@@ -15,15 +15,17 @@ l'architecte" — ici, la preuve que le module lit le réel, pas seulement des c
   [P2]  detail_ajoute : enfants nouveaux sous un parent de valeur inchangée
   [P3]  renommage : un membre nouveau égal à un seul ancien disparu
   [P4]  regroupement : un membre nouveau = somme d'une PARTITION d'anciens (fictif, 3→1)
-  [P5]  scission : un ancien se répartit en plusieurs nouveaux (fictif, 1→2), passage vérifié
+  [P5]  scission : un ancien se répartit en plusieurs nouveaux (fictif, 1→2) — typée, mais l'historique
+        des parts n'est PAS reconstitué (§7 bis : leur répartition serait une hypothèse)
   [P6]  meme_nom_contenu_change : même id, valeur différente au recouvrement — jamais une continuité
   [P7]  rupture : aucun recouvrement du tout
   [P8]  rupture : passage AMBIGU (deux partitions bouclent)
   [P9]  rupture : trop de membres pour établir le passage (borne MAX_MEMBRES_PARTITION dépassée)
   [P10] axe_apparu / axe_disparu
-  [P11] répartition par hypothèse : groupe minimal, montant du groupe CONSERVÉ, méthode prorata v1
-  [P12] scission en TROIS répartie par hypothèse (1 ancien → 3 nouveaux, rupture)
-  [P13] recouvrement absent : axe ENTIER réparti par hypothèse
+  [P11] rupture (sommes différentes au recouvrement) : JAMAIS comblée — aucune cellule fabriquée (§7 bis,
+        arbitrage du 2026-10-23 : plus aucune répartition par hypothèse)
+  [P12] scission en TROIS sans passage vérifié : rupture, aucune cellule fabriquée
+  [P13] recouvrement absent : rupture nommée, aucune cellule fabriquée
   [P14] deux transitions successives sur le même axe (3 régimes), historique reconstitué par CHAÎNE
   [P15] un redécoupage ET un renommage dans le MÊME dépôt (deux mouvements simultanés)
   [P16] invariant de l'agrégat : Σ premier niveau reconstituée == ligne du socle
@@ -144,15 +146,13 @@ if len(tr_p5) == 1:
 chron_p5 = pe.construire_chronique("activites", cellules_p5, {"d1": "2026-01-01", "d2": "2027-01-01"})
 cA = _val(chron_p5, "ent:PartA", "2025-06-30")
 cB = _val(chron_p5, "ent:PartB", "2025-06-30")
-b.check(cA is not None and cB is not None, "[P5] PartA/PartB reconstitués à 2025-06-30")
-if cA is not None and cB is not None:
-    b.check(cA.origine == "passage" and cB.origine == "passage", "[P5] origine == passage")
-    b.check(abs((cA.valeur + cB.valeur) - 900.0 * M) < 1.0,
-            "[P5] le passage conserve le total (900), réparti au PRORATA de la part de chaque "
-            "membre au recouvrement (PartA 40 %, PartB 60 %)")
-    b.check(abs(cA.valeur - 360.0 * M) < 1.0 and abs(cB.valeur - 540.0 * M) < 1.0,
-            "[P5bis] la scission répartit au prorata (400/1000=40% → 360 ; 600/1000=60% → 540), "
-            "jamais la valeur entière dupliquée sur chaque enfant")
+# §7 bis (2026-10-23) : la scission est VÉRIFIÉE (400+600 = 1000 au recouvrement) mais le total
+# ancien (900 en 2025) ne dit pas comment il se répartissait entre PartA et PartB — un prorata
+# serait une hypothèse. L'historique des parts commence donc à leur première publication.
+b.check(cA is None and cB is None,
+        f"[P5] scission : aucune part reconstituée à 2025-06-30 (la répartition serait une hypothèse) ({cA}, {cB})")
+b.check(all(c.origine in ("publie", "passage") for c in chron_p5.cellules),
+        "[P5bis] deux provenances seulement dans la série : publié ou addition vérifiée")
 
 
 # ── [P6] meme_nom_contenu_change ────────────────────────────────────────────────────────────────
@@ -232,18 +232,15 @@ cellules_p11 = [
 chron_p11 = pe.construire_chronique("activites", cellules_p11, {"d1": "2026-01-01", "d2": "2027-01-01"})
 c_h1 = _val(chron_p11, "ent:Nouveau1", "2025-06-30")
 c_h2 = _val(chron_p11, "ent:Nouveau2", "2025-06-30")
-b.check(c_h1 is not None and c_h2 is not None, "[P11] les deux nouveaux membres ont un historique reconstitué")
-if c_h1 is not None and c_h2 is not None:
-    b.check(c_h1.origine == "hypothese" and c_h2.origine == "hypothese", "[P11] origine == hypothese")
-    b.check(abs((c_h1.valeur + c_h2.valeur) - 100.0 * M) < 1.0,
-            "[P11] le MONTANT DU GROUPE est conservé (60+40=100), seule la répartition est une hypothèse")
-    # prorata des parts au PREMIER semestre publié dans le nouveau découpage : Nouveau1=30, Nouveau2=20 → 60%/40%
-    b.check(abs(c_h1.valeur - 60.0 * M) < 1.0 and abs(c_h2.valeur - 40.0 * M) < 1.0,
-            "[P11] prorata v1 : parts 30/20 (60%/40%) appliquées au montant du groupe (100)")
-    b.check(c_h1.methode is not None and "prorata" in c_h1.methode, "[P11] méthode déclarée")
-    b.check(c_h1.periode_des_parts == "2026-06-30", "[P11] période des parts = 1ʳᵉ période du nouveau découpage")
-    b.check(c_h1.anciens_montants == {"ent:Historique1": 60.0 * M, "ent:Historique2": 40.0 * M},
-            "[P11] anciens montants du groupe portés sur la cellule")
+# §7 bis (2026-10-23) : une rupture n'est JAMAIS comblée. Le groupe se lit au recouvrement, mais
+# ses sommes y diffèrent (160 ≠ 50) : aucun passage, donc aucune cellule fabriquée en 2025 ; la
+# série du découpage de référence commence à sa première publication (2026).
+b.check(c_h1 is None and c_h2 is None,
+        f"[P11] rupture : aucune valeur fabriquée pour 2025 ({c_h1}, {c_h2})")
+b.check(any(t.type == "rupture" for t in chron_p11.transitions),
+        "[P11bis] la rupture est NOMMÉE (typée), pas tue")
+b.check({c.periode for c in chron_p11.cellules} == {"2026-06-30"},
+        "[P11ter] la série commence à la première période publiée dans le nouveau découpage")
 
 
 # ── [P12] scission en TROIS répartie par hypothèse (rupture, montant conservé) ──────────────────
@@ -256,11 +253,8 @@ cellules_p12 = [
 ]
 chron_p12 = pe.construire_chronique("activites", cellules_p12, {"d1": "2026-01-01", "d2": "2027-01-01"})
 trois = [_val(chron_p12, f"ent:Fille{i}", "2025-06-30") for i in (1, 2, 3)]
-b.check(all(c is not None for c in trois), "[P12] les trois filles ont un historique reconstitué")
-if all(c is not None for c in trois):
-    b.check(all(c.origine == "hypothese" for c in trois), "[P12] les trois par hypothèse")
-    b.check(abs(sum(c.valeur for c in trois) - 300.0 * M) < 1.0,
-            "[P12] le montant du groupe (300, l'ancienne Mère) est conservé sur les trois filles")
+b.check(all(c is None for c in trois), f"[P12] aucune fille reconstituée en 2025 (rupture) ({trois})")
+b.check(any(t.type == "rupture" for t in chron_p12.transitions), "[P12bis] la rupture est nommée")
 
 
 # ── [P13] recouvrement absent : axe ENTIER réparti par hypothèse ────────────────────────────────
@@ -273,10 +267,10 @@ cellules_p13 = [
 chron_p13 = pe.construire_chronique("activites", cellules_p13, {"d1": "2025-01-01", "d2": "2027-01-01"})
 h1 = _val(chron_p13, "ent:SeulNouveau1", "2024-06-30")
 h2 = _val(chron_p13, "ent:SeulNouveau2", "2024-06-30")
-b.check(h1 is not None and h2 is not None, "[P13] axe entier : historique reconstitué malgré l'absence de recouvrement")
-if h1 is not None and h2 is not None:
-    b.check(h1.origine == "hypothese" and h2.origine == "hypothese", "[P13] origine == hypothese")
-    b.check(abs((h1.valeur + h2.valeur) - 120.0 * M) < 1.0, "[P13] montant du groupe (50+70=120) conservé")
+b.check(h1 is None and h2 is None, f"[P13] sans recouvrement : rien n'est reconstitué en 2024 ({h1}, {h2})")
+rupt13 = [t for t in chron_p13.transitions if t.type == "rupture"]
+b.check(len(rupt13) == 1 and "recouvrement" in rupt13[0].motif,
+        "[P13bis] la rupture nomme l'absence de recouvrement")
 
 
 # ── [P14] deux transitions successives, 3 régimes, 3 périodes reconstituées ─────────────────────
@@ -446,8 +440,11 @@ ec_periodes = {c.periode: c for c in chron_reel.cellules if c.membre == "nvda:Ed
 b.require(dc_periodes, 3, "[P30] Data Center : trois périodes (2024-07-28, 2025-07-27, 2026-07-26)")
 b.require(ec_periodes, 3, "[P30bis] Edge Computing : trois périodes, dont deux par PASSAGE")
 if len(dc_periodes) == 3 and len(ec_periodes) == 3:
-    b.check(dc_periodes["2024-07-28"].origine == "passage" and dc_periodes["2024-07-28"].valeur == 48835000000.0,
-            "[P30ter] Data Center 2024 : continuité (identité), valeur réelle inchangée")
+    # §7 bis : un membre CONTINU (même nom, même valeur au recouvrement) publié par un dépôt
+    # antérieur est PUBLIÉ — « addition vérifiée » ne qualifie que la somme d'anciens membres.
+    b.check(dc_periodes["2024-07-28"].origine == "publie" and dc_periodes["2024-07-28"].valeur == 48835000000.0
+            and dc_periodes["2024-07-28"].depot is not None,
+            "[P30ter] Data Center 2024 : continuité (identité), publié par son dépôt, valeur réelle inchangée")
     b.check(ec_periodes["2024-07-28"].origine == "passage"
             and abs(ec_periodes["2024-07-28"].valeur - (5527000000.0 + 881000000.0 + 675000000.0 + 166000000.0)) < 1.0,
             "[P30quater] Edge Computing 2024 reconstitué par passage = somme RÉELLE des quatre anciens membres")
@@ -559,6 +556,10 @@ socle_p35 = {"cellules": {"chiffre_affaires|P2": {"v": 999.0 * M}}}   # 70 ≠ 9
 vue_p35 = pe.vue_servie(structure_p35, socle=socle_p35)
 refus_p35 = [r for r in vue_p35["refus"] if "axe_p35" in r]
 b.check(refus_p35 == [], f"[P35] aucun refus sur une période INCOMPLÈTE, même très éloignée du total ({refus_p35})")
+chron_p35 = next((c for c in vue_p35["chroniques"] if c["axe"] == "axe_p35"), {})
+b.check({"periode": "P2", "manquants": ["m2"]} in (chron_p35.get("periodes_incompletes") or []),
+        f"[P35bis] … mais la période incomplète est NOMMÉE, avec le membre sans valeur — jamais tue "
+        f"({chron_p35.get('periodes_incompletes')})")
 
 # [P36] la garde (iv) ne porte QUE sur `LIGNE_RACCORD_OBLIGATOIRE` (« chiffre_affaires ») — un
 # résultat ou un actif sectoriel qui laisse un reste non affecté (cas RÉEL NVDA resultat_
@@ -571,7 +572,8 @@ structure_p36 = {
     ],
     "refus": [],
 }
-socle_p36 = {"cellules": {"chiffre_affaires|P1": {"v": 100.0 * M}}}   # 90 (resultat_exploitation) ≠
+socle_p36 = {"cellules": {"chiffre_affaires|P1": {"v": 100.0 * M},
+                          "resultat_exploitation|P1": {"v": 100.0 * M}}}   # 90 (resultat_exploitation) ≠
 # 100 (chiffre_affaires, LIGNE_RACCORD_OBLIGATOIRE) : un chiffre du socle sur une AUTRE ligne existe
 # bien — c'est le filtre sur `c["ligne"]`, pas une coïncidence de clef absente, qui doit protéger ici.
 vue_p36 = pe.vue_servie(structure_p36, socle=socle_p36)
@@ -580,6 +582,145 @@ b.check(refus_p36 == [],
         f"[P36] aucun refus hors de la ligne chiffre_affaires, même si la ligne ne boucle jamais ({refus_p36})")
 b.check(pe.LIGNE_RACCORD_OBLIGATOIRE == "chiffre_affaires",
         "[P36bis] canari : la ligne gardée est bien `chiffre_affaires` (sinon adapter [P34]-[P36])")
+
+
+
+# ── [P37]-[P41] la vue SERVIE reconstitue, sépare et calcule (tranche B, §7 bis) ─────────────────
+# Une société FICTIVE qui regroupe deux activités (A, B → Fusion) au 10-Q, garde une activité
+# continue (K), avec un 10-Q « jumeau » qui a publié le semestre commun dans l'ancien découpage.
+def _flux(axe, membre, periode, v, accn, debut, fin, parent=None):
+    d = _cv(axe, "chiffre_affaires", membre, periode, v * M, accn, parent)
+    d["debut"], d["fin"] = debut, fin
+    return d
+
+
+S25, S26 = "cumul du 2025-01-01 au 2025-06-30", "cumul du 2026-01-01 au 2026-06-30"
+structure_p37 = {
+    "forme": pe.FORME_STRUCTURE,
+    "depots": [{"accn": "dj", "form": "10-Q", "filed": "2025-08-10"},
+               {"accn": "d1", "form": "10-K", "filed": "2026-02-15"},
+               {"accn": "d2", "form": "10-Q", "filed": "2026-08-10"}],
+    "cellules": [
+        _flux("act", "ent:A", "FY2025", 300, "d1", "2025-01-01", "2025-12-31"),
+        _flux("act", "ent:B", "FY2025", 200, "d1", "2025-01-01", "2025-12-31"),
+        _flux("act", "ent:K", "FY2025", 500, "d1", "2025-01-01", "2025-12-31"),
+        _flux("act", "ent:A", S25, 140, "dj", "2025-01-01", "2025-06-30"),
+        _flux("act", "ent:B", S25, 90, "dj", "2025-01-01", "2025-06-30"),
+        _flux("act", "ent:K", S25, 240, "dj", "2025-01-01", "2025-06-30"),
+        _flux("act", "ent:Fusion", S25, 230, "d2", "2025-01-01", "2025-06-30"),
+        _flux("act", "ent:K", S25, 240, "d2", "2025-01-01", "2025-06-30"),
+        _flux("act", "ent:Fusion", S26, 260, "d2", "2026-01-01", "2026-06-30"),
+        _flux("act", "ent:K", S26, 270, "d2", "2026-01-01", "2026-06-30"),
+        # Détail ajouté sous K au 10-Q récent — visible SEULEMENT face au jumeau (le 10-K, déposé
+        # entre les deux, ne publie pas le semestre commun) : la détection compare toute paire de
+        # dépôts, jamais seulement deux dépôts consécutifs.
+        _flux("act", "ent:K1", S25, 100, "d2", "2025-01-01", "2025-06-30", parent="ent:K"),
+        _flux("act", "ent:K2", S25, 140, "d2", "2025-01-01", "2025-06-30", parent="ent:K"),
+        _flux("act", "ent:K1", S26, 120, "d2", "2026-01-01", "2026-06-30", parent="ent:K"),
+        _flux("act", "ent:K2", S26, 150, "d2", "2026-01-01", "2026-06-30", parent="ent:K"),
+    ],
+    "totaux_cumul": [{"ligne": "chiffre_affaires", "periode": S25, "v": 470 * M, "accn": "d2"},
+                     {"ligne": "chiffre_affaires", "periode": S26, "v": 530 * M, "accn": "d2"}],
+    "refus": [],
+}
+socle_p37 = {
+    "periodes": [{"id": "FY2025", "nature": "exercice", "cadrage": "flux", "fin": "2025-12-31"},
+                 {"id": "TTM2026-06-30", "nature": "douze_mois", "cadrage": "flux", "fin": "2026-06-30"}],
+    "cellules": {"chiffre_affaires|FY2025": {"v": 1000 * M}, "chiffre_affaires|TTM2026-06-30": {"v": 1060 * M}},
+}
+vue_p37 = pe.vue_servie(structure_p37, socle_p37)
+
+
+def _vc(vue, membre, periode, source="cellules"):
+    return next((c for c in vue[source] if c["membre"] == membre and c["periode"] == periode), None)
+
+
+fusion_fy = _vc(vue_p37, "ent:Fusion", "FY2025")
+b.check(fusion_fy is not None and fusion_fy["origine"] == "passage" and fusion_fy["v"] == 500 * M
+        and set(fusion_fy["passage_de"]) == {"ent:A", "ent:B"},
+        f"[P37] Fusion FY2025 = A + B = 500, « addition vérifiée », ses anciens membres nommés ({fusion_fy})")
+k_fy = _vc(vue_p37, "ent:K", "FY2025")
+b.check(k_fy is not None and k_fy["origine"] == "publie" and k_fy["accn"] == "d1",
+        f"[P37bis] K (continu) FY2025 est PUBLIÉ, par le 10-K qui le porte ({k_fy})")
+b.check(_vc(vue_p37, "ent:A", "FY2025") is None and _vc(vue_p37, "ent:A", "FY2025", "cellules_anterieures") is not None,
+        "[P38] l'ancien membre A n'est pas dans la série de référence, mais dans le découpage ANTÉRIEUR, tel que publié")
+b.check(_vc(vue_p37, "ent:A", S25, "cellules_anterieures") is not None
+        and _vc(vue_p37, "ent:K", S25)["accn"] == "d2",
+        "[P38bis] au semestre commun, la série de référence prend le dépôt du découpage récent ; le jumeau reste antérieur")
+ttm_f = _vc(vue_p37, "ent:Fusion", "TTM2026-06-30")
+ttm_k = _vc(vue_p37, "ent:K", "TTM2026-06-30")
+b.check(ttm_f is not None and abs(ttm_f["v"] - 530 * M) < 1 and ttm_f["origine"] == "passage"
+        and ttm_f["concept"] == pe.CONCEPT_DOUZE_MOIS,
+        f"[P39] douze mois de Fusion SUR LA SÉRIE : 500 (addition) + 260 − 230 = 530, marqués « passage » ({ttm_f})")
+b.check(ttm_k is not None and abs(ttm_k["v"] - 530 * M) < 1 and ttm_k["origine"] == "publie",
+        f"[P39bis] douze mois de K : 500 + 270 − 240 = 530 ({ttm_k})")
+racc = {(r["periode"], r["niveau"]): r for r in vue_p37["raccords"] if r["axe"] == "act"}
+b.check(all(racc.get((p, "total"), {}).get("statut") == "boucle" for p in ("FY2025", S25, S26, "TTM2026-06-30")),
+        f"[P39ter] les raccords CALCULÉS SUR LA VUE bouclent à chaque période (exercice, cumuls, douze mois) "
+        f"({[(p, racc.get((p, 'total'), {}).get('statut')) for p in ('FY2025', S25, S26, 'TTM2026-06-30')]})")
+b.check(vue_p37["refus"] == [], f"[P39quater] aucun refus sur un cas qui boucle ({vue_p37['refus']})")
+ch37 = next(c for c in vue_p37["chroniques"] if c["axe"] == "act")
+b.check(ch37["periode_annuelle_reference"] == "FY2025" and ch37["point_de_depart_manquant"] == []
+        and ch37["comparable_depuis"] is None,
+        f"[P40] période annuelle de référence = FY2025, aucun point de départ manquant, pas de rupture ({ch37})")
+b.check({m["membre"] for m in vue_p37["membres_nouveaux"]} == {"ent:Fusion", "ent:K1", "ent:K2"},
+        f"[P40bis] membres nouveaux = Fusion et le détail de K ; K lui-même est continu ({vue_p37['membres_nouveaux']})")
+b.check(any(t["type"] == "detail_ajoute" and set(t["nouveaux"]) == {"ent:K1", "ent:K2"} for t in ch37["transitions"]),
+        f"[P42] détail ajouté sous K, vu face au jumeau malgré le 10-K intercalé ({[t['type'] for t in ch37['transitions']]})")
+k1_s26 = _vc(vue_p37, "ent:K1", S26)
+b.check(k1_s26 is not None and k1_s26["parent"] == "ent:K",
+        "[P42bis] les enfants publiés suivent leur parent dans la série (même dépôt, même période)")
+
+# [P33quater] proportions (axe sans raccord) : le dépôt le plus RÉCENT fait foi, quel que soit l'ordre.
+structure_p33q = {"depots": [{"accn": "q1", "filed": "2026-01-01"}, {"accn": "q2", "filed": "2026-06-01"}],
+                  "cellules": [{**_cv("clients", "__proportion__", "c1", "2025-12-31", 0.20, "q2"), "base": "x"},
+                               {**_cv("clients", "__proportion__", "c1", "2025-12-31", 0.25, "q1"), "base": "x"}],
+                  "refus": []}
+prop = pe.vue_servie(structure_p33q)["cellules"]
+b.check(len(prop) == 1 and prop[0]["accn"] == "q2",
+        f"[P33quater] proportion publiée par deux dépôts : le plus récent fait foi ({prop})")
+
+# Mutation de la donnée : l'addition ne boucle plus avec le total de l'exercice → garde (iv) nommée.
+structure_p37m = {**structure_p37, "cellules": [
+    {**c, "v": 999 * M} if (c["membre"] == "ent:B" and c["periode"] == "FY2025") else c
+    for c in structure_p37["cellules"]]}
+refus_p37m = [r for r in pe.vue_servie(structure_p37m, socle_p37)["refus"] if "FY2025" in r]
+b.check(len(refus_p37m) == 1 and "ERREUR" in refus_p37m[0],
+        f"[P40ter] une addition qui ne boucle pas avec le total consolidé est une ERREUR nommée ({refus_p37m})")
+
+# [P41] rupture (même nom, contenu changé), sans republication de l'exercice : AUCUN chiffre
+# fabriqué ; « comparable depuis » nommé ; point de départ manquant NOMMÉ au dernier exercice.
+structure_p41 = {
+    "forme": pe.FORME_STRUCTURE,
+    "depots": [{"accn": "e1", "form": "10-K", "filed": "2026-02-15"},
+               {"accn": "e2", "form": "10-Q", "filed": "2026-08-10"}],
+    "cellules": [
+        _flux("geo", "ent:Nord", "FY2025", 600, "e1", "2025-01-01", "2025-12-31"),
+        _flux("geo", "ent:Sud", "FY2025", 400, "e1", "2025-01-01", "2025-12-31"),
+        _flux("geo", "ent:Nord", S25, 280, "e1", "2025-01-01", "2025-06-30"),
+        _flux("geo", "ent:Sud", S25, 190, "e1", "2025-01-01", "2025-06-30"),
+        _flux("geo", "ent:Nord", S25, 330, "e2", "2025-01-01", "2025-06-30"),   # ré-attribué : 280 → 330
+        _flux("geo", "ent:Sud", S25, 140, "e2", "2025-01-01", "2025-06-30"),    # total conservé : 470
+        _flux("geo", "ent:Nord", S26, 360, "e2", "2026-01-01", "2026-06-30"),
+        _flux("geo", "ent:Sud", S26, 170, "e2", "2026-01-01", "2026-06-30"),
+    ],
+    "totaux_cumul": structure_p37["totaux_cumul"],
+    "refus": [],
+}
+vue_p41 = pe.vue_servie(structure_p41, socle_p37)
+b.check(_vc(vue_p41, "ent:Nord", "FY2025") is None and _vc(vue_p41, "ent:Nord", "TTM2026-06-30") is None,
+        "[P41] contenu changé sans republication : ni l'exercice ni les douze mois ne sont fabriqués")
+b.check(_vc(vue_p41, "ent:Nord", "FY2025", "cellules_anterieures") is not None,
+        "[P41bis] l'exercice reste visible dans le découpage antérieur, tel que publié")
+ch41 = next(c for c in vue_p41["chroniques"] if c["axe"] == "geo")
+b.check(ch41["comparable_depuis"] == S25 and sorted(ch41["point_de_depart_manquant"]) == ["ent:Nord", "ent:Sud"],
+        f"[P41ter] série comparable depuis le semestre republié ; point de départ manquant NOMMÉ ({ch41})")
+b.check({t["type"] for t in ch41["transitions"]} == {"meme_nom_contenu_change"},
+        f"[P41quater] la rupture est typée par les montants ({[t['type'] for t in ch41['transitions']]})")
+b.check({d["membre"] for d in ch41["douze_mois_non_etablis"]} == {"ent:Nord", "ent:Sud"}
+        and all(d["motif"] for d in ch41["douze_mois_non_etablis"]) and vue_p41["refus"] == [],
+        f"[P41quinquies] les douze mois manquants d'un membre de référence sont NOMMÉS (une information, "
+        f"pas une erreur du relevé) ({ch41['douze_mois_non_etablis']}, refus {vue_p41['refus']})")
 
 
 sys.exit(b.summary())

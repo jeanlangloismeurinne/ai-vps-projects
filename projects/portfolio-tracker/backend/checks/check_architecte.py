@@ -39,6 +39,7 @@ import app.modele_entreprise.porte as porte_mod  # noqa: E402
 from app.contracts.architecture_signature_schema import DemandeDecisionArchitecture  # noqa: E402
 from app.contracts.modele_entreprise_schema import Architecture  # noqa: E402
 from app.contracts.parcours_schema import Manque  # noqa: E402
+from app.knowledge import perimetre as pe  # noqa: E402
 from app.knowledge import ventilation as vt  # noqa: E402
 from app.knowledge import ventilation_xbrl as vx  # noqa: E402
 from app.knowledge.socle_comptes import (  # noqa: E402
@@ -294,10 +295,14 @@ def socle_de(ticker: str):
 
 
 _, SOCLE_STRUCT_NVDA = socle_de("NVDA")
-DEPOTS_NVDA = [charger_depot("NVDA", "0001045810-26-000021"), charger_depot("NVDA", "0001045810-26-000075")]
+# Les TROIS dépôts que `ventilation_feed.lire_depots` lit en production quand le premier niveau change
+# (10-K, 10-Q récent, 10-Q jumeau) ; l'architecte lit la VUE SERVIE (lot P1 §8), jamais le relevé brut.
+DEPOTS_NVDA = [charger_depot("NVDA", "0001045810-26-000021"), charger_depot("NVDA", "0001045810-26-000075"),
+               charger_depot("NVDA", "0001045810-25-000209")]
 V_NVDA = vt.relever(DEPOTS_NVDA, GAB, REF_VENT, SOCLE_STRUCT_NVDA)
-STRUCT_NVDA = vt.structure_de_ventilation(V_NVDA, version_referentiel=REF_VENT.version,
-                                          version_gabarit=GAB.version, depots=tuple(DEPOTS_NVDA))
+STRUCT_NVDA = pe.vue_servie(vt.structure_de_ventilation(V_NVDA, version_referentiel=REF_VENT.version,
+                                                        version_gabarit=GAB.version, depots=tuple(DEPOTS_NVDA)),
+                            SOCLE_STRUCT_NVDA)
 
 MATIERE_NVDA = matiere_fictive(
     ticker_id="NVDA", raison_sociale="NVIDIA Corp", cik=1045810,
@@ -354,7 +359,31 @@ def valide_ou_motif(arch: Architecture, matiere=MATIERE_NVDA) -> str:
 ARCH_10K = arch_nvda_10k()
 r = valide_ou_motif(ARCH_10K)
 b.check(r.startswith("OK") and "[S3b]" in r,
-        f"[S1]-[S9] — architecture NVDA plausible au découpage du 10-K, signal [S3b] attendu : {r[:300]}")
+        f"[S1]-[S9] — architecture NVDA plausible au découpage du 10-K (antérieur), signal [S3b] attendu : {r[:300]}")
+
+# Garde (iii), lot P1 : une architecture sur le découpage LE PLUS RÉCENT (Data Center + Edge Computing)
+# trouve ses exercices — Edge Computing FY2026 existe par addition vérifiée — et ne lève aucun [S3b].
+SEGS_10Q = [("data_center", "nvda:DataCenterMember"), ("edge", "nvda:EdgeComputingMember")]
+ARCH_10Q = arch_nvda_10k(
+    blocs=[_bloc_publie(bid, m) for bid, m in SEGS_10Q],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires",
+                        "formule": "data_center__chiffre_affaires_du_bloc + edge__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[{"bloc": bid, "variable": "chiffre_affaires_du_bloc",
+                         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}
+                        for bid, _ in SEGS_10Q])
+r = valide_ou_motif(ARCH_10Q)
+b.check(r.startswith("OK") and "[S3b]" not in r and "[S2]" not in r,
+        f"[S2]/[S3b] — architecture sur le découpage le plus récent : exercices trouvés (addition vérifiée), "
+        f"aucun signal : {r[:300]}")
+ARCH_10Q_SANS_EDGE = arch_nvda_10k(
+    blocs=[_bloc_publie("data_center", "nvda:DataCenterMember")],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires", "formule": "data_center__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[{"bloc": "data_center", "variable": "chiffre_affaires_du_bloc",
+                         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}])
+r = valide_ou_motif(ARCH_10Q_SANS_EDGE)
+b.check(r.startswith("[S2]") and "FY2026-01-25" in r and "EdgeComputing" in r,
+        f"[S2] — période de référence = l'EXERCICE FY2026 du découpage récent (pas un cumul) ; Edge Computing "
+        f"non couvert est nommé : {r[:300]}")
 
 # [S1] : un membre inventé.
 ARCH_S1 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:InventeMember")] +
@@ -480,8 +509,11 @@ b.check(r.startswith("[S3]") and "plusieurs axes" in r,
         f"[S3] — un seul axe au premier niveau, plusieurs axes refusés : {r[:250]}")
 
 # [S3b] : signal déjà observé sur `ARCH_10K` ci-dessus — revérifié ici explicitement.
-b.check("n'est pas la plus récente publiée" in valide_ou_motif(ARCH_10K),
-        "[S3b] — signal : le découpage du 10-K n'est pas le plus récent (10-Q)")
+# Lot P1 (§3) : [S3b] = « l'architecture suit un découpage autre que celui de référence » — le
+# texte change (l'ancien disait « la période de référence n'est pas la plus récente publiée », ce
+# qui se déclenchait aussi pour un exercice face à un cumul du MÊME découpage).
+b.check("découpage ANTÉRIEUR" in valide_ou_motif(ARCH_10K),
+        "[S3b] — signal : l'architecture suit le découpage du 10-K, antérieur au découpage de référence (10-Q)")
 
 # [S4] : un bloc parent rattaché à un bloc COMMUN.
 arch_s4_dict = ARCH_10K.model_dump(mode="json")

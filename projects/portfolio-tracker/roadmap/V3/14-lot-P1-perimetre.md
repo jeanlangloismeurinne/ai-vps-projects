@@ -1,6 +1,6 @@
 ---
 id: spec-lot-p1-perimetre
-status: spec v1.1 2026-10-22 (Opus) — arbitrages §7 rendus par l'utilisateur le même jour ; à exécuter par Sonnet
+status: spec v1.2 2026-10-23 (Opus) — arbitrage Q1 RÉVISÉ le 2026-10-23 (§7 bis : plus aucune répartition par hypothèse) ; tranche B exécutée par Opus
 created: 2026-10-22
 project: portfolio-tracker
 role: >
@@ -113,7 +113,12 @@ ou `hypothese` (répartition déclarée, §2.3 bis). **Aucune cellule de l'histo
 référence n'est vide** pour une période où le total du compte de résultat est connu. C'est ce que lisent le rendu, l'architecte et, plus tard, le
 classeur (M5) : **un historique, un découpage, chaque chiffre avec sa provenance**.
 
-### 2.3 bis La répartition par hypothèse (arbitrage Q1)
+### 2.3 bis La répartition par hypothèse (arbitrage Q1) — ❌ RETIRÉE le 2026-10-23 (§7 bis)
+
+> Le texte ci-dessous est conservé pour l'histoire de la décision ; il ne s'applique plus. Une rupture
+> (aucun passage vérifié) n'est JAMAIS comblée : la série du découpage de référence commence là où
+> l'émetteur l'a publiée, l'ancien découpage reste visible tel que publié, « non comparable ».
+
 
 Quand aucun passage vérifié n'existe, l'historique est quand même rendu dans le découpage le plus récent,
 par une hypothèse **déclarée et marquée** :
@@ -234,6 +239,30 @@ Texte des questions telles que posées :
   acquisition »), la croissance hors acquisitions étant reportée après le premier comité (elle exige de lire
   le chiffre d'affaires acquis dans le texte, donc un modèle). Autre : la calculer dès maintenant.
 
+## 7 bis. Arbitrage révisé (rendu par l'utilisateur le 2026-10-23)
+
+**Question posée** (après la mesure de l'axe pays NVDA : sur le semestre 2025, le 10-Q d'août 2026 RÉ-ATTRIBUE
+tous les pays — États-Unis 44 209 → 58 582 M$, Taïwan, Chine — à total inchangé 90 805 M$ ; un changement
+de critère d'attribution, pas un repli de Singapour) : à quel moment un fonds a-t-il besoin de reconstituer
+un historique dans un découpage qui a changé ?
+
+**Réponse (pratique d'un fonds)** : la valorisation projette le futur ; l'historique par activité ne sert
+qu'à (1) poser le POINT DE DÉPART de chaque bloc dans le découpage actuel (dernier exercice ou douze
+derniers mois) — indispensable ; (2) lire un rythme récent — les comparatifs publiés y suffisent souvent ;
+(3) les analyses longues (cycle, marges normatives) se font au niveau CONSOLIDÉ, que le découpage
+n'affecte pas. L'émetteur est tenu (ASC 280 / IFRS 8) de republier ses comparatifs dans le nouveau
+découpage sauf impossibilité : c'est lui qui fait la reconsolidation. Un analyste ne répartit pas un
+ancien historique au prorata — aucun comité ne signerait une tendance bâtie sur un chiffre fabriqué ;
+il écrit « non comparable avant cette date » et juge à partir du publié.
+
+**Décision** : deux provenances seulement dans la vue servie — **publié** (par l'émetteur, comparatifs
+republiés compris ; un membre continu publié par un dépôt antérieur est publié, pas « passage ») et
+**addition vérifiée** (un nouveau membre = somme exacte d'anciens membres sur une période publiée dans les
+deux découpages ; chaîne de passages admise). Une rupture n'est pas comblée ; elle est NOMMÉE, avec les
+membres en cause et la date à partir de laquelle la série est comparable. Le point de départ de chaque
+membre de référence (dernier exercice) est exigé : son absence est nommée. L'invariant de l'agrégat (§2.3 ter)
+et la règle des douze mois (§2.4) restent. La répartition au prorata sort du module (code et cas).
+
 ## 8. Addendum du 2026-10-22 (Opus) — le cœur restant (B4c-2), conception arrêtée
 
 Deux passages de Sonnet ont livré le détenteur (`perimetre.py`), la lecture du jumeau, la délégation du
@@ -274,5 +303,10 @@ garde (iv) ci-dessous.
 6. **Découpage d'exécution** (pour tenir dans un passage) : tranche A = points 1 + 2 + garde (iv), rendu de
    M2 inchangé en texte (la vue reproduit d'abord le comportement actuel quand il n'y a qu'un régime) ;
    tranche B = 3 + rendu de la chronique + [S2]/[S3b] + `faits_publies` + consigne + gardes (i)-(iii).
+
+**Révision du 2026-10-23 (§7 bis)** : la tranche B se réduit — aucune cellule `hypothese` ; une
+rupture se rend « non comparable avant <date> », l'ancien découpage tel que publié (`cellules_anterieures`) ;
+garde (ii) inchangée (Edge Computing FY2024-FY2026 = Σ des quatre, « addition vérifiée ») ; les périodes
+INCOMPLÈTES (un membre de référence sans valeur) sont nommées, jamais tues.
 
 **État au soir du 2026-10-22** : tranche A livrée (points 1, garde (iv), `vue_servie` pure) ; le branchement des lecteurs passe en tranche B, qui doit aussi traiter l'axe PAYS de NVDA (redécoupé : Singapour replié dans les autres pays, mesuré sur le jumeau) et nommer les périodes que la garde (iv) ne juge pas (incomplètes) au lieu de les taire.

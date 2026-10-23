@@ -21,19 +21,26 @@ import sys
 from app.knowledge.edgar_facts import fetch_company_facts
 from app.knowledge.edgar_feed import resolve_identite
 from app.knowledge.socle_comptes import charger_gabarit, charger_reclassements, reconstituer, structure_du_socle
+from app.knowledge.perimetre import vue_servie
 from app.knowledge.ventilation import charger_referentiel, relever, rendre_ventilation, structure_de_ventilation
 from app.knowledge.ventilation_feed import VentilationIndisponible, assurer_ventilation, lire_depots
 
 
-def _bilan(ticker: str, v) -> str:
-    raccords_total = [r for r in v.raccords if r.niveau == "total"]
-    b = sum(1 for r in raccords_total if r.statut == "boucle")
-    nv = sum(1 for r in raccords_total if r.statut == "non_ventile")
-    dc = sum(1 for r in raccords_total if r.statut == "decoupage_change")
-    ec = sum(1 for r in v.raccords if r.niveau == "emboitement" and r.statut == "ecart")
-    st = sum(1 for r in raccords_total if r.statut == "sans_total")
-    return (f"BILAN ventilation {ticker} : {v.statut} — {len(v.axes)} axes, {len(v.cellules)} cellules, "
-            f"raccords {b} bouclés / {nv} non ventilés / {dc} découpages changés / {ec} écarts / {st} sans total")
+def _bilan(ticker: str, v, vue: dict) -> str:
+    """Le bilan se lit sur la VUE SERVIE (les raccords n'existent qu'à la lecture, lot P1 §8)."""
+    raccords_total = [r for r in vue.get("raccords") or [] if r["niveau"] == "total"]
+    b = sum(1 for r in raccords_total if r["statut"] == "boucle")
+    nv = sum(1 for r in raccords_total if r["statut"] == "non_ventile")
+    ec = sum(1 for r in vue.get("raccords") or [] if r["niveau"] == "emboitement" and r["statut"] == "ecart")
+    st = sum(1 for r in raccords_total if r["statut"] == "sans_total")
+    add = sum(1 for c in vue.get("cellules") or [] if c.get("origine") == "passage")
+    inc = sum(len(ch.get("periodes_incompletes") or []) for ch in vue.get("chroniques") or [])
+    dep = sum(1 for ch in vue.get("chroniques") or [] if ch.get("point_de_depart_manquant"))
+    return (f"BILAN ventilation {ticker} : {v.statut} — {len(v.axes)} axes, {len(v.cellules)} cellules relevées, "
+            f"{len(vue.get('cellules') or [])} servies (dont {add} par addition vérifiée), "
+            f"{len(vue.get('cellules_anterieures') or [])} du découpage antérieur ; "
+            f"raccords {b} bouclés / {nv} non ventilés / {ec} écarts / {st} sans total ; "
+            f"{inc} périodes incomplètes ; {dep} points de départ manquants ; {len(vue.get('refus') or [])} refus")
 
 
 async def un(ticker: str, *, publier: bool) -> int:
@@ -55,13 +62,14 @@ async def un(ticker: str, *, publier: bool) -> int:
     v = relever(depots, gabarit, referentiel, structure_socle)
     structure = structure_de_ventilation(
         v, version_referentiel=referentiel.version, version_gabarit=gabarit.version, depots=tuple(depots))
+    vue = vue_servie(structure, structure_socle)
     print(f"\n══════ {ticker} — {identite.raison_sociale} ══════")
-    print(rendre_ventilation(structure, raison_sociale=identite.raison_sociale))
+    print(rendre_ventilation(vue, raison_sociale=identite.raison_sociale))
     if v.conflits:
         print(f"\nCONFLITS de hiérarchie ({len(v.conflits)}) :")
         for c in v.conflits[:10]:
             print(f"  {c}")
-    print(f"\n{_bilan(ticker, v)}")
+    print(f"\n{_bilan(ticker, v, vue)}")
 
     if publier:
         import asyncpg

@@ -34,7 +34,13 @@ mutations=(
   # ── [S1]-[S9] (structure.py) — chaque motif cible la CONDITION, jamais le `if` qui la partage ──
   "$S¦        if manquants:¦        if False:¦[S1] — membre inventé refusé"
   "$F¦    if len(set(parents.values())) > 1:¦    if False:¦regroupement"
-  "$S¦membres_vises <= membres¦True¦[S2] — découpage mixte refusé"
+  "$S¦    couvrantes_ant = [p for p, ms in par_periode_ant.items() if membres_vises <= ms]¦    couvrantes_ant = [p for p, ms in par_periode_ant.items() if True]¦[S2] — découpage mixte refusé"
+  # Lot P1 : suivre le découpage ANTÉRIEUR n'est plus reconnu — l'architecture du 10-K serait refusée
+  # au lieu d'être signalée au comité ([S3b]).
+  "$S¦    elif couvrantes_ant:¦    elif False:¦[S3b] — signal"
+  # Lot P1, garde (iii) : la période de référence n'est plus l'EXERCICE annuel de référence — un
+  # cumul ou des douze mois calculés la remplaceraient.
+  "$S¦        reference = annuelle if annuelle in couvrantes_ref else max(couvrantes_ref, key=_cle_tri_periode)¦        reference = max(couvrantes_ref, key=_cle_tri_periode)¦[S2] — période de référence = l'EXERCICE"
   "$S¦    if len(axes) > 1:¦    if False:¦[S3] — un seul axe au premier niveau"
   "$S¦b.rattachement.ligne not in famille.lignes_du_business_plan¦False¦[S4] — bloc agrege hors du business plan refusé"
   "$S¦parent.role == \"commun\"¦False¦[S4] — bloc parent rattaché à un bloc commun refusé"

@@ -54,6 +54,10 @@ __all__ = [
     "signal_acquisition_significative",
     "LIGNE_RACCORD_OBLIGATOIRE",
     "vue_servie",
+    "est_structure_courante",
+    "FORME_STRUCTURE",
+    "CONCEPT_DOUZE_MOIS",
+    "CONCEPT_ADDITION",
 ]
 
 
@@ -140,19 +144,21 @@ class Transition:
 
 @dataclass(frozen=True)
 class CelluleChronique:
-    """Une cellule de la série comparable, dans le régime de RÉFÉRENCE (§2.3)."""
+    """Une cellule de la série comparable, dans le régime de RÉFÉRENCE (§2.3). DEUX provenances
+    seulement (arbitrage du 2026-10-23, §7 bis de la spec) : `publie` — la valeur déposée par
+    l'émetteur, y compris par un dépôt ANTÉRIEUR pour un membre CONTINU (même nom, même valeur au
+    recouvrement) ; `passage` — une ADDITION VÉRIFIÉE d'anciens membres publiés. Jamais une
+    répartition par hypothèse : une rupture n'est pas comblée, elle est nommée."""
     axe: str
     membre: str
     periode: str
     valeur: float
-    origine: Literal["publie", "passage", "hypothese"]
+    origine: Literal["publie", "passage"]
+    # `origine == "publie"` : le dépôt qui porte la valeur.
+    depot: Optional[str] = None
     # `origine == "passage"` : les anciens membres sommés et leur dépôt.
     passage_de: tuple[str, ...] = ()
     passage_depot: Optional[str] = None
-    # `origine == "hypothese"` : la méthode, la période des parts, les anciens montants du GROUPE.
-    methode: Optional[str] = None
-    periode_des_parts: Optional[str] = None
-    anciens_montants: Optional[dict[str, float]] = None
 
 
 @dataclass
@@ -265,7 +271,13 @@ def _trouver_partition(
 
 
 def _valeurs_sur_periode(cellules: list[CelluleBrute], periode: str) -> dict[str, float]:
-    return {c.membre: c.valeur for c in cellules if c.periode_fin == periode}
+    """`{membre: valeur}` à `periode` — la PREMIÈRE cellule rencontrée l'emporte : l'appelant
+    (`construire_chronique`) range les cellules du dépôt le plus RÉCENT au plus ancien (#133)."""
+    out: dict[str, float] = {}
+    for c in cellules:
+        if c.periode_fin == periode:
+            out.setdefault(c.membre, c.valeur)
+    return out
 
 
 def typer_transitions(
@@ -407,17 +419,26 @@ def typer_transitions(
     return transitions
 
 
-# ── §2.3 / §2.3 bis — la chronique : séries comparables, publié / passage / hypothèse ──────────
+# ── §2.3 — la chronique : séries comparables, publié / addition vérifiée ───────────────────────
+
+# Les transitions qui reconstituent un historique par ADDITION VÉRIFIÉE (§7 bis) — détenteur unique :
+# une scission est vérifiée mais ne reconstitue rien (la répartition de l'ancien total serait une
+# hypothèse) ; une rupture ou un contenu changé, jamais.
+_ADDITIONS = ("renommage", "regroupement")
 
 def _resoudre_valeur(
     transitions: list[Transition], cellules: list[CelluleBrute], membre: str, periode: str,
     *, profondeur: int = 0,
 ) -> Optional[float]:
-    """La valeur de `membre` à `periode`, par CHAÎNE de passages vérifiés (plusieurs
-    renommages/regroupements/scissions consécutifs, §2.3) — pas seulement le hop immédiat : une
-    chaîne V1→V2→V3 doit pouvoir reconstituer V3 à une période où seul V1 a publié. Bornée (une
-    chaîne traverse au plus les régimes de l'axe, toujours finis — le garde-fou n'est jamais
-    censé être atteint, mais une récursion sans borne serait le blocage muet que #73 interdit)."""
+    """La valeur de `membre` à `periode`, par CHAÎNE d'additions vérifiées (plusieurs
+    renommages/regroupements consécutifs, §2.3) — pas seulement le hop immédiat : une chaîne
+    V1→V2→V3 doit pouvoir reconstituer V3 à une période où seul V1 a publié. Bornée (une chaîne
+    traverse au plus les régimes de l'axe, toujours finis — le garde-fou n'est jamais censé être
+    atteint, mais une récursion sans borne serait le blocage muet que #73 interdit).
+
+    Une SCISSION ne reconstitue rien (§7 bis) : l'ancien total est exact, mais sa répartition entre
+    les nouveaux membres serait une hypothèse — l'historique des parts commence là où l'émetteur
+    les a publiées."""
     if profondeur > 2 * MAX_MEMBRES_PARTITION:
         return None
     direct = next((c.valeur for c in cellules if c.membre == membre and c.periode_fin == periode), None)
@@ -428,22 +449,11 @@ def _resoudre_valeur(
     for t in transitions:
         if membre not in t.nouveaux:
             continue
-        if t.type in ("renommage", "regroupement"):
+        if t.type in _ADDITIONS:
             valeurs = [_resoudre_valeur(transitions, cellules, a, periode, profondeur=profondeur + 1)
                        for a in t.anciens]
             if all(v is not None for v in valeurs):
                 return sum(valeurs)
-        elif t.type == "scission" and t.periode_recouvrement is not None:
-            v_ancien = _resoudre_valeur(
-                transitions, cellules, t.anciens[0], periode, profondeur=profondeur + 1)
-            if v_ancien is None:
-                continue
-            parts = _valeurs_sur_periode(
-                [c for c in cellules if c.periode_fin == t.periode_recouvrement], t.periode_recouvrement)
-            total_parts = sum(parts.get(n, 0.0) for n in t.nouveaux)
-            if total_parts == 0:
-                continue
-            return v_ancien * (parts.get(membre, 0.0) / total_parts)
     return None
 
 
@@ -451,24 +461,22 @@ def _passage_direct(
     transitions: list[Transition], membre_ref: str, vals_periode: dict[str, float], cellules: list[CelluleBrute],
     periode: str,
 ) -> Optional[tuple[tuple[str, ...], float]]:
-    """Rend `(anciens, valeur)` par un passage VÉRIFIÉ (§2.3) : l'IDENTITÉ (le membre existait déjà
-    sous le même nom, continu), ou le(s) ancien(s) de la transition qui mène à `membre_ref`
-    (`renommage`/`regroupement`/`scission`) — leur valeur étant elle-même résolue PAR CHAÎNE
-    (`_resoudre_valeur`), pas seulement au hop immédiat. `None` si aucun passage vérifié ne mène à
-    ce membre.
+    """Rend `(anciens, valeur)` : l'IDENTITÉ (le membre existait déjà sous le même nom, continu —
+    `anciens == (membre_ref,)`), ou le(s) ancien(s) de la transition `renommage`/`regroupement` qui
+    mène à `membre_ref`, leur valeur résolue PAR CHAÎNE (`_resoudre_valeur`). `None` si aucune
+    addition vérifiée ne mène à ce membre.
 
     L'identité n'est PAS enregistrée comme une `Transition` (`typer_transitions` ne décrit que les
     MOUVEMENTS) : un membre inchangé n'en a besoin que pour reconstituer son historique, ici."""
     valeur = _resoudre_valeur(transitions, cellules, membre_ref, periode)
     if valeur is None:
         return None
-    perturbe = any(
-        membre_ref in t.anciens and t.type in ("meme_nom_contenu_change", "rupture")
-        for t in transitions)
-    if not perturbe and membre_ref in vals_periode:
+    # Une valeur directe n'est rendue par `_resoudre_valeur` que si le membre n'est PAS perturbé
+    # (rupture, contenu changé) — détenteur unique de ce refus : il n'est pas recopié ici.
+    if membre_ref in vals_periode:
         return (membre_ref,), valeur
     for t in transitions:
-        if membre_ref in t.nouveaux and t.type in ("renommage", "regroupement", "scission"):
+        if membre_ref in t.nouveaux and t.type in _ADDITIONS:
             return t.anciens, valeur
     return None
 
@@ -476,19 +484,23 @@ def _passage_direct(
 def _detail_ajoute(
     axe: str, cellules: list[CelluleBrute], depots_filed: dict[str, str],
 ) -> list[Transition]:
-    """`detail_ajoute` (§2.2), détecté GLOBALEMENT par paire de dépôts CONSÉCUTIFS (triés par date
-    de dépôt), indépendamment des régimes : un parent dont la valeur est inchangée (à la tolérance
-    de bouclage) sur une période publiée par les deux dépôts, et qui gagne des enfants nouveaux.
-    Détection indépendante de `etablir_regimes` parce qu'un axe qui ne porte QUE du détail ajouté
-    (aucun autre mouvement) ne change pas de premier niveau — ses deux dépôts fusionnent dans le
-    MÊME régime (§2.1), et une transition ENTRE régimes ne le verrait donc jamais."""
+    """`detail_ajoute` (§2.2), détecté GLOBALEMENT sur toute paire (dépôt antérieur, dépôt
+    postérieur) — jamais seulement deux dépôts CONSÉCUTIFS : le 10-K s'intercale entre le 10-Q jumeau
+    et le 10-Q récent sans publier la période qu'ils partagent (cas réel, lot P1), la comparaison
+    consécutive ne verrait jamais le recouvrement. Un parent dont la valeur est inchangée (à la
+    tolérance de bouclage) sur une période publiée par les deux dépôts, et qui gagne des enfants
+    nouveaux. Indépendant de `etablir_regimes` : un axe qui ne porte QUE du détail ajouté ne change
+    pas de premier niveau — ses dépôts fusionnent dans le MÊME régime (§2.1). Borné : n(n−1)/2
+    paires sur une liste finie de dépôts."""
     par_depot: dict[str, list[CelluleBrute]] = {}
     for c in cellules:
         par_depot.setdefault(c.depot, []).append(c)
     depots_tries = sorted(par_depot, key=lambda d: depots_filed.get(d, ""))
     transitions: list[Transition] = []
     vus: set[tuple[str, tuple[str, ...]]] = set()
-    for d_ancien, d_nouveau in zip(depots_tries[:-1], depots_tries[1:]):
+    paires = [(depots_tries[i], depots_tries[j])
+              for i in range(len(depots_tries)) for j in range(i + 1, len(depots_tries))]
+    for d_ancien, d_nouveau in paires:
         cells_a, cells_n = par_depot[d_ancien], par_depot[d_nouveau]
         membres_a = {c.membre for c in cells_a}
         membres_n = {c.membre for c in cells_n}
@@ -521,7 +533,14 @@ def construire_chronique(
     axe: str, cellules: list[CelluleBrute], depots_filed: dict[str, str],
 ) -> Chronique:
     """La chronique d'UN axe : régimes, transitions typées, et la série comparable dans le régime de
-    RÉFÉRENCE (§2.3), avec passage vérifié ou répartition par hypothèse (§2.3 bis)."""
+    RÉFÉRENCE (§2.3) — publiée, ou reconstituée par ADDITION VÉRIFIÉE. Une rupture n'est jamais
+    comblée (§7 bis) : à une période où ni l'une ni l'autre n'existe, le membre n'a pas de cellule.
+
+    Les cellules sont rangées du dépôt le plus RÉCENT au plus ancien (#133) : deux dépôts qui
+    publient la même adresse, c'est le plus récent qui fait foi, quel que soit l'ordre d'arrivée.
+    À une période du régime de référence, seuls ses dépôts parlent — un dépôt d'un ancien régime ne
+    publie jamais une valeur « de référence »."""
+    cellules = sorted(cellules, key=lambda c: (depots_filed.get(c.depot, ""), c.depot), reverse=True)
     regimes = etablir_regimes(cellules, depots_filed)
     if not regimes:
         return Chronique(axe, Regime(axe, frozenset(), frozenset(), {}, frozenset(), ()), [], [], [])
@@ -530,84 +549,40 @@ def construire_chronique(
     for ancien, nouveau in zip(regimes[:-1], regimes[1:]):
         transitions.extend(typer_transitions(ancien, nouveau, cellules))
 
+    depots_ref = set(regime_ref.depots)
+    cellules_ref = [c for c in cellules if c.depot in depots_ref]
     toutes_periodes = sorted({c.periode_fin for c in cellules}, key=ordre_des_periodes)
     cellules_chronique: list[CelluleChronique] = []
-    refus: list[str] = []
+
+    def _depot_de(membre: str, periode: str, parmi: list[CelluleBrute]) -> Optional[str]:
+        return next((c.depot for c in parmi if c.membre == membre and c.periode_fin == periode), None)
 
     for periode in toutes_periodes:
+        if periode in regime_ref.periodes:
+            vals_ref = _valeurs_sur_periode(cellules_ref, periode)
+            for membre in sorted(regime_ref.premier_niveau):
+                if membre in vals_ref:
+                    cellules_chronique.append(CelluleChronique(
+                        axe, membre, periode, vals_ref[membre], "publie",
+                        depot=_depot_de(membre, periode, cellules_ref)))
+            continue
         vals_periode = _valeurs_sur_periode(cellules, periode)
-        periode_dans_ref = periode in regime_ref.periodes
         for membre in sorted(regime_ref.premier_niveau):
-            if membre in vals_periode and periode_dans_ref:
-                cellules_chronique.append(
-                    CelluleChronique(axe, membre, periode, vals_periode[membre], "publie"))
-                continue
-            if periode_dans_ref:
-                continue   # période du régime de référence mais membre non publié cette période-là
-
-            trouve_passage = _passage_direct(transitions, membre, vals_periode, cellules, periode)
-            if trouve_passage is not None:
-                anciens, valeur_passage = trouve_passage
+            trouve = _passage_direct(transitions, membre, vals_periode, cellules, periode)
+            if trouve is None:
+                continue   # rupture ou absence : jamais un chiffre fabriqué (§7 bis)
+            anciens, valeur = trouve
+            if anciens == (membre,):
+                cellules_chronique.append(CelluleChronique(
+                    axe, membre, periode, valeur, "publie", depot=_depot_de(membre, periode, cellules)))
+            else:
                 depot_source = next(
                     (c.depot for c in cellules if c.periode_fin == periode and c.membre in anciens), None)
                 cellules_chronique.append(CelluleChronique(
-                    axe, membre, periode, valeur_passage, "passage",
+                    axe, membre, periode, valeur, "passage",
                     passage_de=anciens, passage_depot=depot_source))
-                continue
 
-            # §2.3 bis — répartition par hypothèse. Le GROUPE = la plus petite partie de l'axe qui
-            # se raccorde : les anciens membres de la transition la plus proche qui touche `membre`,
-            # sinon l'axe entier (aucun recouvrement).
-            groupe_ancien, groupe_nouveau, methode_motif = _groupe_hypothese(transitions, membre, regime_ref)
-            if groupe_ancien is None or not all(a in vals_periode for a in groupe_ancien):
-                continue   # ce membre n'a simplement rien à cette période-là : pas d'historique à inventer
-            premiere_periode_nouveau = _premiere_periode_du_regime(regime_ref, cellules)
-            parts = _parts_au_prorata(groupe_nouveau, premiere_periode_nouveau, cellules)
-            if membre not in parts or sum(parts.values()) <= 0:
-                refus.append(
-                    f"[{axe}] « {membre} » à `{periode}` : aucune part calculable au prorata à "
-                    f"`{premiere_periode_nouveau}` — répartition par hypothèse impossible")
-                continue
-            montant_groupe = sum(vals_periode[a] for a in groupe_ancien)
-            valeur = montant_groupe * (parts[membre] / sum(parts.values()))
-            cellules_chronique.append(CelluleChronique(
-                axe, membre, periode, valeur, "hypothese",
-                methode="prorata des parts du groupe à la première période du nouveau découpage (v1)",
-                periode_des_parts=premiere_periode_nouveau,
-                anciens_montants={a: vals_periode[a] for a in groupe_ancien}))
-
-    return Chronique(axe, regime_ref, regimes, transitions, cellules_chronique, refus)
-
-
-def _groupe_hypothese(
-    transitions: list[Transition], membre: str, regime_ref: Regime,
-) -> tuple[Optional[tuple[str, ...]], tuple[str, ...], str]:
-    """Le GROUPE concerné par une répartition par hypothèse pour `membre` (§2.3 bis) : les anciens
-    membres touchés par une transition RUPTURE/MEME_NOM_CONTENU_CHANGE qui le cite (ou le passage
-    AMBIGU, lui aussi typé `rupture`). `detail_ajoute` est EXCLU délibérément : ses enfants nouveaux
-    « n'ont d'histoire que là où ils sont publiés » (§2.2) — aucune hypothèse ne leur en invente une.
-    Sans recouvrement AU TOUT (la `Transition` « aucune période … » porte alors tous les anciens
-    premier-niveau et tous les nouveaux), le groupe est naturellement l'axe entier."""
-    for t in transitions:
-        if membre in t.nouveaux and t.anciens and t.type in ("rupture", "meme_nom_contenu_change"):
-            return t.anciens, t.nouveaux, f"transition {t.type}"
-    return None, tuple(sorted(regime_ref.premier_niveau)), "aucune transition ne cite ce membre"
-
-
-def _premiere_periode_du_regime(regime: Regime, cellules: list[CelluleBrute]) -> Optional[str]:
-    periodes = sorted(
-        {c.periode_fin for c in cellules if c.membre in regime.premier_niveau and c.periode_fin in regime.periodes},
-        key=ordre_des_periodes)
-    return periodes[0] if periodes else None
-
-
-def _parts_au_prorata(
-    membres: tuple[str, ...], periode: Optional[str], cellules: list[CelluleBrute],
-) -> dict[str, float]:
-    if periode is None:
-        return {}
-    vals = _valeurs_sur_periode(cellules, periode)
-    return {m: vals[m] for m in membres if m in vals}
+    return Chronique(axe, regime_ref, regimes, transitions, cellules_chronique, [])
 
 
 # ── §2.3 ter — l'invariant de l'agrégat ─────────────────────────────────────────────────────────
@@ -637,7 +612,7 @@ def verifier_invariant_agregat(
     return motifs
 
 
-# ── §8 (addendum) point 2 — la vue SERVIE, calculée à la lecture ───────────────────────────────
+# ── §8 (addendum) — la vue SERVIE, calculée à la lecture ───────────────────────────────────────
 
 # La LIGNE dont la somme des membres de premier niveau DOIT se raccorder au total consolidé, pour
 # TOUT émetteur (ASC 280 / IFRS 8 : la ventilation du CHIFFRE D'AFFAIRES par secteur, activité ou
@@ -650,6 +625,23 @@ def verifier_invariant_agregat(
 # émetteur qui ventile son chiffre d'affaires.
 LIGNE_RACCORD_OBLIGATOIRE = "chiffre_affaires"
 
+# La forme de la structure PERSISTÉE que `vue_servie` sait lire (cellules PAR DÉPÔT, cumuls de tous
+# les membres, dates de chaque flux, totaux des cumuls) — une pièce publiée avant le lot P1 ne la
+# porte pas : son lecteur la relève à nouveau plutôt que de servir une vue amputée.
+FORME_STRUCTURE = "cellules_par_depot.2"
+
+# Le `concept` d'une cellule CALCULÉE par le code, jamais lue au dépôt : douze mois glissants, ou
+# addition vérifiée d'anciens membres. Un chiffre dérivé n'est pas un découpage publié par l'émetteur.
+CONCEPT_DOUZE_MOIS = "(douze mois glissants)"
+CONCEPT_ADDITION = "(addition vérifiée d'anciens membres)"
+
+_PROPORTION = "__proportion__"
+
+
+def est_structure_courante(structure: Optional[dict[str, Any]]) -> bool:
+    """`True` si la structure persistée porte la forme que `vue_servie` lit (`FORME_STRUCTURE`)."""
+    return bool(structure) and structure.get("forme") == FORME_STRUCTURE
+
 
 def _depot_le_plus_recent(cles: list[tuple], depots_filed: dict[str, str]) -> tuple:
     """Parmi des cellules candidates pour LA MÊME adresse logique (axe,ligne,membre,période[,base]),
@@ -658,89 +650,272 @@ def _depot_le_plus_recent(cles: list[tuple], depots_filed: dict[str, str]) -> tu
     return max(cles, key=lambda c: (depots_filed.get(c[-1], ""), c[-1]))
 
 
-def vue_servie(structure: dict[str, Any], socle: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-    """La vue SERVIE (lot P1, §8 addendum, point 2 — tranche A) : calculée À LA LECTURE à partir de
-    la structure PERSISTÉE par `ventilation.relever` (cellules PAR DÉPÔT, point 1 — identité
-    `(axe, ligne, membre, période, accn)`, sans aucune fusion) et du socle EN VIGUEUR. Rend une
-    structure de MÊME FORME, où :
-
-      · `cellules` est DÉDUPLIQUÉE à UNE cellule par adresse logique (axe, ligne, membre, période,
-        base) : quand plusieurs dépôts publient la MÊME adresse, celui déposé le plus RÉCEMMENT
-        fait foi (#133) — jamais le premier dépôt rencontré. C'est la cause mesurée de `c551003` :
-        le jumeau avait fait prendre une version d'ORIGINE à la place d'une version RETRAITÉE sur
-        un chemin qui ne passait pas encore par ici (`appariement_feed._choisir_terme`, déjà
-        corrigé) — cette déduplication ferme le MÊME trou pour tout lecteur qui passe par la vue ;
-      · `refus` porte, EN PLUS des refus déjà portés par `structure`, la garde (iv) : pour chaque
-        axe à raccord, sur la ligne `LIGNE_RACCORD_OBLIGATOIRE`, la somme des membres de premier
-        niveau de la série reconstituée égale la ligne du socle à `tolerance_bouclage` À CHAQUE
-        période connue du socle — sinon une ERREUR du module, refus NOMMÉ
-        (`verifier_invariant_agregat`, §2.3 ter), jamais une rupture tue.
-
-    Dans CETTE tranche (A), `cellules` reste la valeur telle que DISPOSÉE par un dépôt (la
-    reconstruction par passage/hypothèse, elle, n'est pas branchée au rendu — tranche B) : pour un
-    axe à un seul régime, la déduplication ne change RIEN (une seule adresse logique, un seul
-    dépôt l'alimentant déjà) — la vue reproduit le comportement actuel à l'identique. Elle ne
-    change le texte affiché que là où une fusion silencieuse cachait auparavant un second dépôt
-    (jamais un nouveau rendu de régime)."""
-    cellules_brutes = structure.get("cellules") or []
-    depots_meta = structure.get("depots") or []
-    depots_filed = {d["accn"]: d.get("filed") or "" for d in depots_meta}
-
-    # ── Déduplication : une adresse logique, une cellule ────────────────────────────────────────
+def _dedupliquer(cellules: list[dict], depots_filed: dict[str, str]) -> list[dict]:
+    """Une cellule par adresse logique (axe, ligne, membre, période, base) : le dépôt le plus récent."""
     par_adresse: dict[tuple, list[dict]] = {}
-    for c in cellules_brutes:
-        adresse = (c["axe"], c["ligne"], c["membre"], c["periode"], c.get("base"))
-        par_adresse.setdefault(adresse, []).append(c)
-    cellules_vue: list[dict] = []
+    for c in cellules:
+        par_adresse.setdefault((c["axe"], c["ligne"], c["membre"], c["periode"], c.get("base")), []).append(c)
+    out: list[dict] = []
     for adresse, candidats in par_adresse.items():
         if len(candidats) == 1:
-            cellules_vue.append(candidats[0])
+            out.append(candidats[0])
             continue
-        cles = [(*adresse, c["accn"]) for c in candidats]
-        accn_retenu = _depot_le_plus_recent(cles, depots_filed)[-1]
-        retenue = next(c for c in candidats if c["accn"] == accn_retenu)
-        cellules_vue.append(retenue)
+        accn = _depot_le_plus_recent([(*adresse, c["accn"]) for c in candidats], depots_filed)[-1]
+        out.append(next(c for c in candidats if c["accn"] == accn))
+    return out
 
-    # ── Garde (iv) : l'invariant de l'agrégat, sur la ligne qui DOIT boucler ────────────────────
-    cel_socle = (socle or {}).get("cellules") or {}
-    refus_nouveaux: list[str] = []
-    par_axe: dict[str, list[dict]] = {}
-    for c in cellules_vue:
-        if c["ligne"] == LIGNE_RACCORD_OBLIGATOIRE:
-            par_axe.setdefault(c["axe"], []).append(c)
-    for axe, cs in par_axe.items():
-        brutes = [
-            CelluleBrute(
-                axe=axe, membre=c["membre"], valeur=float(c["v"]), periode_fin=c["periode"],
-                depot=c["accn"], parent=c.get("parent"))
-            for c in cs
-        ]
-        chronique = construire_chronique(axe, brutes, depots_filed)
-        ligne_du_socle_brut = {
-            periode.split("|", 1)[1]: float(cel["v"])
-            for periode, cel in cel_socle.items()
-            if periode.startswith(f"{LIGNE_RACCORD_OBLIGATOIRE}|") and cel.get("v") is not None
-        }
-        # Une période n'entre dans la garde que si la série RECONSTITUÉE y est COMPLÈTE (tous les
-        # membres de premier niveau du régime de référence y ont une valeur). Un membre du régime
-        # de référence sans aucune valeur à cette période (ex. un membre NOUVEAU dont les douze
-        # mois glissants ne sont pas encore établis, §4.2) est une incomplétude DÉJÀ nommée par le
-        # raccord `decoupage_change`/`non_ventile` existant — ce n'est pas la faute de ce module, et
-        # la garde (iv) ne doit porter que sur ce qu'elle peut vraiment juger, sous peine de refuser
-        # une série que personne n'a prétendu complète (`feedback_garde_structure_pas_sens`).
+
+def _descend_de(membre: str, ancetre: str, parent_de: dict[str, Optional[str]]) -> bool:
+    """`membre` a-t-il `ancetre` pour ancêtre dans `parent_de` ? Borné par la taille de la carte."""
+    cur = parent_de.get(membre)
+    for _ in range(len(parent_de) + 1):
+        if cur is None:
+            return False
+        if cur == ancetre:
+            return True
+        cur = parent_de.get(cur)
+    return False
+
+
+def _transition_en_dict(t: Transition) -> dict[str, Any]:
+    return {"type": t.type, "anciens": list(t.anciens), "nouveaux": list(t.nouveaux),
+            "periode_recouvrement": t.periode_recouvrement, "motif": t.motif}
+
+
+def _raccords_de(cellules: list[dict], totaux: dict[tuple[str, str], float]) -> list[dict]:
+    """Les raccords CALCULÉS SUR LA VUE (§8 point 2) : par (axe, ligne, période), Σ premier niveau vs
+    le total consolidé (socle pour un exercice/instant/douze mois, faits sans dimension du dépôt pour
+    un cumul) ; puis l'emboîtement de chaque parent présent avec ses enfants présents."""
+    groupes: dict[tuple[str, str, str], dict[str, dict]] = {}
+    for c in cellules:
+        if c["ligne"] == _PROPORTION:
+            continue
+        groupes.setdefault((c["axe"], c["ligne"], c["periode"]), {})[c["membre"]] = c
+    raccords: list[dict] = []
+    for (axe, ligne, periode), membres in sorted(groupes.items(), key=lambda kv: (kv[0][0], kv[0][1], ordre_des_periodes(kv[0][2]))):
+        parent_de = {m: c.get("parent") for m, c in membres.items()}
+        pn = premier_niveau_de(membres, parent_de)
+        somme = sum(float(membres[m]["v"]) for m in pn)
+        total = totaux.get((ligne, periode))
+        if total is None:
+            raccords.append({"axe": axe, "ligne": ligne, "periode": periode, "statut": "sans_total",
+                             "total": None, "somme": somme, "reste": None, "niveau": "total"})
+        else:
+            reste = total - somme
+            statut = "boucle" if abs(reste) <= tolerance_bouclage(total, somme) else "non_ventile"
+            raccords.append({"axe": axe, "ligne": ligne, "periode": periode, "statut": statut,
+                             "total": total, "somme": somme, "reste": reste, "niveau": "total"})
+        for parent in sorted(membres):
+            enfants = [m for m in membres if parent_de.get(m) == parent]
+            if not enfants:
+                continue
+            v_parent = float(membres[parent]["v"])
+            s_enfants = sum(float(membres[m]["v"]) for m in enfants)
+            ecart = v_parent - s_enfants
+            raccords.append({
+                "axe": axe, "ligne": ligne, "periode": periode,
+                "statut": "boucle" if abs(ecart) <= tolerance_bouclage(v_parent, s_enfants) else "ecart",
+                "total": v_parent, "somme": s_enfants, "reste": ecart, "niveau": "emboitement",
+                "parent": parent})
+    return raccords
+
+
+def vue_servie(structure: dict[str, Any], socle: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """La vue SERVIE (lot P1, §8 addendum, révisée §7 bis) — le SEUL point d'entrée des lecteurs de la
+    ventilation (rendu, matière de l'architecte, [S1]-[S3b], faits publiés). Calculée À LA LECTURE à
+    partir de la structure PERSISTÉE par `ventilation.relever` (cellules PAR DÉPÔT, identité `(axe,
+    ligne, membre, période, accn)`, sans aucune fusion) et du socle EN VIGUEUR. Rend une structure de
+    même forme, marquée `vue: True`, où :
+
+      · `cellules` = par (axe, ligne), la série dans le régime de RÉFÉRENCE (celui du dépôt le plus
+        récent, #133) : chaque membre de premier niveau `publie` (par l'émetteur, un dépôt antérieur
+        pour un membre continu) ou `passage` (addition vérifiée d'anciens membres) ; les enfants
+        publiés par le MÊME dépôt que leur parent à la même période ; les douze mois glissants
+        calculés SUR CETTE SÉRIE (`appariement_feed.douze_mois_glissants`, détenteur unique) —
+        jamais deux découpages mêlés. Les proportions (`__proportion__`) : dédupliquées ;
+      · `cellules_anterieures` = ce que les dépôts d'un ANCIEN régime ont publié, tel quel (la liberté
+        de l'architecte de suivre un découpage antérieur, 09 §1.1 ; [S3b] le signale) ;
+      · `raccords` = calculés sur la vue ;
+      · `chroniques` = par (axe, ligne) : régimes, transitions, date à partir de laquelle la série est
+        comparable, périodes INCOMPLÈTES nommées, période annuelle de référence, point de départ
+        manquant nommé ;
+      · `membres_nouveaux` = membres du régime de référence absents de tout régime antérieur ;
+      · `refus` = ceux de `structure` + la garde (iv) : sur `LIGNE_RACCORD_OBLIGATOIRE`, à chaque
+        période COMPLÈTE dont le total est connu, Σ premier niveau = total à la tolérance — sinon une
+        ERREUR du module, refus NOMMÉ (§2.3 ter), jamais une rupture tue.
+
+    Pure. Un axe à un seul régime est rendu à l'identique (aucune addition, aucun antérieur)."""
+    from datetime import date as _date
+
+    from app.knowledge.appariement_feed import AppariementInexecutable, douze_mois_glissants
+
+    brutes = structure.get("cellules") or []
+    depots_meta = structure.get("depots") or []
+    depots_filed = {d["accn"]: d.get("filed") or "" for d in depots_meta}
+    forme_de = {d["accn"]: d.get("form") or "" for d in depots_meta}
+
+    periodes_socle = (socle or {}).get("periodes") or []
+    nature_de = {p["id"]: p.get("nature") for p in periodes_socle}
+    periode_ttm = max((p for p in periodes_socle if p.get("nature") == "douze_mois"),
+                      key=lambda p: p["fin"], default=None)
+    totaux: dict[tuple[str, str], float] = {}
+    for cle, cel in ((socle or {}).get("cellules") or {}).items():
+        if "|" in cle and cel.get("v") is not None:
+            ligne, per = cle.split("|", 1)
+            totaux[(ligne, per)] = float(cel["v"])
+    for t in sorted(structure.get("totaux_cumul") or [],
+                    key=lambda t: (depots_filed.get(t.get("accn"), ""), t.get("accn") or "")):
+        totaux[(t["ligne"], t["periode"])] = float(t["v"])   # le dépôt le plus récent écrit en dernier
+
+    dates_periode: dict[str, tuple[str, str]] = {}
+    for c in brutes:
+        if c.get("debut") and c.get("fin"):
+            dates_periode.setdefault(c["periode"], (c["debut"], c["fin"]))
+
+    par_axe_ligne: dict[tuple[str, str], list[dict]] = {}
+    for c in brutes:
+        par_axe_ligne.setdefault((c["axe"], c["ligne"]), []).append(c)
+
+    cellules_vue: list[dict] = []
+    anterieures: list[dict] = []
+    chroniques: list[dict] = []
+    membres_nouveaux: list[dict] = []
+    refus: list[str] = []
+
+    for (axe, ligne), cs in sorted(par_axe_ligne.items()):
+        if ligne == _PROPORTION:
+            cellules_vue.extend(_dedupliquer(cs, depots_filed))
+            continue
+        chron = construire_chronique(axe, [
+            CelluleBrute(axe=axe, membre=c["membre"], valeur=float(c["v"]), periode_fin=c["periode"],
+                         depot=c["accn"], parent=c.get("parent")) for c in cs], depots_filed)
+        ref = chron.regime_reference
+        depots_ref = set(ref.depots)
+        par_adresse = {(c["membre"], c["periode"], c["accn"]): c for c in cs}
+        libelle_de = {c["membre"]: c.get("libelle") or c["membre"] for c in cs}
+
+        # ── La série du régime de référence, puis les enfants publiés avec leur parent ──────────
+        serie: list[dict] = []
+        for cc in chron.cellules:
+            if cc.origine == "publie":
+                serie.append({**par_adresse[(cc.membre, cc.periode, cc.depot)], "origine": "publie"})
+                continue
+            d = {"axe": axe, "ligne": ligne, "membre": cc.membre, "periode": cc.periode, "v": cc.valeur,
+                 "concept": CONCEPT_ADDITION, "accn": cc.passage_depot, "libelle": libelle_de.get(cc.membre),
+                 "origine": "passage", "passage_de": list(cc.passage_de)}
+            if ref.parent_de.get(cc.membre):
+                d["parent"] = ref.parent_de[cc.membre]
+            if cc.periode in dates_periode:
+                d["debut"], d["fin"] = dates_periode[cc.periode]
+            serie.append(d)
+        par_depot_periode: dict[tuple[str, str], list[dict]] = {}
+        for c in cs:
+            par_depot_periode.setdefault((c["accn"], c["periode"]), []).append(c)
+        enfants: list[dict] = []
+        for s_ in [x for x in serie if x["origine"] == "publie"]:
+            groupe = par_depot_periode.get((s_["accn"], s_["periode"]), [])
+            parents_du_depot = {c["membre"]: c.get("parent") for c in groupe}
+            enfants.extend({**c, "origine": "publie"} for c in groupe
+                           if c["membre"] != s_["membre"] and _descend_de(c["membre"], s_["membre"], parents_du_depot))
+        serie_complete = serie + enfants
+
+        # ── Les douze mois glissants, calculés sur la série (jamais deux découpages mêlés) ────────
+        # Un terme absent est une INFORMATION nommée (l'émetteur ne publie pas cet axe au trimestre,
+        # ou la continuité n'est pas prouvée), jamais une erreur du relevé ni un silence.
+        douze_mois_non_etablis: list[dict] = []
+        if periode_ttm is not None and periode_ttm["id"] not in {c["periode"] for c in serie_complete}:
+            fin_ttm = _date.fromisoformat(periode_ttm["fin"])
+            par_membre: dict[str, list[dict]] = {}
+            for c in serie_complete:
+                if c.get("debut") and c.get("fin"):
+                    par_membre.setdefault(c["membre"], []).append(c)
+            for membre, cellules_m in sorted(par_membre.items()):
+                pts = [{"start": c["debut"], "end": c["fin"], "val": float(c["v"]),
+                        "form": forme_de.get(c.get("accn"), ""), "accn": c.get("accn") or "",
+                        "filed": depots_filed.get(c.get("accn"), ""), "_origine": c["origine"]}
+                       for c in cellules_m]
+                try:
+                    valeur, compo = douze_mois_glissants(pts, fin_ttm, f"{axe}:{ligne}:{membre}")
+                except AppariementInexecutable as e:
+                    if membre in ref.premier_niveau:
+                        douze_mois_non_etablis.append({"membre": membre, "motif": str(e)})
+                    continue
+                origines = {p["_origine"] for p in pts for k in compo
+                            if p["start"] == k["start"] and p["end"] == k["end"]}
+                accn_recent = max((k.get("accn") or "" for k in compo), key=lambda a: (depots_filed.get(a, ""), a))
+                modele = cellules_m[0]
+                d = {"axe": axe, "ligne": ligne, "membre": membre, "periode": periode_ttm["id"], "v": valeur,
+                     "concept": CONCEPT_DOUZE_MOIS, "accn": accn_recent, "libelle": modele.get("libelle"),
+                     "origine": "passage" if "passage" in origines else "publie"}
+                if modele.get("parent"):
+                    d["parent"] = modele["parent"]
+                serie_complete.append(d)
+        cellules_vue.extend(serie_complete)
+
+        # ── L'ancien découpage, tel que publié ────────────────────────────────────────────────
+        if len(chron.regimes) > 1:
+            anterieures.extend(_dedupliquer([c for c in cs if c["accn"] not in depots_ref], depots_filed))
+
+        # ── Complétude, point de départ, comparabilité ───────────────────────────────────────
         membres_par_periode: dict[str, set[str]] = {}
-        for cc in chronique.cellules:
-            if cc.membre in chronique.regime_reference.premier_niveau:
-                membres_par_periode.setdefault(cc.periode, set()).add(cc.membre)
-        periodes_completes = {
-            p for p, ms in membres_par_periode.items() if ms >= chronique.regime_reference.premier_niveau}
-        ligne_du_socle = {p: v for p, v in ligne_du_socle_brut.items() if p in periodes_completes}
-        refus_nouveaux.extend(verifier_invariant_agregat(chronique, ligne_du_socle))
+        for c in serie_complete:
+            if c["membre"] in ref.premier_niveau:
+                membres_par_periode.setdefault(c["periode"], set()).add(c["membre"])
+        incompletes = [
+            {"periode": p, "manquants": sorted(ref.premier_niveau - ms)}
+            for p, ms in sorted(membres_par_periode.items(), key=lambda kv: ordre_des_periodes(kv[0]))
+            if not ms >= ref.premier_niveau]
+        completes = sorted((p for p, ms in membres_par_periode.items() if ms >= ref.premier_niveau),
+                           key=ordre_des_periodes)
+        exercices = sorted({c["periode"] for c in cs if nature_de.get(c["periode"]) == "exercice"},
+                           key=ordre_des_periodes)
+        dernier_exercice = exercices[-1] if exercices else None
+        depart_manquant = (sorted(ref.premier_niveau - membres_par_periode.get(dernier_exercice, set()))
+                           if dernier_exercice else [])
+        ruptures = [t for t in chron.transitions if t.type in ("rupture", "meme_nom_contenu_change")]
+        chroniques.append({
+            "axe": axe, "ligne": ligne,
+            "regime_reference": {"premier_niveau": sorted(ref.premier_niveau), "depots": list(ref.depots)},
+            "regimes": [{"premier_niveau": sorted(r.premier_niveau), "depots": list(r.depots),
+                         "periodes": sorted(r.periodes, key=ordre_des_periodes)} for r in chron.regimes],
+            "transitions": [_transition_en_dict(t) for t in chron.transitions],
+            "comparable_depuis": (completes[0] if completes and ruptures else None),
+            "periodes_incompletes": incompletes,
+            "periode_annuelle_reference": next(
+                (p for p in reversed(completes) if nature_de.get(p) == "exercice"), None),
+            "dernier_exercice": dernier_exercice,
+            "point_de_depart_manquant": depart_manquant,
+            "douze_mois_non_etablis": douze_mois_non_etablis,
+        })
+        if len(chron.regimes) > 1:
+            anciens_membres = set().union(*(r.membres for r in chron.regimes[:-1]))
+            vus: set[str] = set()
+            for c in sorted(serie_complete, key=lambda c: ordre_des_periodes(c["periode"])):
+                m = c["membre"]
+                if m in anciens_membres or m in vus or c["origine"] != "publie" or c.get("accn") not in depots_ref:
+                    continue
+                if any(n["axe"] == axe and n["membre"] == m for n in membres_nouveaux):
+                    continue
+                vus.add(m)
+                membres_nouveaux.append({"axe": axe, "membre": m, "accn": c["accn"]})
+
+        # ── Garde (iv) : l'invariant de l'agrégat, sur la ligne qui DOIT boucler ────────────────
+        if ligne == LIGNE_RACCORD_OBLIGATOIRE:
+            ligne_du_totaux = {p: totaux[(ligne, p)] for p in completes if (ligne, p) in totaux}
+            pseudo = Chronique(axe, ref, chron.regimes, chron.transitions, [
+                CelluleChronique(axe, c["membre"], c["periode"], float(c["v"]), c["origine"])
+                for c in serie_complete if c["membre"] in ref.premier_niveau])
+            refus.extend(verifier_invariant_agregat(pseudo, ligne_du_totaux))
 
     return {
         **structure,
+        "vue": True,
         "cellules": cellules_vue,
-        "refus": list(structure.get("refus") or []) + refus_nouveaux,
+        "cellules_anterieures": anterieures,
+        "raccords": _raccords_de(cellules_vue, totaux),
+        "chroniques": chroniques,
+        "membres_nouveaux": membres_nouveaux,
+        "refus": list(structure.get("refus") or []) + refus,
     }
 
 

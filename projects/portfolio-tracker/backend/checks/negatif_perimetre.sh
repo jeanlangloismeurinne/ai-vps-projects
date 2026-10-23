@@ -33,9 +33,12 @@ mutations=(
 # [P9] borne MAX_MEMBRES_PARTITION ignorée — une recherche de partition SANS FIN serait tentée
 # (un blocage muet, #73) au lieu d'un refus nommé.
 "$SRC¦MAX_MEMBRES_PARTITION = 8¦MAX_MEMBRES_PARTITION = 999999¦[P9]"
-# [P11]/[P13] répartition par hypothèse : le montant du GROUPE n'est plus conservé — la valeur de
-# chaque nouveau membre est inventée au prorata SANS passer par le montant ancien.
-"$SRC¦            montant_groupe = sum(vals_periode[a] for a in groupe_ancien)¦            montant_groupe = 0.0¦[P11]"
+# [P5] scission (§7 bis) : réadmettre la scission parmi les additions — l'ancien total serait
+# recopié sur chaque nouvelle part, un historique fabriqué.
+"$SRC¦_ADDITIONS = (\"renommage\", \"regroupement\")¦_ADDITIONS = (\"renommage\", \"regroupement\", \"scission\")¦[P5]"
+# [P41] rupture jamais comblée : la valeur directe d'un membre PERTURBÉ (contenu changé) redevient
+# une continuité — l'exercice d'avant la ré-attribution serait servi comme publié.
+"$SRC¦            return None   # perturbé : cette valeur directe n'est PAS une continuité fiable¦            pass¦[P41]"
 # [P16]/[P17] invariant de l'agrégat : la tolérance de bouclage n'est plus appliquée — un écart
 # minime entre Σ premier niveau et la ligne du socle serait accepté sans jamais être nommé... et
 # RÉCIPROQUEMENT, retirer le contrôle entier fait disparaître l'ERREUR nommée attendue par [P17].
@@ -65,20 +68,39 @@ mutations=(
 "$SRC¦    noms = sorted(candidats)¦    return None, False\n    noms = sorted(candidats)¦[P29bis]"
 # [P30]/[P31] invariant de l'agrégat sur le cas RÉEL : retirer le passage de la chaîne (l'identité
 # triviale) casse la reconstruction de Data Center ET l'invariant qui en dépend.
-"$SRC¦    if not perturbe and membre_ref in vals_periode:¦    if False:¦[P30]"
+"$SRC¦    if membre_ref in vals_periode:¦    if False:¦[P30]"
 # [P32] garde de détention : `premier_niveau_de` cesse d'exclure les enfants dont le parent est
 # présent — un lecteur externe qui recopierait ce calcul passerait inaperçu du grep de détention.
 "$SRC¦    return frozenset(m for m in presents if parent_de.get(m) not in presents)¦    return frozenset(presents)¦[P32bis]"
-# [P33] vue_servie — déduplication : le dépôt le plus récent cesse de faire foi (min au lieu de
-# max) — le premier dépôt rencontré gagnerait, contre #133.
-"$SRC¦    return max(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦    return min(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦[P33bis]"
+# [P33] le découpage de RÉFÉRENCE cesse d'être celui du dépôt le plus récent (#133) : l'ancien
+# régime ferait foi.
+"$SRC¦    cellules = sorted(cellules, key=lambda c: (depots_filed.get(c.depot, \"\"), c.depot), reverse=True)¦    cellules = sorted(cellules, key=lambda c: (depots_filed.get(c.depot, \"\"), c.depot))¦[P33bis]"
+# [P30bis] le découpage de RÉFÉRENCE cesse d'être celui du dépôt le plus récent : l'ancien ferait foi,
+# et l'historique du découpage récent (Edge Computing) disparaîtrait.
+"$SRC¦    regime_ref = regimes[-1]¦    regime_ref = regimes[0]¦[P30bis]"
+# [P33quater] déduplication des proportions : le premier dépôt rencontré gagnerait (min au lieu de max).
+"$SRC¦    return max(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦    return min(cles, key=lambda c: (depots_filed.get(c[-1], \"\"), c[-1]))¦[P33quater]"
 # [P36] vue_servie — la garde (iv) cesse d'être bornée à `LIGNE_RACCORD_OBLIGATOIRE` : un résultat
 # ou un actif sectoriel qui laisse un reste non affecté (cas réel, jamais une faute de périmètre)
 # déclencherait un refus à tort.
-"$SRC¦        if c[\"ligne\"] == LIGNE_RACCORD_OBLIGATOIRE:¦        if True:¦[P36]"
-# [P35] vue_servie — le filtre de complétude disparaît : une période où un membre du régime de
-# référence n'a simplement AUCUNE valeur (pas encore établie) serait jugée comme si elle bouclait.
-"$SRC¦        periodes_completes = {¦        periodes_completes = set(ligne_du_socle_brut)\n        _ignore = {¦[P35]"
+"$SRC¦        if ligne == LIGNE_RACCORD_OBLIGATOIRE:¦        if True:¦[P36]"
+# [P35] le filtre de complétude disparaît : une période où un membre du découpage de référence n'a
+# AUCUNE valeur serait jugée contre le total comme si elle était complète.
+"$SRC¦            ligne_du_totaux = {p: totaux[(ligne, p)] for p in completes if (ligne, p) in totaux}¦            ligne_du_totaux = {p: v for (l, p), v in totaux.items() if l == ligne}¦[P35]"
+# [P35bis] une période incomplète cesse d'être NOMMÉE — elle serait tue.
+"$SRC¦        incompletes = [¦        incompletes = [] and [¦[P35bis]"
+# [P38] l'ancien découpage n'est plus servi : la liberté de le suivre ([S3b]) n'aurait plus de matière.
+"$SRC¦            anterieures.extend(_dedupliquer([c for c in cs if c[\"accn\"] not in depots_ref], depots_filed))¦            pass¦[P38]"
+# [P39] les douze mois ne sont plus calculés sur la série du découpage de référence.
+"$SRC¦        if periode_ttm is not None and periode_ttm[\"id\"] not in {c[\"periode\"] for c in serie_complete}:¦        if False:¦[P39]"
+# [P40ter] la garde (iv) sur la vue disparaît : une addition qui ne boucle pas passerait.
+"$SRC¦            refus.extend(verifier_invariant_agregat(pseudo, ligne_du_totaux))¦            pass¦[P40ter]"
+# [P41ter] le point de départ manquant au dernier exercice cesse d'être nommé.
+"$SRC¦        depart_manquant = (sorted(ref.premier_niveau - membres_par_periode.get(dernier_exercice, set()))¦        depart_manquant = [] and (sorted(ref.premier_niveau - membres_par_periode.get(dernier_exercice, set()))¦[P41ter]"
+# [P41quinquies] des douze mois non établis pour un membre de référence sont tus.
+"$SRC¦                        douze_mois_non_etablis.append({\"membre\": membre, \"motif\": str(e)})¦                        pass¦[P41quinquies]"
+# [P42] le détail ajouté ne se compare plus qu'entre dépôts CONSÉCUTIFS — le 10-K intercalé le masque.
+"$SRC¦              for i in range(len(depots_tries)) for j in range(i + 1, len(depots_tries))]¦              for i in range(len(depots_tries)) for j in range(i + 1, min(i + 2, len(depots_tries)))]¦[P42]"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

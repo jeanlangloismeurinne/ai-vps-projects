@@ -24,7 +24,7 @@ from app.knowledge.datation import constatee
 from app.knowledge.edgar_facts import _UA
 from app.knowledge.edgar_feed import EdgarFeedUnavailable, filing_url, identite_de_l_emetteur
 from app.knowledge.material_events import MaterialEventsUnavailable, _submissions
-from app.knowledge.perimetre import FilingMeta, identifier_jumeau_candidat, regime_a_change
+from app.knowledge.perimetre import FilingMeta, identifier_jumeau_candidat, regime_a_change, vue_servie
 from app.knowledge.service import ENTRIES_COURANTES, store_knowledge
 from app.knowledge.socle_comptes import charger_gabarit
 from app.knowledge.socle_feed import SocleIndisponible, assurer_socle
@@ -313,7 +313,8 @@ async def publier_ventilation(
     async with conn.transaction():
         stored = await store_knowledge(
             conn, ticker_id=ticker_id, entry_type="fact_financial",
-            content=rendre_ventilation(structure, raison_sociale=raison_sociale), source_type=SOURCE_TYPE,
+            content=rendre_ventilation(vue_servie(structure, socle), raison_sociale=raison_sociale),
+            source_type=SOURCE_TYPE,
             title=titre, content_structured=structure, tags=TAGS, lang="fr",
             source_url=filing_url(cik, depot_recent.accn),
             datation=constatee(date_du_fait=date.fromisoformat(fin_du_fait), date_du_document=date.fromisoformat(depot_recent.filed)),

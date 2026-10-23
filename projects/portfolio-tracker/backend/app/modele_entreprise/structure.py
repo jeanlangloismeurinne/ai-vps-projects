@@ -61,6 +61,26 @@ def _membres_nouveaux(matiere: Matiere) -> list[dict]:
     return (matiere.ventilation_structure or {}).get("membres_nouveaux") or []
 
 
+def _cellules_anterieures(matiere: Matiere) -> list[dict]:
+    """Le découpage ANTÉRIEUR tel que publié (`perimetre.vue_servie`) — l'architecte peut le suivre
+    (liberté de composition, 09 §1.1) ; [S3b] le signale au comité."""
+    return (matiere.ventilation_structure or {}).get("cellules_anterieures") or []
+
+
+def _chronique(matiere: Matiere, axe: str, ligne: str) -> Optional[dict]:
+    return next((c for c in (matiere.ventilation_structure or {}).get("chroniques") or []
+                 if c["axe"] == axe and c["ligne"] == ligne), None)
+
+
+def _premier_niveau_par_periode(cellules: list[dict]) -> dict[str, set[str]]:
+    """Le PREMIER NIVEAU publié à chaque période — détenteur unique `perimetre.premier_niveau_de`
+    (#46), jamais recopié en dur ici (un enfant emboîté n'est pas un membre à couvrir isolément)."""
+    presents: dict[str, dict[str, Optional[str]]] = {}
+    for c in cellules:
+        presents.setdefault(c["periode"], {})[c["membre"]] = c.get("parent")
+    return {p: set(premier_niveau_de(parents.keys(), parents)) for p, parents in presents.items()}
+
+
 def _cle_tri_periode(periode: str) -> tuple:
     """DÉLÉGUÉE au détenteur unique `perimetre.ordre_des_periodes` (lot P1, §2.5) — l'ancienne copie
     triait sur la PREMIÈRE date rencontrée (le DÉBUT d'un cumul) ; ce détenteur trie sur la FIN."""
@@ -76,7 +96,7 @@ def _s1(arch: Architecture, matiere: Matiere) -> Optional[str]:
             return (f"[S1] la ventilation du titre n'a aucun axe (statut non ventilé) : aucun bloc "
                     f"publié n'est admis, {[b.id for b in blocs_publies]} en citent un")
         return None
-    adresses = {(c["axe"], c["membre"]) for c in _cellules_vent(matiere)}
+    adresses = {(c["axe"], c["membre"]) for c in _cellules_vent(matiere) + _cellules_anterieures(matiere)}
     adresses |= {(m["axe"], m["membre"]) for m in _membres_nouveaux(matiere)}
     motifs: list[str] = []
     for b in blocs_publies:
@@ -99,8 +119,14 @@ def _s1(arch: Architecture, matiere: Matiere) -> Optional[str]:
 def _s2_s3b(arch: Architecture, ref: ReferentielModele, matiere: Matiere,
            par_bloc: dict[str, Bloc]) -> tuple[Optional[str], list[str]]:
     """Rend `(refus, signaux)`. Couverture au PREMIER NIVEAU — l'emboîtement sous chaque bloc publié
-    qui a des enfants-blocs n'est PAS rejoué ici (simplification assumée du lot : le raccord chiffré
-    de l'emboîtement est de toute façon M5 ; nommée dans le rapport de Sonnet à Opus)."""
+    qui a des enfants-blocs n'est PAS rejoué ici (le raccord chiffré de l'emboîtement est M5).
+
+    Lot P1 (§3, §7 bis) : la ventilation lue est la VUE SERVIE. Si les blocs suivent le découpage de
+    RÉFÉRENCE (le plus récent publié), la période de référence est sa période ANNUELLE de référence
+    (`chroniques[…].periode_annuelle_reference` : le dernier exercice complet, publié ou par addition
+    vérifiée) — jamais un cumul ni des douze mois calculés. S'ils suivent un découpage ANTÉRIEUR (tel
+    que publié), la période de référence est la plus récente de ce découpage qui les couvre, et
+    [S3b] le signale au comité. Mêler les deux est un découpage mixte, refusé."""
     blocs_publies = [b for b in arch.blocs if isinstance(b.rattachement, RattachementPublie)]
     premier_niveau_publies = [
         b for b in blocs_publies if est_premier_niveau_publie(b, par_bloc, matiere.ventilation_structure)]
@@ -110,62 +136,58 @@ def _s2_s3b(arch: Architecture, ref: ReferentielModele, matiere: Matiere,
     if len(axes) != 1:
         return None, []  # [S3] le dira — [S2] ne peut pas choisir un axe de référence
     axe = next(iter(axes))
-
-    cellules_ca = [c for c in _cellules_vent(matiere) if c["axe"] == axe and c["ligne"] == "chiffre_affaires"]
     membres_vises = {m for b in premier_niveau_publies for m in b.rattachement.membres}
-    # Le PREMIER NIVEAU de la ventilation à une période donnée : les membres dont le parent n'est
-    # pas lui-même présent à cette période (même logique que `ventilation._premier_niveau_de`,
-    # jamais recopiée en dur — un enfant emboîté, Compute sous Data Center, n'est pas un membre à
-    # couvrir isolément).
-    presents_par_periode: dict[str, dict[str, Optional[str]]] = {}
-    for c in cellules_ca:
-        presents_par_periode.setdefault(c["periode"], {})[c["membre"]] = c.get("parent")
-    # Détenteur unique `perimetre.premier_niveau_de` (#46) — même ligne que `ventilation.relever`
-    # (deux occurrences), jamais recopiée en dur ici.
-    par_periode: dict[str, set[str]] = {
-        periode: set(premier_niveau_de(parents.keys(), parents))
-        for periode, parents in presents_par_periode.items()
-    }
 
-    couvrantes = [p for p, membres in par_periode.items() if membres_vises <= membres]
-    if not couvrantes:
+    def _ca(cellules: list[dict]) -> list[dict]:
+        return [c for c in cellules if c["axe"] == axe and c["ligne"] == "chiffre_affaires"]
+
+    cellules_ref = _ca(_cellules_vent(matiere))
+    cellules_ant = _ca(_cellules_anterieures(matiere))
+    par_periode_ref = _premier_niveau_par_periode(cellules_ref)
+    par_periode_ant = _premier_niveau_par_periode(cellules_ant)
+    chron = _chronique(matiere, axe, "chiffre_affaires")
+
+    couvrantes_ref = [p for p, ms in par_periode_ref.items() if membres_vises <= ms]
+    couvrantes_ant = [p for p, ms in par_periode_ant.items() if membres_vises <= ms]
+    signaux: list[str] = []
+    if couvrantes_ref:
+        cellules_ca, par_periode = cellules_ref, par_periode_ref
+        annuelle = chron.get("periode_annuelle_reference") if chron else None
+        reference = annuelle if annuelle in couvrantes_ref else max(couvrantes_ref, key=_cle_tri_periode)
+    elif couvrantes_ant:
+        cellules_ca, par_periode = cellules_ant, par_periode_ant
+        reference = max(couvrantes_ant, key=_cle_tri_periode)
+        recents = (chron or {}).get("regime_reference", {}).get("premier_niveau") or sorted(
+            {m for ms in par_periode_ref.values() for m in ms})
+        signaux.append(
+            f"[S3b] l'architecture suit un découpage ANTÉRIEUR de l'axe `{axe}` (période de référence "
+            f"`{reference}`, tel que publié), pas le découpage de référence — le plus récent publié : "
+            f"{sorted(recents)} — le titre a redécoupé ; l'historique du découpage le plus récent est "
+            "dans la ventilation (publié ou par addition vérifiée)")
+    else:
         return (f"[S2] découpage mixte : aucune période de l'axe `{axe}` (ligne chiffre_affaires) ne "
-                f"porte une cellule pour chacun des membres visés {sorted(membres_vises)}"), []
-    reference = max(couvrantes, key=_cle_tri_periode)
+                f"porte une cellule pour chacun des membres visés {sorted(membres_vises)}, ni dans le "
+                f"découpage le plus récent ni dans un découpage antérieur"), []
 
-    membres_periode = par_periode[reference]
-    membres_hors_blocs = membres_periode - membres_vises
+    membres_hors_blocs = par_periode[reference] - membres_vises
     a_un_reste = any(
         isinstance(b.rattachement, RattachementAgrege) and _ligne_somme(arch, ref, b) is not None
         for b in arch.blocs)
-    signaux: list[str] = []
     if membres_hors_blocs:
+        montants = {m: next(c["v"] for c in cellules_ca
+                            if c["periode"] == reference and c["membre"] == m)
+                   for m in membres_hors_blocs}
         if not a_un_reste:
-            montants = {m: next(c["v"] for c in cellules_ca
-                                if c["periode"] == reference and c["membre"] == m)
-                       for m in membres_hors_blocs}
-            total = sum(c["v"] for c in cellules_ca if c["periode"] == reference)
+            total = sum(c["v"] for c in cellules_ca
+                        if c["periode"] == reference and c["membre"] in par_periode[reference])
             part = sum(montants.values()) / total * 100 if total else 0.0
             return (f"[S2] à la période de référence `{reference}` (axe `{axe}`), les membres "
                     f"{sorted(membres_hors_blocs)} ({montants}) ne sont couverts par aucun bloc "
                     f"publié et aucun bloc estimé « reste » rattaché (agrege) n'existe — "
-                    f"{part:.1f} % du total non couvert"), []
-        montants = {m: next(c["v"] for c in cellules_ca
-                            if c["periode"] == reference and c["membre"] == m)
-                   for m in membres_hors_blocs}
+                    f"{part:.1f} % du total non couvert"), signaux
         signaux.append(
             f"[S2] le « reste » couvre les membres {sorted(membres_hors_blocs)} à `{reference}` "
             f"(axe `{axe}`), montants {montants}")
-
-    # [S3b] — la période de référence n'est pas la plus récente publiée sur cet axe.
-    toutes_periodes_axe = {c["periode"] for c in _cellules_vent(matiere) if c["axe"] == axe}
-    plus_recente = max(toutes_periodes_axe, key=_cle_tri_periode) if toutes_periodes_axe else reference
-    if plus_recente != reference:
-        nouveaux = [m["membre"] for m in _membres_nouveaux(matiere) if m["axe"] == axe]
-        signaux.append(
-            f"[S3b] la période de référence choisie (`{reference}`) n'est pas la plus récente "
-            f"publiée sur l'axe `{axe}` (`{plus_recente}`) — le titre a redécoupé ; membres du "
-            f"découpage le plus récent : {sorted(nouveaux)}")
     return None, signaux
 
 

@@ -53,14 +53,17 @@ def poser_maille(blocs_proposes: list[BlocPropose]) -> list[Bloc]:
 
 
 def parent_de_membre(ventilation_structure: Optional[dict], membre: str) -> Optional[str]:
-    """Le parent XBRL d'UN membre, tel que relevé dans la hiérarchie de la ventilation (`parent`
-    porté par les cellules). `None` si le membre est de premier niveau, ou si aucune ventilation
-    n'existe (`secteur_unique`/`sans_ventilation`). DÉTENTEUR UNIQUE (#46)."""
+    """Le parent XBRL d'UN membre, dans la hiérarchie DU DÉCOUPAGE qui le publie (lot P1 §3) : celle
+    du découpage de référence de la vue servie (`cellules`) si le membre y figure, sinon celle du
+    découpage antérieur (`cellules_anterieures`) — jamais une hiérarchie fusionnée entre dépôts.
+    `None` si le membre est de premier niveau, ou si aucune ventilation n'existe
+    (`secteur_unique`/`sans_ventilation`). DÉTENTEUR UNIQUE (#46)."""
     if ventilation_structure is None:
         return None
-    for c in (ventilation_structure.get("cellules") or []):
-        if c.get("membre") == membre and c.get("parent"):
-            return c["parent"]
+    for source in ("cellules", "cellules_anterieures"):
+        cellules = [c for c in (ventilation_structure.get(source) or []) if c.get("membre") == membre]
+        if cellules:
+            return next((c["parent"] for c in cellules if c.get("parent")), None)
     return None
 
 
