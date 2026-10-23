@@ -83,6 +83,7 @@ from app.contracts.formule_grammaire import (
     rendre_dimension,
 )
 from app.knowledge.edgar_facts import (
+    FORMES_RAPPORT_PERIODIQUE,
     duree_jours,
     point_pour_periode,
     est_point_de_flux,
@@ -379,8 +380,9 @@ def _choisir_terme(role: str, groupe: list[dict[str, Any]], *, concept: str, fin
     # autrement — politique déjà arbitrée de `_preferer` (#9 : « un 10-K/A sur l'exercice ne remplace
     # pas le 10-K d'origine »). Un RETRAITEMENT (§2.4) se cherche donc seulement parmi les dépôts
     # RÉGULIERS (un comparatif réécrit dans le 10-K/10-Q SUIVANT, jamais par un correctif formel) ;
-    # si toutes les valeurs différentes ne viennent que d'un amendement, l'origine l'emporte.
-    reguliers = [p for p in groupe if not str(p.get("form") or "").endswith("/A")]
+    # si toutes les valeurs différentes ne viennent que d'un amendement, l'origine l'emporte. Un dépôt
+    # qui n'est pas un rapport financier périodique (DEF 14A, prospectus…) ne retraite rien non plus.
+    reguliers = [p for p in groupe if str(p.get("form") or "") in FORMES_RAPPORT_PERIODIQUE]
     candidats = reguliers if reguliers else groupe
     if len({round(float(p["val"]), 6) for p in candidats}) == 1:
         return _preferer(groupe)

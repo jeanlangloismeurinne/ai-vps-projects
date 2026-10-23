@@ -689,6 +689,25 @@ try:
           abs(_fa2.structure["value"] - (-1_223_033_000.0)) < 1.0, f"→ {_fa2.structure['value']}")
 except Exception as e:
     check("§9 exercice amendé s'exécute", False, repr(e)[:200])
+# Un document qui n'est PAS un rapport financier périodique ne retraite rien. Copié du réel (RVMD,
+# `NetIncomeLoss`, publié en prod le 2026-10-23, socle #1771) : le document de convocation (DEF 14A,
+# tableau rémunération/performance) recopie le résultat 2025 ARRONDI (−1 131,000 M$ contre
+# −1 131,301 M$ au 10-K) et, déposé après le 10-K, était pris pour un retraitement. Toute société
+# américaine publie ce tableau depuis 2022 : la cause n'est pas propre à RVMD.
+_NI_RVMD = [
+    _p("2025-01-01", "2025-06-30", -461_203_000.0, "10-Q", "Q2", "0000950170-25-104022", "2025-08-06"),
+    _p("2025-01-01", "2025-12-31", -1_131_301_000.0, "10-K", "FY", "0001193125-26-071563", "2026-02-25"),
+    _p("2025-01-01", "2025-12-31", -1_131_000_000.0, "DEF 14A", "FY", "0001193125-26-182453", "2026-04-27"),
+    _p("2026-01-01", "2026-06-30", -1_098_187_000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+    _p("2025-01-01", "2025-06-30", -461_203_000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+]
+try:
+    _fp = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _NI_RVMD})
+    check("§9 le chiffre arrondi d'un document de convocation (DEF 14A) ne retraite pas l'exercice : "
+          "−1 131,301 − 1 098,187 + 461,203 = −1 768,285 M$",
+          abs(_fp.structure["value"] - (-1_768_285_000.0)) < 1.0, f"→ {_fp.structure['value']}")
+except Exception as e:
+    check("§9 exercice recopié par un document non financier s'exécute", False, repr(e)[:200])
 
 
 # ── §10 LA DEMANDE PRÉCISE LA PÉRIODE (#113, arbitrage du 2026-10-04) ──────────────────────────────

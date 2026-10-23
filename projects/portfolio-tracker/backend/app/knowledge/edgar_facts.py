@@ -43,6 +43,12 @@ _COMPANYFACTS = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 _COMPANYFACTS_TIMEOUT_S = 60.0
 # formes annuelles acceptées (un 10-K, éventuellement amendé). Les 10-Q sont trimestriels → écartés.
 _ANNUAL_FORMS = {"10-K", "10-K/A", "20-F", "20-F/A"}
+# Les RAPPORTS FINANCIERS PÉRIODIQUES d'origine (sans amendement) — les seuls dépôts dont un chiffre
+# différent peut RETRAITER un chiffre antérieur. Un document de convocation (DEF 14A), un prospectus
+# ou un 8-K recopie des comptes (souvent arrondis) sans les republier : mesuré sur RVMD le 2026-10-23,
+# le tableau rémunération/performance du DEF 14A (−1 131,000 M$, déposé après le 10-K à −1 131,301 M$)
+# était pris pour un retraitement des douze mois glissants.
+FORMES_RAPPORT_PERIODIQUE = frozenset({"10-K", "10-Q", "10-KT", "10-QT", "20-F", "40-F"})
 _CIK_RE = re.compile(r"/data/(\d+)[/-]")
 
 

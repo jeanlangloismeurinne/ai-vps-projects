@@ -18,6 +18,7 @@ import asyncio
 import os
 import sys
 
+from app.db.database import close_pool, get_db_session, init_pool
 from app.knowledge.edgar_facts import fetch_company_facts
 from app.knowledge.edgar_feed import resolve_identite
 from app.knowledge.socle_comptes import charger_gabarit, charger_reclassements, reconstituer, structure_du_socle
@@ -72,18 +73,20 @@ async def un(ticker: str, *, publier: bool) -> int:
     print(f"\n{_bilan(ticker, v, vue)}")
 
     if publier:
-        import asyncpg
         url = os.environ.get("DATABASE_URL") or ""
         if "@" not in url:
             print("  --publier ÉCHEC : DATABASE_URL absente — réservé à Opus, après vérification de la "
                   "sortie à blanc ci-dessus")
             return 1
-        conn = await asyncpg.connect(url.replace("postgresql+asyncpg://", "postgresql://"))
+        # ⚠️ Connexion ouverte COMME LA PRODUCTION (pool + codecs JSONB) : un `asyncpg.connect()` nu
+        # rendait `content_structured` en chaîne et `publier_socle` plantait (2026-10-23, 1ʳᵉ publication).
+        await init_pool(url)
         try:
-            res = await assurer_ventilation(conn, ticker)
+            async with get_db_session() as conn:
+                res = await assurer_ventilation(conn, ticker)
             print(f"  --publier : statut={res.statut} entry_id={res.entry_id} motif={res.motif}")
         finally:
-            await conn.close()
+            await close_pool()
 
     return 0 if v.statut in ("ventilee", "secteur_unique", "sans_ventilation") else 1
 

@@ -142,6 +142,9 @@ mutations=(
 "$SRC¦    flux = {c for c, _ in references if cadrage(c) == \"flux\"}¦    flux = {c for c, _ in references}  # mutation: le cadrage ignoré¦seul le FLUX glisse"
 # L'exact réécrit garde son statut : « recopié tel quel » mentirait.
 "$SRC¦        statut=\"approximation\", expression=expression, deterministe=True,¦        expression=expression, deterministe=True,  # mutation: reste exact¦agrégat déterministe \`[ttm]\` et le DIT"
+# Tout dépôt non amendé redevient candidat au retraitement : le résultat ARRONDI du document de
+# convocation (DEF 14A, déposé après le 10-K) remplace l'exercice publié (cas réel RVMD du 2026-10-23).
+"$SRC¦    reguliers = [p for p in groupe if str(p.get(\"form\") or \"\") in FORMES_RAPPORT_PERIODIQUE]¦    reguliers = [p for p in groupe if not str(p.get(\"form\") or \"\").endswith(\"/A\")]  # mutation¦document de convocation (DEF 14A) ne retraite pas"
 )
 
 passes=0; ratees=0
