@@ -35,7 +35,9 @@ la suite, ou « aucun », et ce qui rend la réussite incertaine). RVMD : les es
 **DIAGNOSTIC du 2026-10-23** (journal, ligne « B4d (diagnostic) », `mesures/2026-10-23/banc-modeles/`) : Vera
 Rubin = capacité du modèle (V4-Pro réussit, même anonymisé) ; IA souveraine, Vera CPU et le « 8 programmes » RVMD =
 information (me_7 mal formée, comptage faux, pièces invisibles à l'architecte) ; [S15] contournable par une
-plateforme inventée. Correctifs proposés à l'utilisateur, non construits.
+plateforme inventée. **Arbitré** : V4-Pro en architecte (accord sous réserve de qualité, mesurée) ; extension
+d'indication = ligne propre, critère « faut-il des données de marché et de concurrence ad hoc ? » (#143). Non construit.
+**⚠ Compte DeepInfra SUSPENDU** depuis le banc (moyen de paiement absent) : AUCUN appel modèle possible, prod comprise.
 **PROCHAIN PAS** : (1) poser ces deux questions à l'utilisateur ; (2) **B4f** `16-lot-B4f-explorateur.md` ;
 (3) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises) — un succès s'y juge À LA LECTURE.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`

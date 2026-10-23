@@ -3658,3 +3658,24 @@ révise la Q1 du 2026-10-22).
 jumeau) dans `check_ventilation_publiee.py` [V13]-[V19] + `negatif_ventilation_publiee.sh` (19/19) ;
 [S2]/[S3b] dans `check_architecte.py` + `negatif_architecte.sh` (30/30).
 
+
+### #143 — une ligne propre se décide par le marché qu'il faudra estimer, pas par le nom du produit (arbitrage du 2026-10-23)
+
+**Logique de fonds.** Un analyste ouvre une ligne de son modèle quand elle exige SES PROPRES hypothèses :
+une taille de marché, une concurrence, une part de marché, une probabilité de succès qu'il faudra aller
+chercher par une collecte ad hoc. Une extension d'indication d'un médicament approuvé (même molécule,
+nouvelle maladie ou nouvelle ligne de traitement) est un NOUVEAU MARCHÉ — patients, concurrents, prix,
+essai à l'issue incertaine — donc une ligne nouvelle. À l'inverse, la génération suivante d'un produit déjà
+vendu, qui remplace l'actuelle auprès des MÊMES clients et face aux MÊMES concurrents, se rattache à
+l'activité qui la porte : ses chiffres sortent des hypothèses de cette activité.
+
+**Règle.** Le critère unique d'une ligne propre (programme ou extension) est : **faudra-t-il aller
+chercher des données de marché et de concurrence ad hoc pour l'estimer ?** Oui → ligne propre (même
+molécule, même marque, même usine) ; non → rattachée à l'activité dont elle prolonge le marché. Cela
+remplace la formule « génération suivante → rattachée » du prompt de l'architecte, qui laissait en conflit
+deux règles (génération suivante / réussite incertaine) sur les extensions d'indication (RVMD : RASolute
+303/304, RASolve 301 — tantôt rattachées, tantôt une ligne, mesuré le 2026-10-23, `mesures/2026-10-23/
+banc-modeles/`). Conséquence sur NVDA : Vera Rubin (même marché que Data Center) se rattache ; Vera CPU
+(marché des processeurs, TAM annoncé, concurrents propres) appelle une ligne propre.
+
+**Statut.** Arbitrage acquis ; non encore construit (prompt de l'architecte, forme de `me_7`).
