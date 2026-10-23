@@ -1,0 +1,15 @@
+{
+  "ticker": "NVDA",
+  "modele": "anthropic/claude-sonnet-5",
+  "anon": false,
+  "etat": "refusee",
+  "motif": "[CONTRAT] la sortie ne respecte pas le contrat de l'architecture : Sortie non-JSON (Expecting value: line 1 column 1 (char 0)). Réponds UNIQUEMENT avec l'objet JSON du contrat, sans texte.",
+  "tokens_in": 81642,
+  "tokens_out": 32768,
+  "sorties": [
+    [
+      "",
+      "[CONTRAT] la sortie ne respecte pas le contrat de l'architecture : Sortie non-JSON (Expecting value: line 1 column 1 (char 0)). Réponds UNIQUEMENT avec l'objet JSON du contrat, sans texte."
+    ]
+  ]
+}

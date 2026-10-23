@@ -1,0 +1,121 @@
+
+### DeepSeek-V4-Flash-0731_NVDA_anon0_r1 — acceptee  (in 29090, out 7451)
+   · l'architecture Vera Rubin                     → bloc       programme_vera_rubin         [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · le processeur Vera CPU                        → bloc       programme_vera_cpu           [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · l'IA souveraine                               → bloc       programme_ia_souveraine      [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · la robotique et le physical AI                → bloc       programme_robotique          [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · l'acquisition de Hugging Face                 → extension  extension_hugging_face       [extension_annoncee] Acquisition annoncée, non conclue : activité annoncée, hors formules.
+   ▪ plateforme programmes_amont : 1 non nommé(s) — Le dossier compte 5 programmes, 4 nommés individuellement — l'écart (1 programme non nommé) est regroupé en plateforme.
+
+### DeepSeek-V4-Flash-0731_NVDA_anon1_r1 — acceptee  (in 64388, out 11704)
+   · le processeur Kestrel CPU                     → bloc       programme_kestrel_cpu        [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · l'IA souveraine                               → bloc       programme_ia_souveraine      [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · la robotique et le physical AI                → bloc       programme_robotique          [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · l'acquisition de OpenLattice                  → extension  extension_openlattice        [extension_annoncee] Acquisition annoncée, non conclue : devient une activité annoncée.
+   ▪ plateforme programmes_amont : 1 non nommé(s) — Un programme non nommé individuellement par `me_7` (le cinquième, non détaillé) — regroupé en plateforme.
+
+### DeepSeek-V4-Flash-0731_RVMD_anon0_r1 — refusee  (in 80063, out 23436)
+   MOTIF : [S14] l'entrée `daraxonrasib` (traitement `bloc`) désigne le bloc `rasonque`, qui n'est pas SA ligne propre (plateforme : False, programmes : []) — un programme nommé a un bloc à lui, dont `programmes` porte son nom ; une plateforme ne regroupe que des programmes NON nommés
+   (dernière sortie refusée :)
+   · daraxonrasib                                  → bloc       rasonque                     [metier_actuel] Produit approuvé, activité commerciale principale — sa propre ligne.
+   · zoldonrasib                                   → bloc       zoldonrasib                  [en_developpement] Nommé individuellement par me_7, Phase 3, réussite incertaine — sa propre ligne.
+   · elironrasib                                   → bloc       elironrasib                  [en_developpement] Nommé individuellement par me_7, Phase 3 à initier, réussite incertaine — sa propre ligne.
+   · RMC-5127                                      → bloc       rmc_5127                     [en_developpement] Nommé individuellement par me_7, Phase 1, réussite incertaine — sa propre ligne.
+   · RM-055                                        → bloc       rm_055                       [en_developpement] Nommé individuellement par me_7, nouvelle classe, Phase 1 à initier, réussite incertaine — sa propre ligne.
+   · RMC-0708                                      → bloc       rmc_0708                     [en_developpement] Nommé individuellement par me_7, stade préclinique, réussite incertaine — sa propre ligne.
+   · RMC-8839                                      → bloc       rmc_8839                     [en_developpement] Nommé individuellement par me_7, stade préclinique, réussite incertaine — sa propre ligne.
+   · RASolute 303                                  → bloc       rasolute_303                 [en_developpement] Nommé individuellement par me_7, extension d'indication, réussite incertaine — sa propre ligne.
+   · RASolute 304                                  → bloc       rasolute_304                 [en_developpement] Nommé individuellement par me_7, extension d'indication, réussite incertaine — sa propre ligne.
+   · RASolve 301                                   → bloc       rasolve_301                  [en_developpement] Nommé individuellement par me_7, extension d'indication, réussite incertaine — sa propre ligne.
+
+### DeepSeek-V4-Flash-0731_RVMD_anon1_r1 — refusee  (in 78083, out 19279)
+   MOTIF : [S14] l'entrée `MTX-305` (traitement `rattache`) désigne le bloc `programmes_precliniques` de statut `en_developpement`, attendu `metier_actuel` — `rattache` ne vaut que pour une GÉNÉRATION SUIVANTE d'un produit déjà vendu, vers le bloc `metier_actuel` qui le vend ; un programme NOMMÉ dont la réussite est incertaine a SA ligne (traitement `bloc`) — une plateforme ne regroupe que des programmes NON nommés ; [S14] l'entrée `MTX-306` (traitement `rattache`) désigne le bloc `programmes_precliniques`
+   (dernière sortie refusée :)
+   · velotrasib (VELTRIQ, approuvé, en extension v → rattache   veltriq                      [metier_actuel] Produit approuvé, les extensions sont des générations suivantes rattachées à l'activité principale.
+   · corvitasib                                    → bloc       corvitasib                   [en_developpement] Programme nommé individuellement, phase 3, réussite incertaine.
+   · amberasib                                     → bloc       amberasib                    [en_developpement] Programme nommé individuellement, phase 3 à initier, réussite incertaine.
+   · MTX-204                                       → bloc       mtx_204                      [en_developpement] Programme nommé individuellement, phase 1, réussite incertaine.
+   · MTX-407                                       → bloc       mtx_407                      [en_developpement] Programme nommé individuellement, nouvelle classe, phase 1 à initier, réussite incertaine.
+   · MTX-305                                       → rattache   programmes_precliniques      [en_developpement] Programme préclinique, non détaillé individuellement, regroupé en plateforme.
+   · MTX-306                                       → rattache   programmes_precliniques      [en_developpement] Programme préclinique, non détaillé individuellement, regroupé en plateforme.
+   ▪ plateforme veltriq_extensions : 3 non nommé(s) — Extensions d'indication de VELTRIQ, nommées par me_7 comme programmes en développement (MERIDIAN-P 303, 304, MERIDIAN-L 
+   ▪ plateforme programmes_precliniques : 2 non nommé(s) — Programmes précliniques nommés (MTX-305, MTX-306) mais non détaillés individuellement, regroupés en plateforme.
+
+### DeepSeek-V4-Pro-0813_NVDA_anon0_r1 — refusee  (in 137056, out 19683)
+   MOTIF : [S14] l'entrée `l'IA souveraine` (traitement `bloc`) désigne le bloc `programme_ia_souveraine`, qui n'est pas SA ligne propre (plateforme : False, programmes : []) — un programme nommé a un bloc à lui, dont `programmes` porte son nom ; une plateforme ne regroupe que des programmes NON nommés ; [S14] l'entrée `l'acquisition de Hugging Face` (traitement `bloc`) désigne le bloc `programme_hugging_face`, qui n'est pas SA ligne propre (plateforme : False, programmes : []) — un programme nommé a un bl
+   (dernière sortie refusée :)
+   · l'architecture Vera Rubin                     → rattache   data_center                  [metier_actuel] Génération suivante du Data Center, en production et en expéditions depuis le T3 FY2027 — rattachée à l'activi
+   · le processeur Vera CPU                        → extension  extension_vera_cpu           [extension_annoncee] Ouvre un TAM de 200 000 M$ annoncé par la direction — devient une activité annoncée.
+   · l'IA souveraine                               → bloc       programme_ia_souveraine      [extension_annoncee] Nommé individuellement par me_7, déploiements annoncés — sa propre ligne.
+   · la robotique et le physical AI                → bloc       programme_robotique          [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · l'acquisition de Hugging Face                 → bloc       programme_hugging_face       [extension_annoncee] Acquisition annoncée, non conclue — bloc extension_annoncee.
+
+### DeepSeek-V4-Pro-0813_NVDA_anon1_r1 — acceptee  (in 29216, out 4999)
+   · IA souveraine                                 → bloc       programme_ia_souveraine      [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · robotique et le physical AI                   → bloc       programme_robotique_physical [en_developpement] Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne.
+   · architecture Kestrel                          → rattache   data_center                  [metier_actuel] Génération suivante d'un produit déjà vendu, rattachée à l'activité Data Center qui la porte.
+   · Kestrel CPU                                   → extension  extension_kestrel_cpu        [extension_annoncee] Activité annoncée par la direction, non encore vendue : extension annoncée.
+   · OpenLattice                                   → extension  extension_openlattice        [extension_annoncee] Acquisition annoncée, non conclue : extension annoncée.
+
+### DeepSeek-V4-Pro-0813_RVMD_anon0_r1 — acceptee  (in 21553, out 5477)
+   · daraxonrasib                                  → rattache   rasonque                     [metier_actuel] Daraxonrasib est approuvé et commercialisé ; ses extensions d'indication sont rattachées à l'activité qui le p
+   · zoldonrasib                                   → bloc       zoldonrasib                  [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · elironrasib                                   → bloc       elironrasib                  [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · RMC-5127                                      → bloc       rmc_5127                     [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · RM-055                                        → bloc       rm_055                       [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · RMC-0708                                      → hors_modele None                         [] Cité comme préclinique/développement par me_7 sans détail individuel ; regroupé dans la plateforme préclinique
+   · RMC-8839                                      → hors_modele None                         [] Cité comme préclinique/développement par me_7 sans détail individuel ; regroupé dans la plateforme préclinique
+   ▪ plateforme programmes_precliniques : 2 non nommé(s) — RMC-0708 et RMC-8839 sont cités comme préclinique/développement par me_7 sans détail individuel ; regroupés en plateform
+
+### DeepSeek-V4-Pro-0813_RVMD_anon1_r1 — refusee  (in 49010, out 11703)
+   MOTIF : [S15] l'inventaire des programmes (7 nommé(s)) et les plateformes (0 non nommé(s)) couvrent 7 programme(s), moins que le chiffre clé `nombre_de_programmes` = 8 de `me_7` — un programme que le dossier compte sans le nommer va dans un bloc `plateforme` (`nombre_de_programmes_non_nommes`), jamais sous un nom inventé
+   (dernière sortie refusée :)
+   · velotrasib                                    → rattache   veltriq                      [metier_actuel] Génération suivante du produit déjà approuvé et commercialisé ; les extensions d'indication sont rattachées à 
+   · corvitasib                                    → bloc       programme_corvitasib         [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · amberasib                                     → bloc       programme_amberasib          [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · MTX-204                                       → bloc       programme_mtx204             [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · MTX-407                                       → bloc       programme_mtx407             [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · MTX-305                                       → bloc       programme_mtx305             [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+   · MTX-306                                       → bloc       programme_mtx306             [en_developpement] Nommé individuellement par me_7, réussite incertaine : sa propre ligne.
+
+### GLM-5.3_NVDA_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### GLM-5.3_RVMD_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### GLM-5.3_RVMD_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Kimi-K3_NVDA_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Kimi-K3_NVDA_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Kimi-K3_RVMD_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Kimi-K3_RVMD_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Qwen3.8-Max_NVDA_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Qwen3.8-Max_NVDA_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Qwen3.8-Max_RVMD_anon0_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### Qwen3.8-Max_RVMD_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque
+
+### claude-sonnet-5_NVDA_anon0_r1 — refusee  (in 81642, out 32768)
+   MOTIF : [CONTRAT] la sortie ne respecte pas le contrat de l'architecture : Sortie non-JSON (Expecting value: line 1 column 1 (char 0)). Réponds UNIQUEMENT avec l'objet JSON du contrat, sans texte.
+
+### claude-sonnet-5_RVMD_anon0_r1 — refusee  (in 59426, out 32768)
+   MOTIF : [CONTRAT] la sortie ne respecte pas le contrat de l'architecture : Sortie non-JSON (Expecting value: line 1 column 1 (char 0)). Réponds UNIQUEMENT avec l'objet JSON du contrat, sans texte.
+
+### claude-sonnet-5_RVMD_anon1_r1 — erreur  (in None, out None)
+   MOTIF : RuntimeError: DeepInfra a retourné une erreur 402 — l'appel n'a pas abouti, tu peux relancer sans risque

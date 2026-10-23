@@ -1,0 +1,7 @@
+{
+  "ticker": "RVMD",
+  "modele": "anthropic/claude-sonnet-5",
+  "anon": true,
+  "etat": "erreur",
+  "motif": "RuntimeError: DeepInfra a retourné une erreur 402 — l'appel n'a pas abouti, tu peux relancer sans risque"
+}

@@ -1,0 +1,7 @@
+{
+  "ticker": "NVDA",
+  "modele": "Qwen/Qwen3.8-Max",
+  "anon": true,
+  "etat": "erreur",
+  "motif": "RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque"
+}

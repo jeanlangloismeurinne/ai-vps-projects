@@ -1,0 +1,7 @@
+{
+  "ticker": "NVDA",
+  "modele": "moonshotai/Kimi-K3",
+  "anon": false,
+  "etat": "erreur",
+  "motif": "RuntimeError: DeepInfra n'a pas répondu dans le délai imparti — tu peux relancer sans risque"
+}

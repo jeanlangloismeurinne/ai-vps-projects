@@ -32,6 +32,10 @@ paris de développement sans chiffre d'affaires, « l'IA souveraine » (un segme
 (#68). Piste : changer la FORME de l'inventaire (pour chaque ligne propre, écrire le produit vendu dont elle serait
 la suite, ou « aucun », et ce qui rend la réussite incertaine). RVMD : les essais d'extension d'indication
 (RASolute 303/304, RASolve 301) sont tantôt rattachés à RASONQUE, tantôt une ligne chacun — à trancher.
+**DIAGNOSTIC du 2026-10-23** (journal, ligne « B4d (diagnostic) », `mesures/2026-10-23/banc-modeles/`) : Vera
+Rubin = capacité du modèle (V4-Pro réussit, même anonymisé) ; IA souveraine, Vera CPU et le « 8 programmes » RVMD =
+information (me_7 mal formée, comptage faux, pièces invisibles à l'architecte) ; [S15] contournable par une
+plateforme inventée. Correctifs proposés à l'utilisateur, non construits.
 **PROCHAIN PAS** : (1) poser ces deux questions à l'utilisateur ; (2) **B4f** `16-lot-B4f-explorateur.md` ;
 (3) **B4e** banc séquentiel (arrêt à 2 succès consécutifs, ≤ 10 entreprises) — un succès s'y juge À LA LECTURE.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`

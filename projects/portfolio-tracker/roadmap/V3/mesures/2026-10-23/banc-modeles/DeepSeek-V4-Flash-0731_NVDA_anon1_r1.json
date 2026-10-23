@@ -1,0 +1,836 @@
+{
+  "ticker": "NVDA",
+  "modele": "deepseek-ai/DeepSeek-V4-Flash-0731",
+  "anon": true,
+  "etat": "acceptee",
+  "tokens_in": 64388,
+  "tokens_out": 11704,
+  "tentatives": 2,
+  "architecture": {
+    "schema_version": "architecture-1.3.0",
+    "ticker_id": "NVDA",
+    "version": 1,
+    "archetype": "rentable",
+    "famille": "industrielle",
+    "version_referentiel": "1.2.0",
+    "blocs": [
+      {
+        "id": "data_center",
+        "libelle": "Data Center",
+        "role": "activite",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "jalon": null,
+        "rattachement": {
+          "type": "publie",
+          "axe": "activites",
+          "membres": [
+            "nvda:DataCenterMember"
+          ]
+        },
+        "variables": [
+          "chiffre_affaires_du_bloc",
+          "taille_du_marche",
+          "croissance_du_marche",
+          "part_de_marche",
+          "volume",
+          "prix_moyen",
+          "part_recurrente",
+          "marge_contributive"
+        ],
+        "motif": "Premier niveau de l'axe `activites` dans le découpage le plus récent (10-Q du 2026-08-26), publié tel quel.",
+        "pieces": [],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "publie"
+      },
+      {
+        "id": "edge_computing",
+        "libelle": "Edge Computing",
+        "role": "activite",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "jalon": null,
+        "rattachement": {
+          "type": "publie",
+          "axe": "activites",
+          "membres": [
+            "nvda:EdgeComputingMember"
+          ]
+        },
+        "variables": [
+          "chiffre_affaires_du_bloc",
+          "taille_du_marche",
+          "croissance_du_marche",
+          "part_de_marche",
+          "volume",
+          "prix_moyen",
+          "part_recurrente",
+          "marge_contributive"
+        ],
+        "motif": "Premier niveau de l'axe `activites` dans le découpage le plus récent (10-Q du 2026-08-26), publié tel quel.",
+        "pieces": [],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "publie"
+      },
+      {
+        "id": "data_center_ai_clouds",
+        "libelle": "Data Center — AI Clouds, Industrial, & Enterprise",
+        "role": "activite",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "jalon": null,
+        "rattachement": {
+          "type": "publie",
+          "axe": "activites",
+          "membres": [
+            "nvda:AICloudsIndustrialEnterpriseMember"
+          ]
+        },
+        "variables": [
+          "chiffre_affaires_du_bloc"
+        ],
+        "motif": "Sous-membre publié de Data Center dans le découpage le plus récent (10-Q du 2026-08-26), emboîtement dérivé par le système.",
+        "pieces": [],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "publie"
+      },
+      {
+        "id": "data_center_hyperscale",
+        "libelle": "Data Center — Hyperscale",
+        "role": "activite",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "jalon": null,
+        "rattachement": {
+          "type": "publie",
+          "axe": "activites",
+          "membres": [
+            "nvda:HyperscaleMember"
+          ]
+        },
+        "variables": [
+          "chiffre_affaires_du_bloc"
+        ],
+        "motif": "Sous-membre publié de Data Center dans le découpage le plus récent (10-Q du 2026-08-26), emboîtement dérivé par le système.",
+        "pieces": [],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "publie"
+      },
+      {
+        "id": "extension_openlattice",
+        "libelle": "Extension annoncée — OpenLattice",
+        "role": "activite",
+        "statut": "extension_annoncee",
+        "origine": "acquisition",
+        "jalon": null,
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "taille_du_marche"
+        ],
+        "motif": "Acquisition annoncée le 2026-09-02, non conclue (clôture attendue S1 2027) — n'entre dans aucune formule de passage.",
+        "pieces": [
+          847,
+          1010,
+          1651
+        ],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "estime"
+      },
+      {
+        "id": "programme_kestrel_cpu",
+        "libelle": "Kestrel CPU",
+        "role": "programme",
+        "statut": "en_developpement",
+        "origine": "interne",
+        "jalon": {
+          "franchi": "annonce du TAM de 200 Md$",
+          "franchi_le": "2026-05-20",
+          "prochain": "lancement commercial",
+          "attendu_vers": "2027-01-01"
+        },
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "probabilite_de_succes",
+          "annee_de_lancement",
+          "ventes_au_pic",
+          "duree_d_exclusivite",
+          "cout_restant_de_developpement",
+          "depense_de_developpement_du_bloc"
+        ],
+        "motif": "Programme nommé individuellement par `me_7`, réussite incertaine (technologie non prouvée) — sa propre ligne.",
+        "pieces": [
+          1004,
+          1010
+        ],
+        "programmes": [
+          "le processeur Kestrel CPU"
+        ],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "estime"
+      },
+      {
+        "id": "programme_ia_souveraine",
+        "libelle": "IA souveraine",
+        "role": "programme",
+        "statut": "en_developpement",
+        "origine": "interne",
+        "jalon": {
+          "franchi": "déploiements au Japon et en Corée",
+          "franchi_le": "2026-07-16",
+          "prochain": "extension des déploiements",
+          "attendu_vers": "2027-12-31"
+        },
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "probabilite_de_succes",
+          "annee_de_lancement",
+          "ventes_au_pic",
+          "duree_d_exclusivite",
+          "cout_restant_de_developpement",
+          "depense_de_developpement_du_bloc"
+        ],
+        "motif": "Programme nommé individuellement par `me_7`, réussite incertaine (déploiements à grande échelle) — sa propre ligne.",
+        "pieces": [
+          1012
+        ],
+        "programmes": [
+          "l'IA souveraine"
+        ],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "estime"
+      },
+      {
+        "id": "programme_robotique",
+        "libelle": "Robotique et physical AI",
+        "role": "programme",
+        "statut": "en_developpement",
+        "origine": "interne",
+        "jalon": {
+          "franchi": "identification du programme",
+          "franchi_le": "2026-10-22",
+          "prochain": "premiers produits",
+          "attendu_vers": "2028-12-31"
+        },
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "probabilite_de_succes",
+          "annee_de_lancement",
+          "ventes_au_pic",
+          "duree_d_exclusivite",
+          "cout_restant_de_developpement",
+          "depense_de_developpement_du_bloc"
+        ],
+        "motif": "Programme nommé individuellement par `me_7`, réussite incertaine (technologie émergente) — sa propre ligne.",
+        "pieces": [
+          1010
+        ],
+        "programmes": [
+          "la robotique et le physical AI"
+        ],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "estime"
+      },
+      {
+        "id": "programmes_amont",
+        "libelle": "Recherche amont (programmes non nommés)",
+        "role": "programme",
+        "statut": "en_developpement",
+        "origine": "interne",
+        "jalon": {
+          "franchi": "portefeuille établi",
+          "franchi_le": "2026-10-22",
+          "prochain": "sélection de candidats",
+          "attendu_vers": "2027-12-31"
+        },
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "recherche_developpement"
+        },
+        "variables": [
+          "depense_de_developpement_du_bloc"
+        ],
+        "motif": "Un programme non nommé individuellement par `me_7` (le cinquième, non détaillé) — regroupé en plateforme.",
+        "pieces": [
+          1010
+        ],
+        "programmes": [],
+        "plateforme": true,
+        "nombre_de_programmes_non_nommes": 1,
+        "maille": "estime"
+      },
+      {
+        "id": "commun",
+        "libelle": "Frais communs non affectés",
+        "role": "commun",
+        "statut": "metier_actuel",
+        "origine": "interne",
+        "jalon": null,
+        "rattachement": {
+          "type": "agrege",
+          "ligne": "autres_charges_exploitation"
+        },
+        "variables": [
+          "couts_communs",
+          "taux_d_impot",
+          "capital_par_point_de_croissance"
+        ],
+        "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément ; taux d'impôt et capital par point de croissance se lisent au socle des comptes.",
+        "pieces": [
+          867
+        ],
+        "programmes": [],
+        "plateforme": false,
+        "nombre_de_programmes_non_nommes": null,
+        "maille": "estime"
+      }
+    ],
+    "variables_propres": [],
+    "passage_a_l_agrege": [
+      {
+        "ligne": "chiffre_affaires",
+        "formule": "data_center__chiffre_affaires_du_bloc + edge_computing__chiffre_affaires_du_bloc"
+      },
+      {
+        "ligne": "recherche_developpement",
+        "formule": "programme_kestrel_cpu__depense_de_developpement_du_bloc + programme_ia_souveraine__depense_de_developpement_du_bloc + programme_robotique__depense_de_developpement_du_bloc + programmes_amont__depense_de_developpement_du_bloc"
+      },
+      {
+        "ligne": "autres_charges_exploitation",
+        "formule": "commun__couts_communs"
+      }
+    ],
+    "cellules_attendues": [
+      {
+        "bloc": "data_center",
+        "variable": "chiffre_affaires_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "edge_computing",
+        "variable": "chiffre_affaires_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "data_center",
+        "variable": "taille_du_marche",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "data_center",
+        "variable": "croissance_du_marche",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "edge_computing",
+        "variable": "taille_du_marche",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "edge_computing",
+        "variable": "croissance_du_marche",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "probabilite_de_succes",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "annee_de_lancement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "ventes_au_pic",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "duree_d_exclusivite",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "cout_restant_de_developpement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_kestrel_cpu",
+        "variable": "depense_de_developpement_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "probabilite_de_succes",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "annee_de_lancement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "ventes_au_pic",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "duree_d_exclusivite",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "cout_restant_de_developpement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_ia_souveraine",
+        "variable": "depense_de_developpement_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "probabilite_de_succes",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "annee_de_lancement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "ventes_au_pic",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "duree_d_exclusivite",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "cout_restant_de_developpement",
+        "periodes": [
+          "sans_periode"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "me_7"
+        }
+      },
+      {
+        "bloc": "programme_robotique",
+        "variable": "depense_de_developpement_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "programmes_amont",
+        "variable": "depense_de_developpement_du_bloc",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "extension_openlattice",
+        "variable": "taille_du_marche",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "couts_communs",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "demande_ciblee"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "taux_d_impot",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "qf_1"
+        }
+      },
+      {
+        "bloc": "commun",
+        "variable": "capital_par_point_de_croissance",
+        "periodes": [
+          "FY2027",
+          "FY2028",
+          "FY2029",
+          "FY2030",
+          "FY2031",
+          "FY2032",
+          "FY2033",
+          "FY2034",
+          "FY2035",
+          "FY2036"
+        ],
+        "auteur": {
+          "type": "question",
+          "question_id": "qf_3"
+        }
+      }
+    ],
+    "autres_axes": [
+      {
+        "axe": "geographie",
+        "usage": "Information de concentration géographique, hors de l'arbre (raccord des marges par zone)."
+      },
+      {
+        "axe": "secteurs",
+        "usage": "Découpage sectoriel publié (Compute & Networking, Graphics) : sert au raccord des marges et à la cohérence des amortissements, hors de l'arbre."
+      },
+      {
+        "axe": "clients",
+        "usage": "Concentration client publiée (parts de chiffre d'affaires et créances) : information de risque, hors de l'arbre."
+      }
+    ],
+    "manques_du_dossier": [
+      {
+        "sujet": "Dépense de R&D affectée par programme, non publiée séparément par l'émetteur.",
+        "blocs": [
+          "programme_kestrel_cpu",
+          "programme_ia_souveraine",
+          "programme_robotique",
+          "programmes_amont"
+        ],
+        "consequence": "`depense_de_developpement_du_bloc` de chaque programme reste une demande ciblée, non une réponse de `me_7`."
+      }
+    ],
+    "inventaire_des_programmes": [
+      {
+        "programme": "le processeur Kestrel CPU",
+        "traitement": "bloc",
+        "bloc": "programme_kestrel_cpu",
+        "motif": "Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne."
+      },
+      {
+        "programme": "l'IA souveraine",
+        "traitement": "bloc",
+        "bloc": "programme_ia_souveraine",
+        "motif": "Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne."
+      },
+      {
+        "programme": "la robotique et le physical AI",
+        "traitement": "bloc",
+        "bloc": "programme_robotique",
+        "motif": "Nommé individuellement par `me_7`, réussite incertaine : sa propre ligne."
+      },
+      {
+        "programme": "l'acquisition de OpenLattice",
+        "traitement": "extension",
+        "bloc": "extension_openlattice",
+        "motif": "Acquisition annoncée, non conclue : devient une activité annoncée."
+      }
+    ]
+  }
+}
