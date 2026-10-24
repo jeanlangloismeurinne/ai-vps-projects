@@ -1,0 +1,484 @@
+Porte : ouverte
+  me_2 (modele_economique) — OUVRE — réponse #1367 qui tient
+  me_3 (modele_economique) — OUVRE — réponse #1368 qui tient
+  me_4 (modele_economique) — OUVRE — réponse #1369 qui tient
+  me_5 (modele_economique) — OUVRE — réponse #1370 qui tient
+  me_7 (modele_economique) — OUVRE — réponse #2292 qui tient
+  mo_4 (defendabilite) — OUVRE — non fondable : la source a été lue, la donnée n'y est pas publiée
+  mo_6 (defendabilite) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  qf_1 (qualite_financiere) — OUVRE — réponse #1209 qui tient
+  qf_3 (qualite_financiere) — OUVRE — réponse #1211 qui tient
+  qf_7 (qualite_financiere) — OUVRE — réponse #1214 qui tient
+  se_2 (secteur_concurrence) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  se_3 (secteur_concurrence) — OUVRE — réponse #1447 qui tient
+  se_4 (secteur_concurrence) — OUVRE — réponse #1448 qui tient
+
+=== NVIDIA CORP (CIK 1045810, ticker NVDA) ===
+Date du jour : 2026-10-22. Dernière clôture publiée : 2026-07-26. Dernière clôture annuelle : 2026-01-25.
+Classement en vigueur : archétype `rentable` (famille `industrielle`) depuis 2026-09-24 — Émetteur à revenus et résultats positifs établis : 627 concepts us-gaap déposés, dont la série Revenues sur plusieurs exercices (inventaire companyfacts mesuré le 2026-09-17). Classement déjà exercé tel quel lors des passages réels de la chaîne (cf. roadmap/V3/00-REPRISE.md l. 353).
+
+Périodes du classeur — historiques : FY2022, FY2023, FY2024, FY2025, FY2026 ; projetées : FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036.
+
+Lignes du business plan (format agrégé) :
+  · chiffre_affaires (Chiffre d'affaires)
+  · cout_des_ventes (Coût des ventes)
+  · marge_brute (Marge brute)
+  · recherche_developpement (Recherche et développement)
+  · frais_commerciaux_administratifs (Frais commerciaux, généraux et administratifs)
+  · autres_charges_exploitation (Autres charges d'exploitation (solde du bouclage))
+  · resultat_exploitation (Résultat d'exploitation)
+  · impot (Impôt sur les résultats)
+  · amortissements (Dotations aux amortissements)
+  · investissements_corporels (Investissements corporels (décaissés))
+  · flux_exploitation (Flux de trésorerie d'exploitation)
+  · flux_de_tresorerie_disponible (Flux de trésorerie disponible (exploitation − investissements corporels))
+  · capital_employe (Capital employé dans l'exploitation (convention maison))
+
+Fiches du catalogue de la famille :
+  · taille_du_marche (Taille du marché adressable par le bloc) — unité M$, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_5', 'se_2']
+    Dépense annuelle des clients que l'offre du bloc peut servir telle qu'elle existe, à la période dite ; un marché d'extension (offre non encore vendue) est un AUTRE bloc, de statut extension, jamais un plafond du bloc actuel.
+  · croissance_du_marche (Progression annuelle du marché adressable) — unité %/an, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['se_4', 'se_2', 'me_5']
+    Taux de croissance annuel du marché tel que défini par `taille_du_marche`, observé ou projeté sur l'horizon de la question qui l'instruit.
+  · part_de_marche (Part prise par le bloc sur son marché adressable) — unité %, période exercice ; origines admises ['calcul'] ; questions sources ['me_5', 'se_2']
+    Chiffre d'affaires du bloc rapporté à la taille du marché adressable, à la même période ; calculée, jamais déclarée, et jamais mesurée sur des revenus futurs (09 §6).
+  · chiffre_affaires_du_bloc (Chiffre d'affaires du bloc) — unité M$, période exercice ; origines admises ['piece', 'calcul'] ; questions sources ['me_2', 'me_4'] — somme_vers_ligne: chiffre_affaires
+    Chiffre d'affaires de l'activité que couvre le bloc, à sa maille propre (publiée ou estimée), avant tout retraitement d'agrégation.
+  · volume (Volume d'unités vendues par le bloc) — unité unités, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_4']
+    Nombre d'unités (ou de contrats, d'abonnements, selon le modèle économique du bloc) vendues sur la période, avant tout effet de prix.
+  · prix_moyen (Prix moyen réalisé par unité vendue) — unité $/unité, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_4', 'me_3', 'mo_6']
+    Chiffre d'affaires du bloc rapporté au volume vendu sur la même période — ce que le client paie effectivement, net des remises et des effets de mix.
+  · part_recurrente (Part du chiffre d'affaires du bloc qui revient sans nouvel effort de vente) — unité %, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_2']
+    Fraction du chiffre d'affaires de la période qui provient d'un revenu déjà engagé (abonnement, contrat reconduit, clientèle installée) et ne dépend pas d'un nouvel acte de vente.
+  · marge_contributive (Marge contributive du bloc) — unité %, période exercice ; origines admises ['piece', 'jugement', 'calcul'] ; questions sources ['me_3', 'se_3']
+    Chiffre d'affaires du bloc moins ses coûts directement variables, rapportée au chiffre d'affaires du bloc — ce qu'une unité de plus rapporte avant les coûts communs du titre.
+  · couts_communs (Coûts communs non affectés à un bloc) — unité M$, période exercice ; origines admises ['piece', 'calcul'] ; questions sources []
+    Charges d'exploitation qui ne se rattachent à aucun bloc d'activité pris isolément (fonctions support, structure) ; se lisent au socle des comptes, jamais recollectées question par question.
+  · taux_d_impot (Taux d'imposition effectif appliqué au résultat du titre) — unité %, période exercice ; origines admises ['piece', 'calcul'] ; questions sources ['qf_1']
+    Taux d'imposition réellement supporté par le résultat d'exploitation du titre, tel que mesuré par le socle des comptes.
+  · capital_par_point_de_croissance (Capital supplémentaire immobilisé par point de croissance de l'activité) — unité M$, période exercice ; origines admises ['reponse_reprise', 'jugement'] ; questions sources ['qf_3']
+    Reprend l'encadré de la question qui instruit déjà ce chiffre pour le titre (un seul chiffre par dossier) ; à défaut, un jugement ancré sur un taux de base sourcé.
+  · probabilite_de_succes (Probabilité de succès du programme) — unité (0-1), période sans_periode ; origines admises ['jugement'] ; questions sources ['se_2', 'mo_4', 'me_7']
+    Probabilité que le programme en développement du bloc atteigne son prochain jalon décisif (autorisation, lancement commercial), ancrée sur une classe de référence sourcée.
+  · annee_de_lancement (Année de lancement commercial visée ou observée du bloc) — unité année, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['se_2', 'me_5', 'me_7']
+    Exercice auquel le bloc est (ou serait) effectivement lancé commercialement, tel que publié par l'émetteur ou estimé par jugement ancré.
+  · ventes_au_pic (Ventes annuelles au pic du bloc) — unité M$, période exercice ; origines admises ['jugement'] ; questions sources ['me_5', 'me_4', 'me_7']
+    Chiffre d'affaires annuel maximal attendu du bloc une fois son potentiel commercial pleinement atteint, avant tout déclin lié à la concurrence ou à l'exclusivité.
+  · duree_d_exclusivite (Durée d'exclusivité commerciale du bloc) — unité années, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['mo_4']
+    Nombre d'années pendant lesquelles le bloc est protégé de la concurrence directe (brevet, exclusivité réglementaire, avance technique défendable).
+  · cout_restant_de_developpement (Coût restant à engager pour développer le bloc) — unité M$, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['qf_7', 'me_7']
+    Montant total encore nécessaire pour amener le programme du bloc à son prochain jalon décisif, au-delà des sommes déjà dépensées — un MONTANT SANS PÉRIODE (`periode: sans_periode`), jamais une ligne annuelle du business plan : la dépense de l'EXERCICE pour ce même programme est `depense_de_developpement_du_bloc` (lot M3 bis §4.2 ; cause ④, §5 : une dimension temporelle ne se mélange jamais entre un reste à engager et une cadence annuelle).
+  · depense_de_developpement_du_bloc (Dépense de recherche et développement de l'exercice pour le programme du bloc) — unité M$, période exercice ; origines admises ['piece', 'jugement', 'calcul'] ; questions sources ['me_7', 'qf_7']
+    Ce que le compte de résultat de l'exercice supporte pour le programme du bloc — distincte de `cout_restant_de_developpement`, qui est un montant SANS période (lot M3 bis §4.2).
+
+Patron de départ de l'archétype (suggestion) :
+  · bloc activite — variables suggérées : chiffre_affaires_du_bloc, taille_du_marche, croissance_du_marche, part_de_marche, volume, prix_moyen, part_recurrente, marge_contributive
+  · bloc commun — variables suggérées : couts_communs, taux_d_impot, capital_par_point_de_croissance
+
+Comptes reconstitués :
+Comptes de NVIDIA CORP reconstitués au format maison depuis les dépôts SEC (gabarit 1.1.0, dernier dépôt lu : 10-Q déposé le 2026-08-26). Montants en millions de dollars, tels que déposés (une charge est positive). Une ligne « solde du bouclage » est l'écart déterministe entre un total déposé et les lignes nommées au-dessus. « n.d. » : ligne non déposée par l'émetteur.
+Reclassement d'analyste — Participations non cotées et titres détenus à long terme : EquitySecuritiesWithoutReadilyDeterminableFairValueAmount. NVIDIA présente ses participations non cotées (dont OpenAI et des sociétés de son écosystème) dans les « autres actifs » non courants, sans ligne propre au bilan : 22,3 Md$ au 25/01/2026, 47,9 Md$ au 26/07/2026 (concept déposé sans interruption depuis le 29/01/2023). Leurs réévaluations et plus-values sont sous le résultat d'exploitation (« autres produits », 9,0 Md$ sur l'exercice 2026) : convention maison, elles sortent du capital employé. Ce n'est pas une recette du gabarit : chez Microsoft, les mêmes titres sont déjà dans les placements à long terme. (pièce : https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm)
+Reclassement d'analyste — Participations cotées détenues, présentées à l'actif courant : EquitySecuritiesFvNi. NVIDIA range ses titres de participation COTÉS dans les « charges payées d'avance et autres actifs courants » : 12,9 Md$ au 25/01/2026, 42,8 Md$ au 26/07/2026 (le solde des autres actifs courants, une fois ces titres retirés, retombe sur les charges payées d'avance déposées). Leurs variations de valeur sont hors exploitation : convention maison, ils sortent du capital employé. (pièce : https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm)
+
+Compte de résultat — Exercice clos le 2022-01-30 | Exercice clos le 2023-01-29 | Exercice clos le 2024-01-28 | Exercice clos le 2025-01-26 | Exercice clos le 2026-01-25 | Douze mois au 2026-07-26
+  Chiffre d'affaires : 26 914.0 | 26 974.0 | 60 922.0 | 130 497.0 | 215 938.0 | 302 970.0
+  Coût des ventes : 9 439.0 | 11 618.0 | 16 621.0 | 32 639.0 | 62 475.0 | 76 729.0
+  Marge brute : 17 475.0 | 15 356.0 | 44 301.0 | 97 858.0 | 153 463.0 | 226 241.0
+  Recherche et développement : 5 268.0 | 7 339.0 | 8 675.0 | 12 914.0 | 18 497.0 | 23 592.0
+  Frais commerciaux, généraux et administratifs : 2 166.0 | 2 440.0 | 2 654.0 | 3 491.0 | 4 579.0 | 5 070.0
+  Autres charges d'exploitation (solde du bouclage) : 0.0 | 1 353.0 | 0.0 | 0.0 | 0.0 | 0.0
+  Résultat d'exploitation : 10 041.0 | 4 224.0 | 32 972.0 | 81 453.0 | 130 387.0 | 197 579.0
+  Produits financiers (intérêts reçus) : 29.0 | 267.0 | 866.0 | 1 786.0 | 2 300.0 | 2 229.0
+  Charges d'intérêts : 236.0 | 262.0 | 257.0 | 247.0 | 259.0 | 464.0
+  Autres produits et charges hors exploitation (solde du bouclage) : 107.0 | -48.0 | 237.0 | 1 034.0 | 9 022.0 | 30 399.0
+  Résultat avant impôt : 9 941.0 | 4 181.0 | 33 818.0 | 84 026.0 | 141 450.0 | 229 743.0
+  Impôt sur les résultats : 189.0 | -187.0 | 4 058.0 | 11 146.0 | 21 383.0 | 36 863.0
+  Activités abandonnées, minoritaires et autres (solde du bouclage) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0
+  Résultat net part du groupe : 9 752.0 | 4 368.0 | 29 760.0 | 72 880.0 | 120 067.0 | 192 880.0
+
+Bilan — Bilan d'ouverture au 2021-01-31 | Bilan au 2022-01-30 | Bilan au 2023-01-29 | Bilan au 2024-01-28 | Bilan au 2025-01-26 | Bilan au 2026-01-25 | Dernier bilan au 2026-07-26
+  Trésorerie et équivalents : 847.0 | 1 990.0 | 3 389.0 | 7 280.0 | 8 589.0 | 10 605.0 | 22 443.0
+  Placements financiers à court terme : 10 714.0 | 19 218.0 | 9 907.0 | 18 704.0 | 34 621.0 | 39 065.0 | 34 143.0
+  Créances clients : 2 429.0 | 4 650.0 | 3 827.0 | 9 999.0 | 23 065.0 | 38 466.0 | 63 059.0
+  Stocks : 1 826.0 | 2 605.0 | 5 159.0 | 5 282.0 | 10 080.0 | 21 403.0 | 31 575.0
+  Participations cotées détenues, présentées à l'actif courant : 0.0 | n.d. | n.d. | n.d. | n.d. | 12 886.0 | 42 783.0
+  Autres actifs courants (solde du bouclage) : 239.0 | 366.0 | 791.0 | 3 080.0 | 3 771.0 | 3 180.0 | 3 409.0
+  Actif courant : 16 055.0 | 28 829.0 | 23 073.0 | 44 345.0 | 80 126.0 | 125 605.0 | 197 412.0
+  Placements financiers à long terme : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Immobilisations corporelles nettes : 2 149.0 | 2 778.0 | 3 807.0 | 3 914.0 | 6 283.0 | 10 383.0 | 14 285.0
+  Droits d'utilisation (baux) : 707.0 | 829.0 | 1 038.0 | 1 346.0 | 1 793.0 | 2 867.0 | 5 390.0
+  Écarts d'acquisition : 4 193.0 | 4 349.0 | 4 372.0 | 4 430.0 | 5 188.0 | 20 832.0 | 21 125.0
+  Immobilisations incorporelles : 2 737.0 | 2 339.0 | 1 676.0 | 1 112.0 | 807.0 | 3 306.0 | 2 998.0
+  Participations non cotées et titres détenus à long terme : n.d. | n.d. | 288.0 | 1 321.0 | 3 387.0 | 22 251.0 | 47 898.0
+  Autres actifs non courants (solde du bouclage) : 2 950.0 | 5 063.0 | 6 928.0 | 9 260.0 | 14 017.0 | 21 559.0 | 31 164.0
+  Total de l'actif : 28 791.0 | 44 187.0 | 41 182.0 | 65 728.0 | 111 601.0 | 206 803.0 | 320 272.0
+  Dettes fournisseurs : 1 201.0 | 1 783.0 | 1 193.0 | 2 699.0 | 6 310.0 | 9 812.0 | 15 059.0
+  Dette financière à moins d'un an : 999.0 | 0.0 | 1 250.0 | 1 250.0 | 0.0 | 999.0 | 1 000.0
+  Obligations locatives à moins d'un an : 121.0 | 144.0 | 176.0 | 228.0 | 288.0 | 372.0 | 509.0
+  Autres passifs courants (solde du bouclage) : 1 604.0 | 2 408.0 | 3 944.0 | 6 454.0 | 11 449.0 | 20 980.0 | 26 451.0
+  Passif courant : 3 925.0 | 4 335.0 | 6 563.0 | 10 631.0 | 18 047.0 | 32 163.0 | 43 019.0
+  Dette financière à plus d'un an : 5 964.0 | 10 946.0 | 9 703.0 | 8 459.0 | 8 463.0 | 7 469.0 | 32 366.0
+  Financement adossé aux redevances futures (dette) : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Obligations locatives à plus d'un an : 634.0 | 741.0 | 902.0 | 1 119.0 | 1 519.0 | 2 572.0 | 4 985.0
+  Autres passifs non courants (solde du bouclage) : 1 375.0 | 1 553.0 | 1 913.0 | 2 541.0 | 4 245.0 | 7 306.0 | 10 918.0
+  Total des dettes : 11 898.0 | 17 575.0 | 19 081.0 | 22 750.0 | 32 274.0 | 49 510.0 | 91 288.0
+  Capitaux propres (minoritaires compris) : 16 893.0 | 26 612.0 | 22 101.0 | 42 978.0 | 79 327.0 | 157 293.0 | 228 984.0
+  Total du passif et des capitaux propres : 28 791.0 | 44 187.0 | 41 182.0 | 65 728.0 | 111 601.0 | 206 803.0 | 320 272.0
+  Capital employé dans l'exploitation (convention maison) : 13 718.0 | 17 959.0 | 21 423.0 | 27 924.0 | 45 452.0 | 88 337.0 | 126 105.0
+  Capital employé hors écarts d'acquisition : 9 525.0 | 13 610.0 | 17 051.0 | 23 494.0 | 40 264.0 | 67 505.0 | 104 980.0
+
+Tableau des flux de trésorerie — Exercice clos le 2022-01-30 | Exercice clos le 2023-01-29 | Exercice clos le 2024-01-28 | Exercice clos le 2025-01-26 | Exercice clos le 2026-01-25 | Douze mois au 2026-07-26
+  Dotations aux amortissements : 1 174.0 | 1 544.0 | 1 508.0 | 1 864.0 | 2 843.0 | 3 687.0
+  Rémunération en actions : 2 004.0 | 2 709.0 | 3 549.0 | 4 737.0 | 6 386.0 | 7 241.0
+  Variation du besoin en fonds de roulement et autres éléments (solde du bouclage) : -3 822.0 | -2 980.0 | -6 727.0 | -15 392.0 | -26 578.0 | -69 448.0
+  Flux de trésorerie d'exploitation : 9 108.0 | 5 641.0 | 28 090.0 | 64 089.0 | 102 718.0 | 134 360.0
+  Investissements corporels (décaissés) : 976.0 | 1 833.0 | 1 069.0 | 3 236.0 | 6 042.0 | 7 354.0
+  Acquisitions de sociétés, nettes de la trésorerie acquise : 263.0 | 49.0 | 83.0 | 1 007.0 | 1 535.0 | 1 156.0
+  Autres flux d'investissement, dont placements (solde du bouclage) : -8 591.0 | 9 257.0 | -9 414.0 | -16 178.0 | -44 651.0 | -66 499.0
+  Flux de trésorerie d'investissement : -9 830.0 | 7 375.0 | -10 566.0 | -20 421.0 | -52 228.0 | -75 009.0
+  Émissions d'actions : 281.0 | 355.0 | 403.0 | 490.0 | 644.0 | 789.0
+  Rachats d'actions : 0.0 | 10 039.0 | 9 533.0 | 33 706.0 | 40 086.0 | 55 315.0
+  Dividendes versés : 399.0 | 398.0 | 395.0 | 834.0 | 974.0 | 6 776.0
+  Autres flux de financement, dont dette (solde du bouclage) : 1 983.0 | -1 535.0 | -4 108.0 | -8 309.0 | -8 058.0 | 12 755.0
+  Flux de trésorerie de financement : 1 865.0 | -11 617.0 | -13 633.0 | -42 359.0 | -48 474.0 | -48 547.0
+  Effet des variations de change : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Variation de la trésorerie : 1 143.0 | 1 399.0 | 3 891.0 | 1 309.0 | 2 016.0 | 10 804.0
+  Flux de trésorerie disponible (exploitation − investissements corporels) : 8 132.0 | 3 808.0 | 27 021.0 | 60 853.0 | 96 676.0 | 127 006.0
+
+Ratios maison (définitions 1.0.0, communes à toutes les sociétés) — Exercice clos le 2022-01-30 | Exercice clos le 2023-01-29 | Exercice clos le 2024-01-28 | Exercice clos le 2025-01-26 | Exercice clos le 2026-01-25
+  Taux d'impôt retenu (%) : 1.9 | 0.0 | 12.0 | 13.3 | 15.1
+  Résultat d'exploitation après impôt (M$) : 9 850.1 | 4 224.0 | 29 015.5 | 70 648.3 | 110 676.4
+  Capital employé moyen de l'exercice (M$) : 15 838.5 | 19 691.0 | 24 673.5 | 36 688.0 | 66 894.5
+  Rendement du capital employé (%) : 62.2 | 21.5 | 117.6 | 192.6 | 165.4
+  Rendement hors écarts d'acquisition (%) : 85.2 | 27.6 | 143.1 | 221.6 | 205.4
+  Marge d'exploitation après impôt (%) : 36.6 | 15.7 | 47.6 | 54.1 | 51.3
+  Rotation du capital employé (fois) : 1.70 | 1.37 | 2.47 | 3.56 | 3.23
+  Rendement du capital employé, moyenne des cinq exercices (%) : 111.9 — moyenne des exercices clos du 2022-01-30 au 2026-01-25 — socle des comptes, ratio maison : moyenne des rendements annuels : résultat d'exploitation après impôt ÷ capital employé moyen de l'exercice
+  Pente du rendement du capital employé sur cinq exercices (points/an) : 37.9 — exercices clos du 2022-01-30 au 2026-01-25 — socle des comptes, ratio maison : pente des moindres carrés des cinq rendements annuels
+  Part du résultat net retrouvée en trésorerie d'exploitation, trois exercices (%) : 87.5 — exercices clos du 2024-01-28 au 2026-01-25 — socle des comptes, ratio maison : Σ flux de trésorerie d'exploitation ÷ Σ résultat net, trois derniers exercices
+  Capital employé supplémentaire par point de croissance du chiffre d'affaires (M$) : 100.2 — exercices clos du 2022-01-30 au 2026-01-25 — socle des comptes, ratio maison : variation du capital employé ÷ croissance du chiffre d'affaires en points, du premier au dernier exercice du socle
+
+Bouclages : 26 contrôles, aucun écart.
+
+Ventilation publiée :
+Ventilation publiée de NVIDIA CORP relevée dans l'instance XBRL des dépôts (référentiel 1.0.0, gabarit 1.1.0). Statut : ventilee.
+  Dépôt lu : 10-K (0001045810-26-000021), déposé le 2026-02-25.
+  Dépôt lu : 10-Q (0001045810-26-000075), déposé le 2026-08-26.
+
+Chaque axe répartit le MÊME chiffre d'affaires total de l'émetteur selon un critère différent. Deux axes se CROISENT : un membre d'un axe n'est JAMAIS contenu dans un membre d'un autre axe. L'emboîtement n'existe qu'À L'INTÉRIEUR d'un axe (marqué ↳ ci-dessous).
+  Axe « activites » — Σ des membres de premier niveau vs. chiffre d'affaires des comptes :
+    FY2024-01-28 : Σ = 60 922.0 M$ ; chiffre d'affaires des comptes = 60 922.0 M$
+    FY2025-01-26 : Σ = 130 497.0 M$ ; chiffre d'affaires des comptes = 130 497.0 M$
+    cumul du 2025-01-27 au 2025-07-27 : Σ = 90 805.0 M$ ; chiffre d'affaires des comptes = 90 805.0 M$
+    FY2026-01-25 : Σ = 215 938.0 M$ ; chiffre d'affaires des comptes = 215 938.0 M$
+    cumul du 2026-01-26 au 2026-07-26 : Σ = 177 837.0 M$ ; chiffre d'affaires des comptes = 177 837.0 M$
+    TTM2026-07-26 : Σ = 277 798.0 M$ ; chiffre d'affaires des comptes = 302 970.0 M$ — l'écart n'est pas un montant non affecté : le découpage a changé, absents de cette période : Automotive, Gaming, OEM and Other, Professional Visualization
+  Axe « activites » — découpages successifs (plusieurs ensembles de membres de premier niveau observés) :
+    ['Automotive', 'Data Center', 'Gaming', 'OEM and Other', 'Professional Visualization'] — périodes ['FY2024-01-28', 'FY2025-01-26', 'FY2026-01-25'] ; dépôt le plus récent 0001045810-26-000075
+    ['Data Center', 'Edge Computing'] — périodes ['cumul du 2025-01-27 au 2025-07-27', 'cumul du 2026-01-26 au 2026-07-26'] ; dépôt le plus récent 0001045810-26-000075
+  Axe « geographie » — Σ des membres de premier niveau vs. chiffre d'affaires des comptes :
+    FY2024-01-28 : Σ = 60 922.0 M$ ; chiffre d'affaires des comptes = 60 922.0 M$
+    FY2025-01-26 : Σ = 130 497.0 M$ ; chiffre d'affaires des comptes = 130 497.0 M$
+    FY2026-01-25 : Σ = 215 938.0 M$ ; chiffre d'affaires des comptes = 215 938.0 M$
+    TTM2026-07-26 : Σ = 302 970.0 M$ ; chiffre d'affaires des comptes = 302 970.0 M$
+  Axe « secteurs » — Σ des membres de premier niveau vs. chiffre d'affaires des comptes :
+    FY2024-01-28 : Σ = 60 922.0 M$ ; chiffre d'affaires des comptes = 60 922.0 M$
+    FY2025-01-26 : Σ = 130 497.0 M$ ; chiffre d'affaires des comptes = 130 497.0 M$
+    FY2026-01-25 : Σ = 215 938.0 M$ ; chiffre d'affaires des comptes = 215 938.0 M$
+    TTM2026-07-26 : Σ = 302 970.0 M$ ; chiffre d'affaires des comptes = 302 970.0 M$
+
+— Axe « activites » —
+  chiffre_affaires — FY2024-01-28 :
+    Automotive [axe=activites membre=nvda:AutomotiveMember] : 1 091.0 M$
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 47 525.0 M$
+      ↳ Compute [axe=activites membre=nvda:ComputeMember] : 38 950.0 M$
+      ↳ Networking [axe=activites membre=nvda:NetworkingMember] : 8 575.0 M$
+    Gaming [axe=activites membre=nvda:GamingMember] : 10 447.0 M$
+    OEM and Other [axe=activites membre=nvda:OEMAndOtherMember] : 306.0 M$
+    Professional Visualization [axe=activites membre=nvda:ProfessionalVisualizationMember] : 1 553.0 M$
+    (premier niveau boucle avec le total publié : 60 922.0 M$)
+  chiffre_affaires — FY2025-01-26 :
+    Automotive [axe=activites membre=nvda:AutomotiveMember] : 1 694.0 M$
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 115 186.0 M$
+      ↳ Compute [axe=activites membre=nvda:ComputeMember] : 102 196.0 M$
+      ↳ Networking [axe=activites membre=nvda:NetworkingMember] : 12 990.0 M$
+    Gaming [axe=activites membre=nvda:GamingMember] : 11 350.0 M$
+    OEM and Other [axe=activites membre=nvda:OEMAndOtherMember] : 389.0 M$
+    Professional Visualization [axe=activites membre=nvda:ProfessionalVisualizationMember] : 1 878.0 M$
+    (premier niveau boucle avec le total publié : 130 497.0 M$)
+  chiffre_affaires — FY2026-01-25 :
+    Automotive [axe=activites membre=nvda:AutomotiveMember] : 2 349.0 M$
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 193 737.0 M$
+      ↳ Compute [axe=activites membre=nvda:ComputeMember] : 162 361.0 M$
+      ↳ Networking [axe=activites membre=nvda:NetworkingMember] : 31 376.0 M$
+    Gaming [axe=activites membre=nvda:GamingMember] : 16 042.0 M$
+    OEM and Other [axe=activites membre=nvda:OEMAndOtherMember] : 619.0 M$
+    Professional Visualization [axe=activites membre=nvda:ProfessionalVisualizationMember] : 3 191.0 M$
+    (premier niveau boucle avec le total publié : 215 938.0 M$)
+  chiffre_affaires — TTM2026-07-26 :
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 277 798.0 M$
+    DÉCOUPAGE CHANGÉ — absent(s) depuis l'exercice de référence : Automotive, Gaming, OEM and Other, Professional Visualization (reste au total : 25 172.0 M$)
+  chiffre_affaires — cumul du 2025-01-27 au 2025-07-27 :
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 80 208.0 M$
+      ↳ AI Clouds, Industrial, & Enterprise (NOUVEAU) [axe=activites membre=nvda:AICloudsIndustrialEnterpriseMember] : 33 780.0 M$
+      ↳ Hyperscale (NOUVEAU) [axe=activites membre=nvda:HyperscaleMember] : 46 428.0 M$
+    Edge Computing (NOUVEAU) [axe=activites membre=nvda:EdgeComputingMember] : 10 597.0 M$
+    (premier niveau boucle avec le total publié : 90 805.0 M$)
+  chiffre_affaires — cumul du 2026-01-26 au 2026-07-26 :
+    Data Center [axe=activites membre=nvda:DataCenterMember] : 164 269.0 M$
+      ↳ AI Clouds, Industrial, & Enterprise (NOUVEAU) [axe=activites membre=nvda:AICloudsIndustrialEnterpriseMember] : 72 508.0 M$
+      ↳ Hyperscale (NOUVEAU) [axe=activites membre=nvda:HyperscaleMember] : 91 761.0 M$
+    Edge Computing (NOUVEAU) [axe=activites membre=nvda:EdgeComputingMember] : 13 568.0 M$
+    (premier niveau boucle avec le total publié : 177 837.0 M$)
+
+— Axe « clients » —
+  Le client « A/R Customer A » représente 22 % des créances clients de l'ensemble consolidé, période au 2026-07-26.
+  Le client « A/R Customer B » représente 14 % des créances clients de l'ensemble consolidé, période au 2026-07-26.
+  Le client « A/R Customer C » représente 13 % des créances clients de l'ensemble consolidé, période au 2026-07-26.
+  Le client « A/R Customer D » représente 11 % des créances clients de l'ensemble consolidé, période au 2026-07-26.
+  Le client « A/R Customer E » représente 10 % des créances clients de l'ensemble consolidé, période au 2026-07-26.
+  Le client « A/R Customer F » représente 25 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « A/R Customer G » représente 18 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « A/R Customer H » représente 13 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « Customer one » représente 13 % du chiffre d'affaires de Compute & Networking, période au 2024-01-28.
+  Le client « Customer one » représente 17 % des créances clients de l'ensemble consolidé, période au 2025-01-26.
+  Le client « Customer one » représente 12 % du chiffre d'affaires de Compute & Networking, période au 2025-01-26.
+  Le client « Customer one » représente 25 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « Customer one » représente 22 % du chiffre d'affaires de Compute & Networking, période au 2026-01-25.
+  Le client « Customer three » représente 13 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « Customer two » représente 16 % des créances clients de l'ensemble consolidé, période au 2025-01-26.
+  Le client « Customer two » représente 11 % du chiffre d'affaires de Compute & Networking, période au 2025-01-26.
+  Le client « Customer two » représente 18 % des créances clients de l'ensemble consolidé, période au 2026-01-25.
+  Le client « Customer two » représente 14 % du chiffre d'affaires de Compute & Networking, période au 2026-01-25.
+  Le client « Revenue Customer 1 » représente 16 % du chiffre d'affaires de Compute And Networking, période au 2026-07-26.
+  Le client « Revenue Customer 2 » représente 16 % du chiffre d'affaires de Compute And Networking, période au 2026-07-26.
+  Le client « Revenue Customer 3 » représente 15 % du chiffre d'affaires de Compute And Networking, période au 2026-07-26.
+  Le client « Revenue Customer 4 » représente 13 % du chiffre d'affaires de Compute And Networking, période au 2026-07-26.
+  Le client « Revenue Customer 5 » représente 23 % du chiffre d'affaires de Compute And Networking, période au 2025-07-27.
+  Le client « Revenue Customer 6 » représente 16 % du chiffre d'affaires de Compute And Networking, période au 2025-07-27.
+  Le client « Revenue Customer 7 » représente 20 % du chiffre d'affaires de Compute And Networking, période au 2025-07-27.
+  Le client « Revenue Customer 8 » représente 15 % du chiffre d'affaires de Compute And Networking, période au 2025-07-27.
+
+— Axe « geographie » —
+  chiffre_affaires — FY2024-01-28 :
+    Taiwan [axe=geographie membre=country:TW] : 14 912.0 M$
+    United States [axe=geographie membre=country:US] : 31 533.0 M$
+    China (including Hong Kong) [axe=geographie membre=nvda:ChinaIncludingHongKongMember] : 12 330.0 M$
+    Other [axe=geographie membre=nvda:OtherCountriesMember] : 2 147.0 M$
+    (premier niveau boucle avec le total publié : 60 922.0 M$)
+  chiffre_affaires — FY2025-01-26 :
+    Taiwan [axe=geographie membre=country:TW] : 23 600.0 M$
+    United States [axe=geographie membre=country:US] : 77 482.0 M$
+    China (including Hong Kong) [axe=geographie membre=nvda:ChinaIncludingHongKongMember] : 25 048.0 M$
+    Other [axe=geographie membre=nvda:OtherCountriesMember] : 4 367.0 M$
+    (premier niveau boucle avec le total publié : 130 497.0 M$)
+  chiffre_affaires — FY2026-01-25 :
+    Taiwan [axe=geographie membre=country:TW] : 42 345.0 M$
+    United States [axe=geographie membre=country:US] : 149 617.0 M$
+    China (including Hong Kong) [axe=geographie membre=nvda:ChinaIncludingHongKongMember] : 19 677.0 M$
+    Other [axe=geographie membre=nvda:OtherCountriesMember] : 4 299.0 M$
+    (premier niveau boucle avec le total publié : 215 938.0 M$)
+  chiffre_affaires — TTM2026-07-26 :
+    Taiwan [axe=geographie membre=country:TW] : 64 786.0 M$
+    United States [axe=geographie membre=country:US] : 214 878.0 M$
+    China (including Hong Kong) [axe=geographie membre=nvda:ChinaIncludingHongKongMember] : 18 463.0 M$
+    Other [axe=geographie membre=nvda:OtherCountriesMember] : 4 843.0 M$
+    (premier niveau boucle avec le total publié : 302 970.0 M$)
+
+— Axe « secteurs » —
+  amortissements — FY2024-01-28 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 457.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 307.0 M$
+    non ventilé (reste au total publié) : 744.0 M$
+  amortissements — FY2025-01-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 732.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 372.0 M$
+    non ventilé (reste au total publié) : 760.0 M$
+  amortissements — FY2026-01-25 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 1 600.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 590.0 M$
+    non ventilé (reste au total publié) : 653.0 M$
+  amortissements — TTM2026-07-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 2 116.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 737.0 M$
+    non ventilé (reste au total publié) : 834.0 M$
+  chiffre_affaires — FY2024-01-28 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 47 405.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 13 517.0 M$
+    (premier niveau boucle avec le total publié : 60 922.0 M$)
+  chiffre_affaires — FY2025-01-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 116 193.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 14 304.0 M$
+    (premier niveau boucle avec le total publié : 130 497.0 M$)
+  chiffre_affaires — FY2026-01-25 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 193 479.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 22 459.0 M$
+    (premier niveau boucle avec le total publié : 215 938.0 M$)
+  chiffre_affaires — TTM2026-07-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 275 409.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 27 561.0 M$
+    (premier niveau boucle avec le total publié : 302 970.0 M$)
+  ecarts_d_acquisition — B2025-01-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 4 800.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 370.0 M$
+    non ventilé (reste au total publié) : 18.0 M$
+  ecarts_d_acquisition — B2026-01-25 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 20 500.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 370.0 M$
+    non ventilé (reste au total publié) : -38.0 M$
+  resultat_exploitation — FY2024-01-28 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 32 016.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 5 846.0 M$
+    non ventilé (reste au total publié) : -4 890.0 M$
+  resultat_exploitation — FY2025-01-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 82 875.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 5 085.0 M$
+    non ventilé (reste au total publié) : -6 507.0 M$
+  resultat_exploitation — FY2026-01-25 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 130 141.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 9 156.0 M$
+    non ventilé (reste au total publié) : -8 910.0 M$
+  resultat_exploitation — TTM2026-07-26 :
+    Compute & Networking [axe=secteurs membre=nvda:ComputeAndNetworkingSegmentMember] : 195 755.0 M$
+    Graphics [axe=secteurs membre=nvda:GraphicsSegmentMember] : 12 114.0 M$
+    non ventilé (reste au total publié) : -10 290.0 M$
+
+Faits sur un axe retenu sans recette du gabarit (non rattachés) : 22.
+Sous-détails (un axe de plus que la publication) : 22.
+
+Membres nouveaux (apparus depuis le dernier 10-K), relevés au 10-Q :
+  activites / AI Clouds, Industrial, & Enterprise (enfant de Data Center) :
+    cumul du 2025-01-27 au 2025-07-27 : 33 780.0 M$
+    cumul du 2026-01-26 au 2026-07-26 : 72 508.0 M$
+  activites / Edge Computing :
+    cumul du 2025-01-27 au 2025-07-27 : 10 597.0 M$
+    cumul du 2026-01-26 au 2026-07-26 : 13 568.0 M$
+  activites / Hyperscale (enfant de Data Center) :
+    cumul du 2025-01-27 au 2025-07-27 : 46 428.0 M$
+    cumul du 2026-01-26 au 2026-07-26 : 91 761.0 M$
+  clients / A/R Customer A :
+    2026-07-26 : 22 %
+  clients / A/R Customer B :
+    2026-07-26 : 14 %
+  clients / A/R Customer C :
+    2026-07-26 : 13 %
+  clients / A/R Customer D :
+    2026-07-26 : 11 %
+  clients / A/R Customer E :
+    2026-07-26 : 10 %
+  clients / A/R Customer F :
+    2026-01-25 : 25 %
+  clients / A/R Customer G :
+    2026-01-25 : 18 %
+  clients / A/R Customer H :
+    2026-01-25 : 13 %
+  clients / Revenue Customer 1 :
+    2026-07-26 : 16 %
+  clients / Revenue Customer 2 :
+    2026-07-26 : 16 %
+  clients / Revenue Customer 3 :
+    2026-07-26 : 15 %
+  clients / Revenue Customer 4 :
+    2026-07-26 : 13 %
+  clients / Revenue Customer 5 :
+    2025-07-27 : 23 %
+  clients / Revenue Customer 6 :
+    2025-07-27 : 16 %
+  clients / Revenue Customer 7 :
+    2025-07-27 : 20 %
+  clients / Revenue Customer 8 :
+    2025-07-27 : 15 %
+(pièce non encore publiée — ventilation relevée à blanc, pas écrite.)
+
+Réponses des questions sources (ordre de la porte) :
+— Question me_2 (modele_economique) — porte : ouvre — réponse #1367 qui tient
+  statut repondu ; écrite le 2026-10-14 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face, dont la plateforme est ouverte et multi-accélérateur, ne crée pas de revenus récurrents immédiats pour NVIDIA et ne change pas la nature transactionnelle du chiffre d'affaires ; elle pourrait à terme générer des revenus indirects via l'écosystème, mais sans effet quantifiable sur la part récurrente actuelle.
+  verbatim : Le chiffre d'affaires est essentiellement transactionnel et matériel : sur S1 FY2027, le Data Center représente 164 269 M$ (92,4 % du total) et l'Edge Computing 13 568 M$, soit des ventes de produits et systèmes ; les revenus récurrents logiciels (AI Enterprise, DGX Cloud, Omniverse) sont intégrés aux segments mais sans ventilation chiffrée distincte. Les obligations de performance restantes ne s'élèvent qu'à 3,20 Md$ au 2026-07-26, soit environ 1,8 % du chiffre d'affaires semestriel, ce qui confirme le caractère très majoritairement transactionnel du modèle.
+  sens : revenus_transactionnels
+— Question me_3 (modele_economique) — porte : ouvre — réponse #1368 qui tient
+  statut repondu ; écrite le 2026-10-14 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face, avec un prix de 11,9 Md$ et un programme de rétention de 1,0 Md$, n'affecte pas la marge brute des produits existants ; elle pourrait diluer la marge à terme si les coûts d'intégration pèsent, mais aucun impact n'est chiffré dans le dépôt.
+  verbatim : Une unité vendue de plus dégage une marge brute élevée : sur l'exercice clos le 2026-01-25, la marge brute est de 153 463 M$ pour un chiffre d'affaires de 215 938 M$, soit 71,1 % ; sur les douze mois au 2026-07-26, elle atteint 226 241 M$ pour 302 970 M$, soit 74,7 %. Cette marge brute, qui représente ce que rapporte une unité après ses coûts directs (coût des ventes), est en hausse sur la période, reflétant une économie unitaire forte.
+  sens : economie_unitaire_forte
+— Question me_4 (modele_economique) — porte : ouvre — réponse #1369 qui tient
+  statut repondu ; écrite le 2026-10-14 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face ne modifie pas les moteurs de chiffre d'affaires existants ; elle pourrait ajouter un moteur indirect (adoption de l'open-source stimulant la demande de calcul NVIDIA), mais sans effet chiffré dans le dépôt.
+  verbatim : Les deux moteurs principaux du chiffre d'affaires sont : (1) la demande en IA et calcul accéléré pour data centers, qui a tiré la croissance de S1 FY2027 (Data Center +104,8 % en glissement annuel, à 164 269 M$) et de FY2026 ; (2) la capacité d'approvisionnement, contrainte externe — NVIDIA sécurise mémoire et capacité de fabrication via des engagements passés de 119 Md$ à 279 Md$ au 2026-07-26. Le premier est largement maîtrisé (architecture, roadmap, prix), le second est subi (dépendance aux fonderies et fournisseurs de mémoire).
+  sens : moteurs_maitrises
+— Question me_5 (modele_economique) — porte : ouvre — réponse #1370 qui tient
+  statut approxime ; écrite le 2026-10-14 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face étend le marché adressable vers l'écosystème open-source (18 millions de développeurs, 200 000 entreprises), mais sans TAM chiffré dans le dépôt ; elle ne change pas la part prise sur le marché CPU existant.
+  verbatim : Le marché adressable par le modèle actuel n'est pas publié dans son ensemble par NVIDIA dans le corpus ; seule une extension est chiffrée : le TAM des CPUs de datacenter pour IA agentique (Vera CPU) est annoncé à 200 Md$ par la direction (appel résultats Q1 FY2027). La part déjà prise sur ce marché est estimée à environ 10 %, en rapportant la visibilité de revenus CPU de près de 20 Md$ pour l'exercice en cours à ce TAM.
+    chiffre : marche_adressable = 200000 M$ (annoncé le 2026-05-20 (TAM CPU data center IA agentique))
+    chiffre : part_deja_prise = 10 % (exercice en cours (FY2027), visibilité de revenus CPU ~20 Md$)
+  sens : croissance_ample
+— Question me_7 (modele_economique) — porte : ouvre — réponse #2292 qui tient
+  statut approxime ; écrite le 2026-10-22 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — remplacée(s) sur leur sujet par une pièce plus récente, citée(s) comme contexte : #1012 — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face, annoncée le 2026-09-02, est un programme en cours : accord définitif signé, clôture attendue au premier semestre 2027, prix d'environ 11,9 Md$ plus 1,0 Md$ de rétention en actions ; elle étend le portefeuille à l'écosystème open-source des développeurs IA.
+  verbatim : Le portefeuille de programmes futurs est établi : (1) l'architecture Vera Rubin, en production et en expéditions depuis le T3 FY2027, avec des produits disponibles au second semestre 2026 ; (2) le processeur Vera CPU, qui ouvre un TAM de 200 000 M$ (annonce de la direction) ; (3) l'IA souveraine avec des déploiements au Japon (Noetra, 140 MW) et en Corée (NAVER/Brookfield) ; (4) la robotique et le physical AI ; (5) l'acquisition de Hugging Face, annoncée le 2026-09-02, non conclue, attendue au premier semestre 2027. La dépense de R&D de l'exercice FY2026 est de 18 497 M$, sans ventilation par programme.
+    chiffre : nombre_de_programmes = 5 unités (à la date de l'analyse (2026-10-22))
+    chiffre : depense_de_developpement = 18497 M$ (exercice clos le 2026-01-25)
+  sens : portefeuille_etabli
+— Question mo_4 (defendabilite) — porte : ouvre — non fondable : la source a été lue, la donnée n'y est pas publiée
+  statut non_fondable ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+— Question mo_6 (defendabilite) — porte : ouvre — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  statut non_fondable ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+— Question qf_1 (qualite_financiere) — porte : ouvre — réponse #1209 qui tient
+  statut repondu ; écrite le 2026-10-12 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face (11,9 MdUSD) est financée par les ressources existantes et ne modifie pas la capacité bénéficiaire d'exploitation ; le rendement du capital employé reste très supérieur à son coût.
+  verbatim : Le rendement du capital employé de NVIDIA est très largement supérieur à son coût du capital sur les cinq derniers exercices : la moyenne des rendements annuels ressort à 111,9 % (exercices clos du 2022-01-30 au 2026-01-25), avec un rendement de 165,4 % sur le dernier exercice clos (2026-01-25). Le coût du capital n'est pas chiffré dans le corpus, mais le rendement est si élevé qu'il dépasse sans ambiguïté tout coût raisonnable des ressources.
+    chiffre : cout_du_capital : non établi — Le corpus ne fournit aucun chiffre de coût du capital (ni WACC, ni coût des capitaux propres) pour NVIDIA.
+    chiffre : resultat_operationnel_apres_impot_normalise = 110676 M$ (exercice clos le 2026-01-25)
+    chiffre : rendement_du_capital_employe = 111.851 % (moyenne des exercices clos du 2022-01-30 au 2026-01-25 — socle des comptes, ratio maison : moyenne des rendements annuels : résultat d'exploitation après impôt ÷ capital employé moyen de l'exercice)
+  sens : cree_de_la_valeur
+— Question qf_3 (qualite_financiere) — porte : ouvre — réponse #1211 qui tient
+  statut repondu ; écrite le 2026-10-12 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face (11,9 MdUSD) augmentera le capital employé à la clôture, mais elle est ponctuelle et ne remet pas en cause le caractère peu capitalistique de la croissance organique observé sur cinq ans.
+  verbatim : La croissance de NVIDIA est peu capitalistique : chaque point de croissance du chiffre d'affaires a immobilisé en moyenne 100,2 MUSD de capital employé supplémentaire sur les exercices clos du 2022-01-30 au 2026-01-25. Le capital employé est passé de 13 718 MUSD à 88 337 MUSD pendant que le chiffre d'affaires passait de 26 914 MUSD à 215 938 MUSD.
+    chiffre : capital_par_point_de_croissance = 100.207 M$ (exercices clos du 2022-01-30 au 2026-01-25 — socle des comptes, ratio maison : variation du capital employé ÷ croissance du chiffre d'affaires en points, du premier au dernier exercice du socle)
+  sens : croissance_peu_capitalistique
+— Question qf_7 (qualite_financiere) — porte : ouvre — réponse #1214 qui tient
+  statut repondu ; écrite le 2026-10-12 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2026-06-15 (déposé le 2026-06-18), items 8.01 (autre événement important), 9.01 (états financiers et pièces jointes) — rouvre au titre de : financement (note flash du 2026-10-18 : « On June 18, 2026, NVIDIA Corporation (the “Company”) completed an offering of $3,500,000,000 aggregate principal amount of its 4.250% Notes due 2028 (the “2028… »)) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face (11,9 MdUSD) sera financée par la trésorerie existante ; elle réduit la trésorerie mobilisable mais laisse NVIDIA avec une autonomie de financement encore très longue. ; 8-K du 2026-08-17 — effet : Les garanties de valeur résiduelle envers SB Energy (plafonnées à 105 MdUSD, conditionnées à la mise en service à partir de 2028) constituent un passif potentiel significatif qui pourrait réduire l'autonomie de financement à partir de 2028, mais ne change pas l'autonomie actuelle.
+  verbatim : NVIDIA dispose d'une autonomie de financement très longue : au 2026-07-26, la trésorerie mobilisable (56 586 MUSD) couvre très largement la consommation annuelle constatée sur les douze derniers mois (127 006 MUSD de flux de trésorerie disponible positif, soit une génération nette de cash, et non une consommation). La dette exigible à douze mois (1 000 MUSD) est négligeable face à cette trésorerie.
+    chiffre : consommation_prevue : non établi — NVIDIA ne fournit pas de guidance annuelle de dépenses pour l'exercice en cours ; seule une guidance trimestrielle de dépenses opérationnelles (9,2 MdUSD GAAP pour le T3 FY2027) est publiée.
+    chiffre : tresorerie_mobilisable = 56586 M$ (Dernier bilan au 2026-07-26 — socle des comptes : tresorerie + placements_court_terme + placements_long_terme)
+    chiffre : consommation_constatee = -127006 M$ (Douze mois au 2026-07-26 — socle des comptes : -flux_de_tresorerie_disponible)
+    chiffre : consommation_retenue = -127006 M$ (Douze mois au 2026-07-26 — socle des comptes : -flux_de_tresorerie_disponible — retenu : consommation_constatee, le plus élevé de consommation_constatee, consommation_prevue ; consommation_prevue non établi(s), facultatif(s))
+    chiffre : autonomie : non établi — non calculable (tresorerie_mobilisable / consommation_retenue * 12) : consommation_retenue vaut -127 006.0 — un quotient sur un dénominateur négatif n'est pas un niveau (#44)
+  sens : autonomie_longue
+— Question se_2 (secteur_concurrence) — porte : ouvre — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  statut non_fondable ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+— Question se_3 (secteur_concurrence) — porte : ouvre — réponse #1447 qui tient
+  statut repondu ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face (11,9 Md$) n'affecte pas les indicateurs comparés de marge et de croissance ; elle pourrait renforcer l'avantage compétitif de NVIDIA à long terme.
+  verbatim : NVIDIA est nettement devant ses pairs directs : au T2 FY2027, sa marge brute est de 75,0 % et son résultat opérationnel de 63,7 Md$, contre 59,9 % de marge brute et 50,8 % de marge opérationnelle pour TSMC en 2025, et 50 % de marge brute et 3,7 Md$ de résultat opérationnel pour AMD en 2025. L'écart se creuse : la croissance du chiffre d'affaires de NVIDIA est de 106 % sur un an, contre 31,6 % pour TSMC et un niveau record mais plus faible pour AMD.
+  sens : devant_ses_pairs
+— Question se_4 (secteur_concurrence) — porte : ouvre — réponse #1448 qui tient
+  statut repondu ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-07-26, dernier exercice : 2026-01-25) ; le dernier fait qui la rouvre (8-K du 2025-08-27, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-09-02 — effet : L'acquisition de Hugging Face (11,9 Md$) ne modifie pas la position dans le cycle de demande ; elle soutient la demande d'open-source, sans effet sur la contrainte d'offre.
+  verbatim : La demande d'accélérateurs IA est en phase de croissance forte, non cyclique au sens classique : le chiffre d'affaires de NVIDIA a augmenté de 85,4 Md$ entre FY2025 et FY2026, et le financement VC en IA a dépassé 400 Md$ au premier semestre 2026. La position actuelle est favorable : la demande excède l'offre, avec des engagements d'achat de NVIDIA passés à 279 Md$ et une offre contrainte jusqu'à l'exercice 2028.
+  sens : cycle_favorable
+
+Notes flash depuis la dernière clôture annuelle :
+  · 2026-02-25 — types ['resultats'] — note flash du 2026-10-18 : « On February 25, 2026, NVIDIA Corporation, or the Company, issued a press release announcing its results for the quarter ended January 25, 2026. » · couvert(s) par les comptes : accord_commercial (survenu le 2026-01-25) — accession 0001045810-26-000019 — pièce #857
+  · 2026-05-20 — types ['financement', 'resultats'] — note flash du 2026-10-18 : « On May 20, 2026, NVIDIA Corporation, or the Company, issued a press release announcing its results for the quarter ended April 26, 2026. » · couvert(s) par les comptes : accord_commercial (survenu le 2026-04-26) — accession 0001045810-26-000051 — pièce non identifiée
+  · 2026-06-15 — types ['financement'] — note flash du 2026-10-18 : « On June 18, 2026, NVIDIA Corporation (the “Company”) completed an offering of $3,500,000,000 aggregate principal amount of its 4.250% Notes due 2028 (the “2028… » — accession 0001193125-26-275783 — pièce non identifiée
+  · 2026-08-26 — types ['resultats'] — note flash du 2026-10-18 : « On August 26, 2026, NVIDIA Corporation, or the Company, issued a press release announcing its results for the quarter ended July 26, 2026. » · couvert(s) par les comptes : accord_commercial (survenu le 2026-07-26) — accession 0001045810-26-000073 — pièce #896
+  · 2026-09-02 — types ['perimetre'] — note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). » — accession 0001045810-26-000078 — pièce #847
+
+Taille de la matière : 52779 caractères, ~13194 jetons estimés.
+BILAN architecte NVDA : porte ouverte — à blanc (matière seule) — 0 blocs (0 publiés / 0 estimés), 0 cellules attendues, 0 signaux, 0.0000 $

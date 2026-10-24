@@ -89,6 +89,11 @@ mutations=(
   # ── Bloc 1.1.0 (motif/pieces, §2.2) ────────────────────────────────────────────────────────────
   "$S¦        if (self.maille == \"estime\" or self.statut != \"metier_actuel\") and not self.pieces:¦        if False:¦SANS pièce est refusé"
 
+  # ── 1.2.0 (lot M3 bis) — [R7] (table `unites`), `BlocPropose.jalon`, [S12] ────────────────────
+  "$S¦            if v.unite not in self.unites:¦            if False:¦[R7]"
+  "$S¦        if a_jalon != (self.statut == \"en_developpement\"):¦        if False:¦SANS jalon est refusé"
+  "$S¦        if self.origine == \"acquisition\" and self.statut not in (\"metier_actuel\", \"extension_annoncee\"):¦        if False:¦[S12]"
+
   # ── Le pont de l'architecture [P1]-[P5] ───────────────────────────────────────────────────────
   "$R¦    if famille_attendue is None:¦    if False:¦archétype absent du référentiel"
   "$R¦    if arch.famille != famille_attendue:¦    if False:¦famille différente de celle de l'archétype"
@@ -128,7 +133,7 @@ mutations=(
   "$SC¦            if fourchette is None:¦            if False:¦déplacement sans fourchette couvrante"
 
   # ── Réplicabilité (§9) ────────────────────────────────────────────────────────────────────────
-  "$Y¦version: \"1.1.0\"¦version: \"1.1.0\"\n# NVDA (mutation de test — la garde de réplicabilité doit rougir)¦réplicabilité"
+  "$Y¦version: \"1.2.0\"¦version: \"1.2.0\"\n# NVDA (mutation de test — la garde de réplicabilité doit rougir)¦réplicabilité"
 )
 
 source "$(dirname "$0")/_negatif.sh"

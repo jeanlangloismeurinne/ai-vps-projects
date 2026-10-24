@@ -3613,3 +3613,48 @@ Coût d'erreur nommé : un nombre tronqué (« $198.8 ») se retrouve à l'inté
 porte alors la ligne exacte du document, l'affirmation du collecteur reste dans sa lecture.
 Gardes : `check_search_worker` §11 (fixture copiée du 10-K réel) + `negatif_search_worker.sh` (8 mutations
 neuves chez le détenteur, celle du contrat retirée).
+
+### #142 — le découpage d'une ventilation : le plus récent fait foi, son historique est publié ou additionné, jamais réparti (lot P1, 2026-10-22/23)
+
+**Logique de fonds.** Deux métiers : le *teneur des séries* suit chaque émetteur dans le temps, l'*analyste*
+construit son modèle sur ces séries. Une valorisation projette le futur : l'historique par activité ne sert
+qu'à poser le point de départ de chaque bloc (dernier exercice, douze derniers mois) et à lire un rythme
+récent ; les analyses longues (cycle, marges normatives) se font au niveau consolidé, que le découpage
+n'affecte pas. Quand l'émetteur change de découpage, c'est LUI qui republie ses comparatifs (ASC 280 /
+IFRS 8) ; un analyste ne répartit jamais un ancien historique au prorata — aucun comité ne signerait une
+tendance bâtie sur un chiffre fabriqué (arbitrage du 2026-10-23, `14-lot-P1-perimetre.md` §7 bis, qui
+révise la Q1 du 2026-10-22).
+
+**Règle.**
+1. **Détenteur unique** : `app/knowledge/perimetre.py`. Tout bug de périmètre futur (fusion de divisions,
+   découpage produits → clients, cession retraitée, même nom au contenu changé) se reproduit D'ABORD par
+   un cas FICTIF de `check_perimetre.py`, puis se corrige dans `perimetre.py` — jamais dans un
+   consommateur. Aucun autre module ne calcule un premier niveau par période ni ne compare deux dépôts
+   ([P32]).
+2. **Le relevé est brut, par dépôt** (`ventilation.relever` : identité `(axe, ligne, membre, période,
+   accn)`, cumuls de TOUS les membres, dates de chaque flux, totaux des cumuls ; `forme =
+   cellules_par_depot.2`). Il ne décide rien du périmètre.
+3. **Un seul point d'entrée des lecteurs : `perimetre.vue_servie(structure, socle)`**, calculée à la
+   lecture (rendu, matière de l'architecte, [S1]-[S3b], faits publiés, publication). `rendre_ventilation`
+   refuse un relevé brut. Une pièce persistée d'une forme antérieure se relève (à blanc) ou se republie,
+   jamais servie amputée (`est_structure_courante`).
+4. **Deux provenances seulement** dans la série du découpage de référence (celui du dépôt le plus récent,
+   #133) : `publie` (par l'émetteur, comparatifs republiés compris ; un membre continu publié par un
+   dépôt antérieur est publié) et `passage` = **addition vérifiée** (un nouveau membre = somme exacte
+   d'anciens membres sur une période publiée dans les deux découpages, chaîne admise). Une scission est
+   vérifiée mais ne reconstitue rien ; une rupture ou un contenu changé (typés par les MONTANTS, jamais
+   par les noms) n'est jamais comblé : la série est « comparable depuis » la première période complète,
+   l'ancien découpage reste servi à part, tel que publié (`cellules_anterieures`).
+5. **Ce qui boucle, garanti par des tests déterministes** : raccords recalculés sur la vue ; invariant de
+   l'agrégat sur le chiffre d'affaires (Σ premier niveau = total à `tolerance_bouclage`, sinon ERREUR
+   nommée) ; douze mois calculés SUR LA SÉRIE (jamais deux découpages mêlés) ; périodes incomplètes, point
+   de départ manquant au dernier exercice et douze mois non établis NOMMÉS (des informations, pas des
+   refus).
+6. **L'architecte** est libre de suivre le découpage antérieur (09 §1.1) : [S3b] le signale au comité ;
+   mêler les deux découpages sur un axe est refusé ([S2] découpage mixte). Sa période de référence est la
+   période ANNUELLE de référence du découpage suivi, jamais un cumul ni des douze mois calculés.
+
+**Preuve.** `check_perimetre.py` (98) + `negatif_perimetre.sh` (32/32) ; cas réel NVDA (10-K + 10-Q + 10-Q
+jumeau) dans `check_ventilation_publiee.py` [V13]-[V19] + `negatif_ventilation_publiee.sh` (19/19) ;
+[S2]/[S3b] dans `check_architecte.py` + `negatif_architecte.sh` (30/30).
+

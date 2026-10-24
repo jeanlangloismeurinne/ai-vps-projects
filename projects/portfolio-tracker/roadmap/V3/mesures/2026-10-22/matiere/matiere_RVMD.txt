@@ -1,0 +1,257 @@
+Porte : fermée (1)
+  me_2 (modele_economique) — OUVRE — réponse #1335 : un fait important publié depuis rend les pièces caduques — l'historique « sensibilite_passee » n'est pas complété : sa pièce la plus récente est du 2026-06-30, avant le 2026-08-26 (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le chiffre courant « poids_des_premiers_clients » : sa pièce la plus récente, #961 du 2026-06-30, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  me_3 (modele_economique) — OUVRE — réponse #1336 qui tient
+  me_4 (modele_economique) — OUVRE — réponse #1337 qui tient
+  me_5 (modele_economique) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  me_7 (modele_economique) — OUVRE — réponse #2304 qui tient
+  mo_4 (defendabilite) — OUVRE — réponse #1420 : un fait important publié depuis rend les pièces caduques — la description annuelle « echeances_contractuelles_ou_legales » : sa pièce la plus récente, #1167 du 2025-12-31, précède le fait qui rouvre la question (8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))). Elle reste EXACTE à sa date : périmé n'est pas faux. — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-26 — effet : L'approbation FDA du 2026-08-26 fixe le point de départ des exclusivités NCE (5 ans, jusqu'au 2031-08-26) et Orphan Drug (7 ans, jusqu'au 2033-08-26), ce qui ancre la durée de la barrière réglementaire.
+  mo_6 (defendabilite) — OUVRE — réponse #1416 refusée par le contrôle : le contrôle du manager a refusé la réponse : completude ko — `mo_6` a été déclarée sans objet sous un classement antérieur ; l'émetteur a été reclassé et la question a désormais un objet — elle est à instruire
+  qf_1 (qualite_financiere) — OUVRE — réponse #1685 qui tient
+  qf_3 (qualite_financiere) — OUVRE — réponse #1712 qui tient
+  qf_7 (qualite_financiere) — OUVRE — réponse #1680 qui tient
+  se_2 (secteur_concurrence) — OUVRE — réponse #1441 : un fait important publié depuis rend les pièces caduques — le jugement « consequence_pour_l_entreprise » : sa pièce la plus récente, #1296 du 2024-12-31, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le jugement « nouveaux_modeles » : sa pièce la plus récente, #1292 du 2026-04-13, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  se_3 (secteur_concurrence) — FERME — aucune réponse instruite
+  se_4 (secteur_concurrence) — OUVRE — réponse #1442 qui tient
+
+=== Revolution Medicines, Inc. (CIK 1628171, ticker RVMD) ===
+Date du jour : 2026-10-22. Dernière clôture publiée : 2026-06-30. Dernière clôture annuelle : 2025-12-31.
+Classement en vigueur : archétype `rentable` (famille `industrielle`) depuis 2026-10-18 — Premier produit approuvé par la FDA (déclenché par le dépôt 0001193125-26-366931)
+
+Périodes du classeur — historiques : FY2021, FY2022, FY2023, FY2024, FY2025 ; projetées : FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035.
+
+Lignes du business plan (format agrégé) :
+  · chiffre_affaires (Chiffre d'affaires)
+  · cout_des_ventes (Coût des ventes)
+  · marge_brute (Marge brute)
+  · recherche_developpement (Recherche et développement)
+  · frais_commerciaux_administratifs (Frais commerciaux, généraux et administratifs)
+  · autres_charges_exploitation (Autres charges d'exploitation (solde du bouclage))
+  · resultat_exploitation (Résultat d'exploitation)
+  · impot (Impôt sur les résultats)
+  · amortissements (Dotations aux amortissements)
+  · investissements_corporels (Investissements corporels (décaissés))
+  · flux_exploitation (Flux de trésorerie d'exploitation)
+  · flux_de_tresorerie_disponible (Flux de trésorerie disponible (exploitation − investissements corporels))
+  · capital_employe (Capital employé dans l'exploitation (convention maison))
+
+Fiches du catalogue de la famille :
+  · taille_du_marche (Taille du marché adressable par le bloc) — unité M$, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_5', 'se_2']
+    Dépense annuelle des clients que l'offre du bloc peut servir telle qu'elle existe, à la période dite ; un marché d'extension (offre non encore vendue) est un AUTRE bloc, de statut extension, jamais un plafond du bloc actuel.
+  · croissance_du_marche (Progression annuelle du marché adressable) — unité %/an, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['se_4', 'se_2', 'me_5']
+    Taux de croissance annuel du marché tel que défini par `taille_du_marche`, observé ou projeté sur l'horizon de la question qui l'instruit.
+  · part_de_marche (Part prise par le bloc sur son marché adressable) — unité %, période exercice ; origines admises ['calcul'] ; questions sources ['me_5', 'se_2']
+    Chiffre d'affaires du bloc rapporté à la taille du marché adressable, à la même période ; calculée, jamais déclarée, et jamais mesurée sur des revenus futurs (09 §6).
+  · chiffre_affaires_du_bloc (Chiffre d'affaires du bloc) — unité M$, période exercice ; origines admises ['piece', 'calcul'] ; questions sources ['me_2', 'me_4'] — somme_vers_ligne: chiffre_affaires
+    Chiffre d'affaires de l'activité que couvre le bloc, à sa maille propre (publiée ou estimée), avant tout retraitement d'agrégation.
+  · volume (Volume d'unités vendues par le bloc) — unité unités, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_4']
+    Nombre d'unités (ou de contrats, d'abonnements, selon le modèle économique du bloc) vendues sur la période, avant tout effet de prix.
+  · prix_moyen (Prix moyen réalisé par unité vendue) — unité $/unité, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_4', 'me_3', 'mo_6']
+    Chiffre d'affaires du bloc rapporté au volume vendu sur la même période — ce que le client paie effectivement, net des remises et des effets de mix.
+  · part_recurrente (Part du chiffre d'affaires du bloc qui revient sans nouvel effort de vente) — unité %, période exercice ; origines admises ['piece', 'jugement'] ; questions sources ['me_2']
+    Fraction du chiffre d'affaires de la période qui provient d'un revenu déjà engagé (abonnement, contrat reconduit, clientèle installée) et ne dépend pas d'un nouvel acte de vente.
+  · marge_contributive (Marge contributive du bloc) — unité %, période exercice ; origines admises ['piece', 'jugement', 'calcul'] ; questions sources ['me_3', 'se_3']
+    Chiffre d'affaires du bloc moins ses coûts directement variables, rapportée au chiffre d'affaires du bloc — ce qu'une unité de plus rapporte avant les coûts communs du titre.
+  · couts_communs (Coûts communs non affectés à un bloc) — unité M$, période exercice ; origines admises ['piece', 'calcul'] ; questions sources []
+    Charges d'exploitation qui ne se rattachent à aucun bloc d'activité pris isolément (fonctions support, structure) ; se lisent au socle des comptes, jamais recollectées question par question.
+  · taux_d_impot (Taux d'imposition effectif appliqué au résultat du titre) — unité %, période exercice ; origines admises ['piece', 'calcul'] ; questions sources ['qf_1']
+    Taux d'imposition réellement supporté par le résultat d'exploitation du titre, tel que mesuré par le socle des comptes.
+  · capital_par_point_de_croissance (Capital supplémentaire immobilisé par point de croissance de l'activité) — unité M$, période exercice ; origines admises ['reponse_reprise', 'jugement'] ; questions sources ['qf_3']
+    Reprend l'encadré de la question qui instruit déjà ce chiffre pour le titre (un seul chiffre par dossier) ; à défaut, un jugement ancré sur un taux de base sourcé.
+  · probabilite_de_succes (Probabilité de succès du programme) — unité (0-1), période sans_periode ; origines admises ['jugement'] ; questions sources ['se_2', 'mo_4', 'me_7']
+    Probabilité que le programme en développement du bloc atteigne son prochain jalon décisif (autorisation, lancement commercial), ancrée sur une classe de référence sourcée.
+  · annee_de_lancement (Année de lancement commercial visée ou observée du bloc) — unité année, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['se_2', 'me_5', 'me_7']
+    Exercice auquel le bloc est (ou serait) effectivement lancé commercialement, tel que publié par l'émetteur ou estimé par jugement ancré.
+  · ventes_au_pic (Ventes annuelles au pic du bloc) — unité M$, période exercice ; origines admises ['jugement'] ; questions sources ['me_5', 'me_4', 'me_7']
+    Chiffre d'affaires annuel maximal attendu du bloc une fois son potentiel commercial pleinement atteint, avant tout déclin lié à la concurrence ou à l'exclusivité.
+  · duree_d_exclusivite (Durée d'exclusivité commerciale du bloc) — unité années, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['mo_4']
+    Nombre d'années pendant lesquelles le bloc est protégé de la concurrence directe (brevet, exclusivité réglementaire, avance technique défendable).
+  · cout_restant_de_developpement (Coût restant à engager pour développer le bloc) — unité M$, période sans_periode ; origines admises ['piece', 'jugement'] ; questions sources ['qf_7', 'me_7']
+    Montant total encore nécessaire pour amener le programme du bloc à son prochain jalon décisif, au-delà des sommes déjà dépensées — un MONTANT SANS PÉRIODE (`periode: sans_periode`), jamais une ligne annuelle du business plan : la dépense de l'EXERCICE pour ce même programme est `depense_de_developpement_du_bloc` (lot M3 bis §4.2 ; cause ④, §5 : une dimension temporelle ne se mélange jamais entre un reste à engager et une cadence annuelle).
+  · depense_de_developpement_du_bloc (Dépense de recherche et développement de l'exercice pour le programme du bloc) — unité M$, période exercice ; origines admises ['piece', 'jugement', 'calcul'] ; questions sources ['me_7', 'qf_7']
+    Ce que le compte de résultat de l'exercice supporte pour le programme du bloc — distincte de `cout_restant_de_developpement`, qui est un montant SANS période (lot M3 bis §4.2).
+
+Patron de départ de l'archétype (suggestion) :
+  · bloc activite — variables suggérées : chiffre_affaires_du_bloc, taille_du_marche, croissance_du_marche, part_de_marche, volume, prix_moyen, part_recurrente, marge_contributive
+  · bloc commun — variables suggérées : couts_communs, taux_d_impot, capital_par_point_de_croissance
+
+Comptes reconstitués :
+Comptes de Revolution Medicines, Inc. reconstitués au format maison depuis les dépôts SEC (gabarit 1.1.0, dernier dépôt lu : 10-Q déposé le 2026-08-05). Montants en millions de dollars, tels que déposés (une charge est positive). Une ligne « solde du bouclage » est l'écart déterministe entre un total déposé et les lignes nommées au-dessus. « n.d. » : ligne non déposée par l'émetteur.
+Reclassement d'analyste — Financement adossé aux redevances futures (dette) : AccruedRoyaltiesCurrentAndNoncurrent. Accord avec Royalty Pharma (2025) : les fonds reçus contre une part des redevances futures sont comptabilisés comme une dette (cession de revenus futurs, ASC 470-10), qui porte des intérêts non décaissés capitalisés — 24,2 M$ en 2025 (PaidInKindInterest), avant toute autre dette. Convention maison : un financement qui porte intérêt est de la dette. Inscrit en non courant (aucune échéance à douze mois déposée). (pièce : https://www.sec.gov/Archives/edgar/data/1628171/000119312526071563/0001193125-26-071563-index.htm)
+
+Compte de résultat — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31 | Douze mois au 2026-06-30
+  Chiffre d'affaires : 29.4 | 35.4 | 11.6 | 0.0 | 0.0 | n.d.
+  Coût des ventes : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Marge brute : 29.4 | 35.4 | 11.6 | 0.0 | 0.0 | 0.0
+  Recherche et développement : 186.9 | 253.1 | 423.1 | 592.2 | 987.3 | 1 296.3
+  Frais commerciaux, généraux et administratifs : 30.4 | 40.6 | 75.6 | 97.3 | 195.0 | 330.9
+  Autres charges d'exploitation (solde du bouclage) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0
+  Résultat d'exploitation : -188.0 | -258.3 | -487.2 | -689.5 | -1 182.4 | -1 627.2
+  Produits financiers (intérêts reçus) : 0.9 | 9.2 | 47.5 | 86.9 | 90.7 | 98.5
+  Charges d'intérêts : 0.0 | 0.0 | 0.0 | 0.0 | 24.2 | 59.3
+  Autres produits et charges hors exploitation (solde du bouclage) : 0.0 | 0.0 | -0.2 | 1.8 | -15.4 | -180.2
+  Résultat avant impôt : -187.1 | -249.1 | -439.9 | -600.8 | -1 131.3 | -1 768.3
+  Impôt sur les résultats : 0.0 | -0.4 | -3.5 | -0.8 | 0.0 | n.d.
+  Activités abandonnées, minoritaires et autres (solde du bouclage) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0
+  Résultat net part du groupe : -187.1 | -248.7 | -436.4 | -600.1 | -1 131.3 | -1 768.3
+
+Bilan — Bilan d'ouverture au 2020-12-31 | Bilan au 2021-12-31 | Bilan au 2022-12-31 | Bilan au 2023-12-31 | Bilan au 2024-12-31 | Bilan au 2025-12-31 | Dernier bilan au 2026-06-30
+  Trésorerie et équivalents : 104.3 | 108.5 | 161.4 | 696.1 | 543.1 | 383.7 | 815.4
+  Placements financiers à court terme : 336.5 | 468.6 | 483.5 | 1 156.8 | 1 746.2 | 1 641.9 | 3 122.5
+  Créances clients : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Stocks : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Participations cotées détenues, présentées à l'actif courant : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Autres actifs courants (solde du bouclage) : 13.4 | 12.7 | 15.2 | 26.3 | 38.3 | 49.4 | 90.4
+  Actif courant : 454.1 | 589.8 | 660.2 | 1 879.3 | 2 327.6 | 2 075.0 | 4 028.3
+  Placements financiers à long terme : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Immobilisations corporelles nettes : 8.9 | 11.5 | 18.7 | 22.9 | 24.3 | 33.2 | 34.6
+  Droits d'utilisation (baux) : 27.4 | 59.7 | 55.1 | 77.1 | 117.5 | 132.1 | 127.8
+  Écarts d'acquisition : 14.6 | 14.6 | 14.6 | 14.6 | 14.6 | 14.6 | 14.6
+  Immobilisations incorporelles : 60.9 | 59.9 | 58.8 | 57.7 | 56.7 | 55.8 | 55.8
+  Participations non cotées et titres détenus à long terme : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Autres actifs non courants (solde du bouclage) : 1.4 | 2.5 | 4.6 | 10.1 | 17.6 | 43.8 | 62.1
+  Total de l'actif : 567.4 | 738.0 | 811.9 | 2 061.7 | 2 558.3 | 2 354.5 | 4 323.3
+  Dettes fournisseurs : 12.6 | 14.1 | 21.3 | 61.8 | 54.4 | 64.6 | 88.4
+  Dette financière à moins d'un an : n.d. | n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Obligations locatives à moins d'un an : 3.7 | 6.2 | 6.8 | 7.4 | 12.9 | 16.5 | 16.8
+  Autres passifs courants (solde du bouclage) : 30.9 | 40.1 | 33.9 | 74.7 | 96.6 | 209.3 | 248.9
+  Passif courant : 47.2 | 60.4 | 62.0 | 143.9 | 163.9 | 290.4 | 354.1
+  Dette financière à plus d'un an : n.d. | n.d. | n.d. | n.d. | n.d. | 0.0 | 487.4
+  Financement adossé aux redevances futures (dette) : n.d. | n.d. | n.d. | n.d. | 0.0 | 268.4 | 548.5
+  Obligations locatives à plus d'un an : 29.0 | 60.4 | 57.4 | 80.6 | 123.0 | 142.2 | 137.7
+  Autres passifs non courants (solde du bouclage) : 16.6 | 14.7 | 7.3 | 11.1 | 6.2 | 22.1 | 189.3
+  Total des dettes : 92.7 | 135.4 | 126.7 | 235.5 | 293.1 | 723.2 | 1 717.0
+  Capitaux propres (minoritaires compris) : 474.7 | 602.6 | 685.2 | 1 826.2 | 2 265.2 | 1 631.3 | 2 606.2
+  Total du passif et des capitaux propres : 567.4 | 738.0 | 811.9 | 2 061.7 | 2 558.3 | 2 354.5 | 4 323.3
+  Capital employé dans l'exploitation (convention maison) : 55.7 | 47.1 | 56.7 | -4.9 | 0.4 | -77.2 | -79.9
+  Capital employé hors écarts d'acquisition : 41.1 | 32.5 | 42.1 | -19.5 | -14.2 | -91.8 | -94.5
+
+Tableau des flux de trésorerie — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31 | Douze mois au 2026-06-30
+  Dotations aux amortissements : 3.1 | 4.0 | 5.0 | 6.6 | 7.8 | 9.1
+  Rémunération en actions : 20.7 | 31.2 | 61.8 | 79.2 | 118.4 | 218.8
+  Variation du besoin en fonds de roulement et autres éléments (solde du bouclage) : 16.1 | -10.9 | 19.0 | -43.1 | 107.4 | 317.4
+  Flux de trésorerie d'exploitation : -147.2 | -224.4 | -350.6 | -557.4 | -897.7 | -1 223.0
+  Investissements corporels (décaissés) : 6.5 | 10.8 | 7.7 | 10.3 | 16.0 | 9.1
+  Acquisitions de sociétés, nettes de la trésorerie acquise : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Autres flux d'investissement, dont placements (solde du bouclage) : -135.6 | -13.3 | -334.9 | -544.1 | 134.0 | -1 377.2
+  Flux de trésorerie d'investissement : -142.1 | -24.1 | -342.6 | -554.4 | 118.1 | -1 386.3
+  Émissions d'actions : 281.1 | 248.1 | 323.7 | 727.6 | 0.0 | 1 651.4
+  Rachats d'actions : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Dividendes versés : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Autres flux de financement, dont dette (solde du bouclage) : 13.0 | 53.3 | 905.5 | 231.8 | 621.5 | 1 371.9
+  Flux de trésorerie de financement : 294.2 | 301.4 | 1 229.2 | 959.4 | 621.5 | 3 023.3
+  Effet des variations de change : n.d. | n.d. | n.d. | n.d. | n.d. | n.d.
+  Variation de la trésorerie : 4.9 | 52.9 | 536.0 | -152.4 | -158.2 | 413.9
+  Flux de trésorerie disponible (exploitation − investissements corporels) : -153.7 | -235.2 | -358.3 | -567.7 | -913.7 | -1 232.1
+
+Ratios maison (définitions 1.0.0, communes à toutes les sociétés) — Exercice clos le 2021-12-31 | Exercice clos le 2022-12-31 | Exercice clos le 2023-12-31 | Exercice clos le 2024-12-31 | Exercice clos le 2025-12-31
+  Taux d'impôt retenu (%) : 0.0 | 0.0 | 0.0 | 0.0 | 0.0
+  Résultat d'exploitation après impôt (M$) : -188.0 | -258.3 | -487.2 | -689.5 | -1 182.4
+  Capital employé moyen de l'exercice (M$) : 51.4 | 51.9 | 25.9 | -2.2 | -38.4
+  Rendement du capital employé (%) : -365.7 | -497.6 | -1 880.4 | n.d. | n.d.
+  Rendement hors écarts d'acquisition (%) : -510.8 | -692.5 | -4 311.0 | n.d. | n.d.
+  Marge d'exploitation après impôt (%) : -639.7 | -730.0 | -4 207.1 | n.d. | n.d.
+  Rotation du capital employé (fois) : 0.57 | 0.68 | 0.45 | n.d. | n.d.
+  Rendement du capital employé, moyenne des cinq exercices (%) : non défini : rendement non défini pour l'exercice clos le 2024-12-31 (non défini : capital employé moyen nul ou négatif (-2.2 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104)) ; l'exercice clos le 2025-12-31 (non défini : capital employé moyen nul ou négatif (-38.4 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104))
+  Pente du rendement du capital employé sur cinq exercices (points/an) : non défini : rendement non défini pour l'exercice clos le 2024-12-31 (non défini : capital employé moyen nul ou négatif (-2.2 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104)) ; l'exercice clos le 2025-12-31 (non défini : capital employé moyen nul ou négatif (-38.4 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104))
+  Part du résultat net retrouvée en trésorerie d'exploitation, trois exercices (%) : non calculable : résultat net cumulé nul ou négatif sur les exercices clos du 2023-12-31 au 2025-12-31 (-2 167.8 M$) — une perte ne se convertit pas en trésorerie
+  Capital employé supplémentaire par point de croissance du chiffre d'affaires (M$) : non calculable : le chiffre d'affaires n'a pas crû sur les exercices clos du 2021-12-31 au 2025-12-31 (-100.0 points) — aucun point de croissance à financer
+
+Bouclages : 20 contrôles, aucun écart.
+
+Ventilation publiée :
+L'émetteur ne publie qu'un secteur : tous les blocs seront estimés et se raccordent à une ligne des comptes (statut `secteur_unique`).
+
+Réponses des questions sources (ordre de la porte) :
+— Question me_2 (modele_economique) — porte : ouvre — réponse #1335 : un fait important publié depuis rend les pièces caduques — l'historique « sensibilite_passee » n'est pas complété : sa pièce la plus récente est du 2026-06-30, avant le 2026-08-26 (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le chiffre courant « poids_des_premiers_clients » : sa pièce la plus récente, #961 du 2026-06-30, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  statut repondu ; écrite le 2026-10-13 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité perimee — l'historique « sensibilite_passee » n'est pas complété : sa pièce la plus récente est du 2026-06-30, avant le 2026-08-26 (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le chiffre courant « poids_des_premiers_clients » : sa pièce la plus récente, #961 du 2026-06-30, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  verbatim : Aucun chiffre d'affaires n'est reconnu sur les six mois clos le 2026-06-30 : le compte de résultat ne comporte aucune ligne de revenus, et les collaborations cliniques (Summit, Tango, BMS) sont des accords de développement sans reconnaissance de revenus. Les paiements Royalty Pharma sont comptabilisés comme dette, non comme revenus.
+  sens : revenus_non_etablis
+— Question me_3 (modele_economique) — porte : ouvre — réponse #1336 qui tient
+  statut approxime ; écrite le 2026-10-13 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) est couvert
+  verbatim : Le prix catalogue par unité de traitement est de 39 800 USD pour 30 jours de RASONQUE (coût d'acquisition en gros), mais le coût de production unitaire n'est pas publié ; la marge brute par unité ne peut donc être qu'estimée, et elle est en outre réduite par les remises gouvernementales Medicare (20-30 % du prix catalogue) et l'assistance copay qui peut ramener la charge patient à 0 USD.
+  sens : economie_unitaire_non_etablie
+— Question me_4 (modele_economique) — porte : ouvre — réponse #1337 qui tient
+  statut repondu ; écrite le 2026-10-13 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) est couvert
+  verbatim : Les moteurs du futur chiffre d'affaires de RASONQUE sont : (1) la population de patients atteints d'adénocarcinome pancréatique métastatique éligibles (2e ligne ou plus), (2) le taux d'adoption par les prescripteurs, et (3) la prise en charge par les payeurs (assurance commerciale et Medicare). Ces moteurs sont largement subis : la population est donnée, l'adoption dépend des prescripteurs, et la prise en charge est négociée avec les payeurs.
+  sens : moteurs_subis
+— Question me_5 (modele_economique) — porte : ouvre — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  statut non_fondable ; écrite le 2026-10-13 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+— Question me_7 (modele_economique) — porte : ouvre — réponse #2304 qui tient
+  statut approxime ; écrite le 2026-10-22 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-05-06, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : surprise_execution (note flash du 2026-10-18 : « On May 6, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended March 31, 2026. » · couvert(s) par les comptes : gouvernance (survenu le 2026-03-31), reglementaire_favorable (survenu le 2026-03-31))) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-26 — effet : L'approbation FDA du 2026-08-26 fait passer daraxonrasib du statut de candidat à celui de produit commercialisé, mais les extensions d'indication (1L PDAC, adjuvant, NSCLC) restent en développement ; le portefeuille de programmes futurs est inchangé dans son ampleur. ; 8-K du 2026-08-05 — effet : Le communiqué Q2 2026 du 2026-08-05 confirme l'avancement des programmes (RASolute 303, 304, 305, 308, 309, RASolve 301, 307, RMC-5127, RM-055) et la dépense de R&D du T2 2026 de 394,9 M$, sans modifier l'inventaire des programmes.
+  verbatim : Revolution Medicines prépare un portefeuille de programmes en développement : daraxonrasib (RASONQUE, approuvé, en extension vers 1L PDAC via RASolute 303, adjuvant via RASolute 304, NSCLC via RASolve 301), zoldonrasib (Phase 3 RASolute 305, 308, 309), elironrasib (Phase 3 RASolve 307 à initier), RMC-5127 (Phase 1), RMC-0708 et RMC-8839 (préclinique/développement), RM-055 (nouvelle classe, Phase 1 à initier).
+    chiffre : nombre_de_programmes = 8 unités (au 2026-08-05)
+    chiffre : depense_de_developpement = 987.3 M$ (exercice 2025)
+  sens : portefeuille_etabli
+— Question mo_4 (defendabilite) — porte : ouvre — réponse #1420 : un fait important publié depuis rend les pièces caduques — la description annuelle « echeances_contractuelles_ou_legales » : sa pièce la plus récente, #1167 du 2025-12-31, précède le fait qui rouvre la question (8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))). Elle reste EXACTE à sa date : périmé n'est pas faux. — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-26 — effet : L'approbation FDA du 2026-08-26 fixe le point de départ des exclusivités NCE (5 ans, jusqu'au 2031-08-26) et Orphan Drug (7 ans, jusqu'au 2033-08-26), ce qui ancre la durée de la barrière réglementaire.
+  statut repondu ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité perimee — la description annuelle « echeances_contractuelles_ou_legales » : sa pièce la plus récente, #1167 du 2025-12-31, précède le fait qui rouvre la question (8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))). Elle reste EXACTE à sa date : périmé n'est pas faux. — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-26 — effet : L'approbation FDA du 2026-08-26 fixe le point de départ des exclusivités NCE (5 ans, jusqu'au 2031-08-26) et Orphan Drug (7 ans, jusqu'au 2033-08-26), ce qui ancre la durée de la barrière réglementaire.
+  verbatim : La barrière tient au moins jusqu'en 2031 (exclusivité NCE de 5 ans à compter de l'approbation du 2026-08-26), soit environ 5 ans à la date de l'analyse, et jusqu'en 2033 pour l'Orphan Drug Exclusivity (7 ans). Les brevets de composition de matière expirent entre 2031 et 2045, ce qui prolonge la protection au-delà de l'exclusivité réglementaire.
+    chiffre : duree_retenue = 5 années (à la date de l'analyse (2026-10-14), jusqu'à l'expiration de l'exclusivité NCE le 2031-08-26)
+  sens : duree_longue
+— Question mo_6 (defendabilite) — porte : ouvre — réponse #1416 refusée par le contrôle : le contrôle du manager a refusé la réponse : completude ko — `mo_6` a été déclarée sans objet sous un classement antérieur ; l'émetteur a été reclassé et la question a désormais un objet — elle est à instruire
+  statut sans_objet ; écrite le 2026-10-15 ; verdict renvoye
+  motif du contrôle : completude ko — `mo_6` a été déclarée sans objet sous un classement antérieur ; l'émetteur a été reclassé et la question a désormais un objet — elle est à instruire
+— Question qf_1 (qualite_financiere) — porte : ouvre — réponse #1685 qui tient
+  statut repondu ; écrite le 2026-10-18 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-05-06, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : surprise_execution (note flash du 2026-10-18 : « On May 6, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended March 31, 2026. » · couvert(s) par les comptes : gouvernance (survenu le 2026-03-31), reglementaire_favorable (survenu le 2026-03-31))) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-05 — effet : Le 8-K du 2026-08-05 ne modifie pas la réponse : il confirme une perte d'exploitation de 950,4 M$ sur le S1 2026 et une perte nette de 1 098,2 M$, sans changer la relation négative entre le capital employé et le résultat. Le capital employé moyen reste négatif (-79,9 M$ au 2026-06-30), le rendement demeure non défini.
+  verbatim : Le capital employé ne rapporte pas durablement plus que son coût : le rendement du capital employé est négatif sur les exercices 2021 à 2023 (respectivement -365,7 %, -497,6 % et -1 880,4 %) et n'est pas défini sur 2024 et 2025, le capital employé moyen étant nul ou négatif (-2,2 M$ en 2024, -38,4 M$ en 2025). L'entreprise détruit de la valeur.
+    chiffre : cout_du_capital : non établi — Le corpus ne fournit aucune estimation du coût moyen pondéré du capital (WACC) de Revolution Medicines.
+    chiffre : resultat_operationnel_apres_impot_normalise = -1182.4 M$ (exercice 2025)
+    chiffre : rendement_du_capital_employe : non établi — non établi : rendement absent pour l'exercice clos le 2024-12-31 (non défini : capital employé moyen nul ou négatif (-2.2 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104)) ; l'exercice clos le 2025-12-31 (non défini : capital employé moyen nul ou négatif (-38.4 M$) — un rendement rapporté à un capital négatif changerait de signe avec lui (#104))
+  sens : detruit_de_la_valeur
+— Question qf_3 (qualite_financiere) — porte : ouvre — réponse #1712 qui tient
+  statut repondu ; écrite le 2026-10-18 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-05-06, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : surprise_allocation, surprise_execution (note flash du 2026-10-18 : « On May 6, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended March 31, 2026. » · couvert(s) par les comptes : gouvernance (survenu le 2026-03-31), reglementaire_favorable (survenu le 2026-03-31))) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-05 — effet : Sans effet sur ce chiffre : il est calculé sur des exercices clos, qu'un dépôt postérieur (surprise_allocation, surprise_execution) ne modifie pas — seuls un retraitement des comptes, un changement de périmètre ou un dépôt non lu le rouvrent.
+  verbatim : Non significatif pour cette entreprise : capital supplémentaire investi par point de croissance de l'activité — non calculable : le chiffre d'affaires n'a pas crû sur les exercices clos du 2021-12-31 au 2025-12-31 (-100.0 points) — aucun point de croissance à financer. Aucun verdict ne se lit sur ce chiffre ; la question se rouvrira aux comptes suivants.
+    chiffre : capital_par_point_de_croissance : non établi — non calculable : le chiffre d'affaires n'a pas crû sur les exercices clos du 2021-12-31 au 2025-12-31 (-100.0 points) — aucun point de croissance à financer
+  sens : non_significatif
+— Question qf_7 (qualite_financiere) — porte : ouvre — réponse #1680 qui tient
+  statut repondu ; écrite le 2026-10-18 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2026-05-06, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : financement, surprise_allocation, surprise_execution (note flash du 2026-10-18 : « On May 6, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended March 31, 2026. » · couvert(s) par les comptes : gouvernance (survenu le 2026-03-31), reglementaire_favorable (survenu le 2026-03-31))) est couvert — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-10-08 — effet : Le tirage de 250,0 M$ le 2026-10-08 augmente la trésorerie disponible d'environ 245 M$ nets (250 M$ moins 5 M$ de frais), portant la trésorerie mobilisable à ≈4 183 M$ et l'autonomie à ≈22,8 mois à consommation constante. La société a renoncé à la Tranche 3 (250 M$ potentiels), ce qui réduit d'autant le capital disponible mais ne change pas la trésorerie actuelle. ; 8-K du 2026-08-27 — effet : Les baux Seaport Boulevard (loyers ≈2,7 M$/mois à pleine occupation à partir de 2027-2028) ajouteront des charges locatives annuelles d'environ 32,4 M$ à pleine occupation, soit ≈2,6 % de la consommation annuelle retenue ; l'effet sur l'autonomie est marginal (≈0,3 mois). ; 8-K du 2026-08-26 — effet : L'approbation FDA de RASONQUE le 2026-08-26 ouvre le lancement commercial ; le produit générera des revenus (WAC 39 800 $/mois) qui pourraient réduire la consommation nette, mais aucune prévision de revenus n'est fournie dans le corpus. L'effet sur l'autonomie ne peut pas être chiffré. ; 8-K du 2026-08-05 — effet : Le 8-K du 2026-08-05 confirme la trésorerie de 3,94 Md$ au 2026-06-30 et la guidance FY2026 de 2,1–2,2 Md$ ; il ne change pas l'autonomie calculée.
+  verbatim : Au 2026-06-30, la trésorerie mobilisable s'élève à 3 938,0 M$ (trésorerie, équivalents et titres négociables). La consommation constatée sur les douze derniers mois (exploitation + investissements corporels) est de 1 232,1 M$, et la direction prévoit pour FY2026 des dépenses opérationnelles GAAP de 2,1 à 2,2 Md$ (borne haute 2 200 M$), incluant 270–290 M$ de rémunération en actions non-cash. La consommation retenue (la plus prudente) est la prévision de la direction de 2 200 M$, soit une autonomie d'environ 21,5 mois. Aucune échéance de dette n'est exigible dans les douze prochains mois.
+    chiffre : consommation_prevue = 2200 M$ (exercice 2026 (prévision de la direction, borne haute de la guidance GAAP))
+    chiffre : tresorerie_mobilisable = 3937.97 M$ (Dernier bilan au 2026-06-30 — socle des comptes : tresorerie + placements_court_terme + placements_long_terme)
+    chiffre : consommation_constatee = 1232.13 M$ (Douze mois au 2026-06-30 — socle des comptes : -flux_de_tresorerie_disponible)
+    chiffre : consommation_retenue = 2200 M$ (exercice 2026 (prévision de la direction, borne haute de la guidance GAAP) — retenu : consommation_prevue, le plus élevé de consommation_constatee, consommation_prevue)
+    chiffre : autonomie = 21.4798 mois (calculé : tresorerie_mobilisable / consommation_retenue * 12 — consommation_retenue exercice 2026 (prévision de la direction, borne haute de la guidance GAAP) — retenu : consommation_prevue, le plus élevé de consommation_constatee, consommation_prevue ; tresorerie_mobilisable Dernier bilan au 2026-06-30 — socle des comptes : tresorerie + placements_court_terme + placements_long_terme)
+  sens : autonomie_longue
+— Question se_2 (secteur_concurrence) — porte : ouvre — réponse #1441 : un fait important publié depuis rend les pièces caduques — le jugement « consequence_pour_l_entreprise » : sa pièce la plus récente, #1296 du 2024-12-31, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le jugement « nouveaux_modeles » : sa pièce la plus récente, #1292 du 2026-04-13, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  statut approxime ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité perimee — le jugement « consequence_pour_l_entreprise » : sa pièce la plus récente, #1296 du 2024-12-31, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le jugement « nouveaux_modeles » : sa pièce la plus récente, #1292 du 2026-04-13, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  verbatim : Le marché des thérapies ciblant RAS est dispersé et en recomposition : de nombreux programmes cliniques concurrents existent sur les cibles KRAS G12C, KRAS G12D et RAS mutant (Amgen, Eli Lilly, Bristol Myers Squibb, AstraZeneca, etc.), mais Revolution Medicines se positionne en tête sur la cible RAS(ON) avec daraxonrasib, premier inhibiteur de cette classe, approuvé par la FDA en août 2026. Le marché est donc fragmenté entre de nombreux développeurs, avec un avantage de premier entrant pour Revolution Medicines sur sa cible spécifique.
+  sens : marche_en_recomposition
+— Question se_3 (secteur_concurrence) — porte : ferme — aucune réponse instruite
+  (aucune réponse instruite)
+— Question se_4 (secteur_concurrence) — porte : ouvre — réponse #1442 qui tient
+  statut repondu ; écrite le 2026-10-15 ; verdict acquitte
+  motif du contrôle : 4 contrôles au vert
+  actualité courante — chaque pièce est dans la durée de vie de ce qu'elle fonde (dernière clôture publiée : 2026-06-30, dernier exercice : 2025-12-31) ; le dernier fait qui la rouvre (8-K du 2025-08-06, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : a_qualifier) est couvert — remplacée(s) sur leur sujet par une pièce plus récente, citée(s) comme contexte : #1272
+  verbatim : La demande du secteur n'est pas cyclique au sens classique : elle dépend de la capacité des entreprises à lever des fonds, et les conditions de financement sont actuellement favorables. Revolution Medicines a levé environ 1,725 milliard $ en avril 2026 (offre publique) et 500 millions $ en obligations convertibles, et dispose de 3,9 milliards $ de trésorerie et titres négociables au 30 juin 2026, ce qui lui permet de financer ses opérations pour au moins 12 mois. Le secteur est en phase de financement abondant, comme en témoignent les levées récentes et l'approbation de RASONQUE qui ouvre une nouvelle source de revenus.
+  sens : cycle_favorable
+
+Notes flash depuis la dernière clôture annuelle :
+  · 2026-02-25 — types ['resultats'] — note flash du 2026-10-18 : « On February 25, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the year ended December 31, 2025. » · couvert(s) par les comptes : accord_commercial (survenu le 2025-12-31), financement (survenu le 2025-06-01), reglementaire_favorable (survenu le 2025-12-31), surprise (survenu le 2025-12-31) — accession 0001193125-26-071517 — pièce non identifiée
+  · 2026-04-13 — types ['reglementaire_favorable'] — note flash du 2026-10-18 : « On April 13, 2026, Revolution Medicines, Inc. (the “Company”) shared topline results from its global, randomized, controlled Phase 3 RASolute 302 clinical trial… » — accession 0001193125-26-152039 — pièce non identifiée
+  · 2026-04-14 — types ['financement'] — note flash du 2026-10-18 : « On April 14, 2026, Revolution Medicines, Inc. (the “Company”) entered into an underwriting agreement (the “Equity Underwriting Agreement”) with J.P. Morgan Secu… » — accession 0001193125-26-159289 — pièce non identifiée
+  · 2026-04-14 — types ['financement'] — note flash du 2026-10-18 : « On April 17, 2026, Revolution Medicines, Inc. (the “Company”) issued $500,000,000 aggregate principal amount of its 0.50% Convertible Senior Notes due 2033 (the… » — accession 0001193125-26-161800 — pièce #299
+  · 2026-05-06 — types ['financement', 'resultats', 'surprise_allocation', 'surprise_execution'] — note flash du 2026-10-18 : « On May 6, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended March 31, 2026. » · couvert(s) par les comptes : gouvernance (survenu le 2026-03-31), reglementaire_favorable (survenu le 2026-03-31) — accession 0001193125-26-208918 — pièce non identifiée
+  · 2026-08-05 — types ['reglementaire_favorable', 'resultats', 'surprise_allocation', 'surprise_execution'] — note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30) — accession 0001193125-26-335039 — pièce #768
+  · 2026-08-26 — types ['changement_de_stade', 'reglementaire_favorable'] — note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… » — accession 0001193125-26-366931 — pièce #944
+  · 2026-10-08 — types ['financement'] — note flash du 2026-10-18 : « On October 8, 2026 (the “Tranche A Closing Date”), in connection with the U.S. Food and Drug Administration’s (the “FDA”) approval of RASONQUE™ (daraxonrasib) f… » — accession 0001628171-26-000004 — pièce #1021
+
+Taille de la matière : 42041 caractères, ~10510 jetons estimés.
+BILAN architecte RVMD : porte fermée (1) — à blanc (matière seule) — 0 blocs (0 publiés / 0 estimés), 0 cellules attendues, 0 signaux, 0.0000 $

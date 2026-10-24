@@ -1281,6 +1281,64 @@ frameworks:
             mode: variable
             variable: Concentration des encours par secteur, par contrepartie et par zone
 
+      - id: me_7
+        enonce: >-
+          Que prépare l'entreprise pour ses années futures — programmes en développement,
+          générations et produits annoncés, capacités en construction, acquisitions et accords en
+          cours — à quel stade est chacun, quel est son prochain jalon, combien coûte-t-il et que
+          pourrait-il rapporter ?
+        chemin_indexation: modele_economique.programmes_futurs
+        nature_attendue: mesure
+        plancher_tier: B+
+        rouverte_par: [changement_de_stade, reglementaire_favorable, reglementaire_defavorable, accord_commercial, resultats, surprise_execution]
+        sens_admis: [portefeuille_etabli, portefeuille_naissant, rien_de_prepare]
+        ingredients_requis:
+          - id: inventaire_des_programmes
+            libelle: >-
+              Chaque programme ou projet nommé — y compris les plus précoces (découverte,
+              préclinique, prototype, génération suivante annoncée) — avec son origine (interne,
+              acquisition, licence, partenariat), son dernier jalon franchi et sa date, son
+              prochain jalon et sa date attendue, le marché ou l'indication visé ; ceux que
+              l'émetteur ne nomme pas individuellement sont décrits comme plateforme, avec leur
+              nombre
+            essentiel: true
+            duree_de_vie: description_annuelle
+          - id: depense_par_programme
+            libelle: Dépense de l'exercice affectée par programme quand l'émetteur la publie, sinon la R&D totale et la part non affectée
+            essentiel: false
+            duree_de_vie: chiffre_courant
+            cadence: annuelle
+          - id: potentiel_par_programme
+            libelle: Ventes au pic, probabilité de succès au prochain jalon, sources et méthode
+            essentiel: false
+            duree_de_vie: jugement
+          - id: operations_de_perimetre_en_cours
+            libelle: Acquisitions, cessions, accords annoncés et non conclus, avec leur condition et leur date
+            essentiel: false
+            duree_de_vie: description_annuelle
+        chiffres_cles:
+          - id: nombre_de_programmes
+            libelle: Nombre de programmes ou projets recensés
+            unite: unités
+            periode: à la date de l'analyse
+          - id: depense_de_developpement
+            libelle: Dépense de développement de l'exercice, tous programmes confondus
+            unite: "M$"
+            periode: dernier exercice
+        variables_par_archetype:
+          rentable:
+            mode: variable
+            variable: Programmes et produits futurs qui s'ajouteront aux activités actuelles
+          pre_revenus:
+            mode: variable
+            variable: Portefeuille de programmes, chacun au stade et au jalon suivant
+          financiere:
+            mode: variable
+            variable: Nouveaux métiers, implantations et opérations de périmètre en cours
+        # Jamais `sans_objet` (09 §4, lot M3 bis §4.1) : une entreprise qui ne prépare rien le dit
+        # (`sens: rien_de_prepare`), et c'est une information pour la valorisation — pas une
+        # question qu'on retire du dossier.
+
   # ═══════════════════════════════════════════════════════════════════════════════════════════
   # « Secteur et concurrence » — roadmap 05, capacité 2 (2026-09-28), co-écrit avec l'utilisateur.
   # Porter : un bon acteur dans un secteur structurellement pauvre reste un placement médiocre. Il

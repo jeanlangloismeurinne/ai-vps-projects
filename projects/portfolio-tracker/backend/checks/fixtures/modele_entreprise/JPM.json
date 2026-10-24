@@ -1,10 +1,10 @@
 {
-  "schema_version": "architecture-1.1.0",
+  "schema_version": "architecture-1.2.0",
   "ticker_id": "JPM",
   "version": 1,
   "archetype": "financiere",
   "famille": "bancaire",
-  "version_referentiel": "1.1.0",
+  "version_referentiel": "1.2.0",
   "blocs": [
     {
       "id": "detail_et_communautes",
@@ -15,7 +15,9 @@
       "rattachement": {
         "type": "publie",
         "axe": "us-gaap:StatementBusinessSegmentsAxis",
-        "membre": "jpm:ConsumerCommunityBankingMember"
+        "membres": [
+          "jpm:ConsumerCommunityBankingMember"
+        ]
       },
       "variables": [
         "encours",
@@ -24,7 +26,8 @@
         "coefficient_d_exploitation",
         "fonds_propres_alloues"
       ],
-      "motif": "Motif de test (fixture JPM) pour le bloc detail_et_communautes : metier/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture JPM) pour le bloc detail_et_communautes : metier/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "banque_entreprises_marches",
@@ -35,7 +38,9 @@
       "rattachement": {
         "type": "publie",
         "axe": "us-gaap:StatementBusinessSegmentsAxis",
-        "membre": "jpm:CommercialAndInvestmentBankMember"
+        "membres": [
+          "jpm:CommercialAndInvestmentBankMember"
+        ]
       },
       "variables": [
         "encours",
@@ -44,7 +49,8 @@
         "coefficient_d_exploitation",
         "fonds_propres_alloues"
       ],
-      "motif": "Motif de test (fixture JPM) pour le bloc banque_entreprises_marches : metier/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture JPM) pour le bloc banque_entreprises_marches : metier/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "gestion_fortune",
@@ -55,14 +61,17 @@
       "rattachement": {
         "type": "publie",
         "axe": "us-gaap:StatementBusinessSegmentsAxis",
-        "membre": "jpm:AssetandWealthManagementSegmentMember"
+        "membres": [
+          "jpm:AssetandWealthManagementSegmentMember"
+        ]
       },
       "variables": [
         "encours",
         "coefficient_d_exploitation",
         "fonds_propres_alloues"
       ],
-      "motif": "Motif de test (fixture JPM) pour le bloc gestion_fortune : metier/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture JPM) pour le bloc gestion_fortune : metier/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "fonction_corporate",
@@ -73,12 +82,15 @@
       "rattachement": {
         "type": "publie",
         "axe": "us-gaap:StatementBusinessSegmentsAxis",
-        "membre": "us-gaap:CorporateNonSegmentMember"
+        "membres": [
+          "us-gaap:CorporateNonSegmentMember"
+        ]
       },
       "variables": [
         "fonds_propres_alloues"
       ],
-      "motif": "Motif de test (fixture JPM) pour le bloc fonction_corporate : metier/metier_actuel/publie, rattachement publie."
+      "motif": "Motif de test (fixture JPM) pour le bloc fonction_corporate : metier/metier_actuel/publie, rattachement publie.",
+      "origine": "interne"
     },
     {
       "id": "elements_non_alloues",
@@ -96,7 +108,8 @@
       "motif": "Motif de test (fixture JPM) pour le bloc elements_non_alloues : commun/metier_actuel/estime, rattachement agrege.",
       "pieces": [
         1
-      ]
+      ],
+      "origine": "interne"
     }
   ],
   "variables_propres": [],

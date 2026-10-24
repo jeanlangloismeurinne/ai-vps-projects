@@ -786,9 +786,18 @@ décrit avant la première vente, on demande ce qui est visé.
 | `me_4` | Quels sont les deux ou trois **moteurs** qui font varier le chiffre d'affaires ? | `interpretation` | B | `resultats`, `surprise_secteur`, `surprise_concurrence`, `surprise_execution`, `changement_de_stade` |
 | `me_5` | **Jusqu'où** l'activité peut-elle croître sur son modèle actuel — quel marché, quelle part déjà prise ? | `interpretation` | B | `reglementaire_favorable`, `reglementaire_defavorable`, `changement_de_stade` |
 | `me_6` | Le modèle **dépend-il** d'un client, d'un produit, d'un fournisseur ou d'un pays dont la perte le remettrait en cause ? | `mesure` | A | `accord_commercial`, `incident`, `changement_de_stade` |
+| `me_7` | Que **prépare** l'entreprise pour ses années futures — programmes en développement, générations et produits annoncés, capacités en construction, acquisitions et accords en cours — à quel stade est chacun, quel est son prochain jalon, combien coûte-t-il et que pourrait-il rapporter ? | `mesure` | B+ | `changement_de_stade`, `reglementaire_favorable`, `reglementaire_defavorable`, `accord_commercial`, `resultats`, `surprise_execution` |
 
-> Un changement de périmètre (`perimetre`, portée totale) rouvre les six sans qu'aucune ait à le
-> lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un dépôt.
+> Un changement de périmètre (`perimetre`, portée totale) rouvre les sept sans qu'aucune ait à le
+> lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un
+> dépôt. **`me_7`** (lot M3 bis, roadmap V3 `13-lot-M3bis-structure.md` §4) : ce que l'entreprise
+> prépare — l'inventaire des programmes, génération suivantes, capacités en construction,
+> acquisitions et accords en cours — est une part de la valeur, parfois la principale ; **jamais
+> `sans_objet`**, une entreprise qui ne prépare rien le dit (`sens: rien_de_prepare`). Elle entre
+> dans `questions_sources` de `probabilite_de_succes`, `annee_de_lancement`, `ventes_au_pic`,
+> `cout_restant_de_developpement` et de la fiche `depense_de_developpement_du_bloc`
+> (`app/frameworks/modele_entreprise.yaml`), et **ferme la porte de l'architecte** (`app/modele_entreprise/porte.py`)
+> jusqu'à sa première réponse instruite — comme toute question source d'un patron industriel.
 
 ### 4.4 Framework « Secteur et concurrence » (2026-09-28)
 

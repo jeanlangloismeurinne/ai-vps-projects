@@ -39,6 +39,7 @@ import app.modele_entreprise.porte as porte_mod  # noqa: E402
 from app.contracts.architecture_signature_schema import DemandeDecisionArchitecture  # noqa: E402
 from app.contracts.modele_entreprise_schema import Architecture  # noqa: E402
 from app.contracts.parcours_schema import Manque  # noqa: E402
+from app.knowledge import perimetre as pe  # noqa: E402
 from app.knowledge import ventilation as vt  # noqa: E402
 from app.knowledge import ventilation_xbrl as vx  # noqa: E402
 from app.knowledge.socle_comptes import (  # noqa: E402
@@ -227,7 +228,7 @@ def matiere_fictive(**over) -> Matiere:
         patron_texte="  · y", socle_texte="comptes", socle_piece_id=100, socle_structure={},
         ventilation_texte="vent", ventilation_piece_id=200, ventilation_structure=VENT_NVDA_FICTIVE,
         questions_texte=("— Question me_2 — ouvre",), notes_flash_texte="(aucune)",
-        pieces_citables=frozenset({100, 101, 102}))
+        pieces_citables=frozenset({100, 101, 102, 103}))
     base.update(over)
     return Matiere(**base)
 
@@ -252,12 +253,12 @@ b.check("tous les blocs seront estimés" in rendre_matiere(M_secteur_unique),
 print("§4 l'exemple du prompt (#121)")
 # ═══════════════════════════════════════════════════════════════════════════════════════════════
 sortie = ArchitecteSortie.model_validate(_EXEMPLE_ARCHITECTURE)
-b.check(len(sortie.blocs) == 5, f"exemple — 5 blocs (obtenu {len(sortie.blocs)})")
+b.check(len(sortie.blocs) == 6, f"exemple — 6 blocs (obtenu {len(sortie.blocs)})")
 arch_exemple = _poser_entete(sortie, ticker_id="FICTIF", version=1, archetype="rentable",
                              famille="industrielle", version_referentiel=REF.version)
-matiere_exemple = matiere_fictive(pieces_citables=frozenset({100, 101, 102}))
+matiere_exemple = matiere_fictive(pieces_citables=frozenset({100, 101, 102, 103}))
 tient, motif, signaux = juger_architecture(arch_exemple, REF, matiere_exemple)
-b.check(tient, f"exemple — valide contre le contrat, [P1]-[P5] et [S1]-[S9] (motif : {motif})")
+b.check(tient, f"exemple — valide contre le contrat, [P1]-[P5] et [S1]-[S11] (motif : {motif})")
 
 # ═══════════════════════════════════════════════════════════════════════════════════════════════
 print("§5 l'en-tête")
@@ -294,10 +295,14 @@ def socle_de(ticker: str):
 
 
 _, SOCLE_STRUCT_NVDA = socle_de("NVDA")
-DEPOTS_NVDA = [charger_depot("NVDA", "0001045810-26-000021"), charger_depot("NVDA", "0001045810-26-000075")]
+# Les TROIS dépôts que `ventilation_feed.lire_depots` lit en production quand le premier niveau change
+# (10-K, 10-Q récent, 10-Q jumeau) ; l'architecte lit la VUE SERVIE (lot P1 §8), jamais le relevé brut.
+DEPOTS_NVDA = [charger_depot("NVDA", "0001045810-26-000021"), charger_depot("NVDA", "0001045810-26-000075"),
+               charger_depot("NVDA", "0001045810-25-000209")]
 V_NVDA = vt.relever(DEPOTS_NVDA, GAB, REF_VENT, SOCLE_STRUCT_NVDA)
-STRUCT_NVDA = vt.structure_de_ventilation(V_NVDA, version_referentiel=REF_VENT.version,
-                                          version_gabarit=GAB.version, depots=tuple(DEPOTS_NVDA))
+STRUCT_NVDA = pe.vue_servie(vt.structure_de_ventilation(V_NVDA, version_referentiel=REF_VENT.version,
+                                                        version_gabarit=GAB.version, depots=tuple(DEPOTS_NVDA)),
+                            SOCLE_STRUCT_NVDA)
 
 MATIERE_NVDA = matiere_fictive(
     ticker_id="NVDA", raison_sociale="NVIDIA Corp", cik=1045810,
@@ -313,8 +318,9 @@ SEGS_10K = [("data_center", "nvda:DataCenterMember"), ("gaming", "nvda:GamingMem
 
 
 def _bloc_publie(bid, membre, **over):
-    base = {"id": bid, "libelle": bid, "role": "activite", "statut": "metier_actuel", "maille": "publie",
-           "rattachement": {"type": "publie", "axe": "activites", "membre": membre},
+    base = {"id": bid, "libelle": bid, "role": "activite", "statut": "metier_actuel",
+           "origine": "interne", "maille": "publie",
+           "rattachement": {"type": "publie", "axe": "activites", "membres": [membre]},
            "variables": ["chiffre_affaires_du_bloc"],
            "motif": f"Segment publié {bid} du 10-K, motif de longueur suffisante pour le contrat."}
     base.update(over)
@@ -327,10 +333,17 @@ def arch_nvda_10k(**over_cellules) -> Architecture:
     cellules = [{"bloc": bid, "variable": "chiffre_affaires_du_bloc",
                 "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}
                for bid, _ in SEGS_10K]
-    d = {"schema_version": "architecture-1.1.0", "ticker_id": "NVDA", "version": 1, "archetype": "rentable",
+    d = {"schema_version": "architecture-1.2.0", "ticker_id": "NVDA", "version": 1, "archetype": "rentable",
         "famille": "industrielle", "version_referentiel": REF.version, "blocs": blocs,
         "variables_propres": [], "passage_a_l_agrege": [{"ligne": "chiffre_affaires", "formule": formule}],
-        "cellules_attendues": cellules}
+        "cellules_attendues": cellules,
+        # [S10] (1.2.0, cause ①) — la ventilation réelle de NVDA porte aussi `clients`, `geographie`,
+        # `secteurs` : premier niveau sur `activites` seul, les autres axes sont déclarés en usage.
+        "autres_axes": [
+            {"axe": "clients", "usage": "Information de concentration client, hors de l'arbre."},
+            {"axe": "geographie", "usage": "Information de répartition géographique, hors de l'arbre."},
+            {"axe": "secteurs", "usage": "Second découpage publié (segments) ; raccord des marges, hors de l'arbre."},
+        ]}
     d.update(over_cellules)
     return Architecture.model_validate(d)
 
@@ -346,13 +359,75 @@ def valide_ou_motif(arch: Architecture, matiere=MATIERE_NVDA) -> str:
 ARCH_10K = arch_nvda_10k()
 r = valide_ou_motif(ARCH_10K)
 b.check(r.startswith("OK") and "[S3b]" in r,
-        f"[S1]-[S9] — architecture NVDA plausible au découpage du 10-K, signal [S3b] attendu : {r[:300]}")
+        f"[S1]-[S9] — architecture NVDA plausible au découpage du 10-K (antérieur), signal [S3b] attendu : {r[:300]}")
+
+# Garde (iii), lot P1 : une architecture sur le découpage LE PLUS RÉCENT (Data Center + Edge Computing)
+# trouve ses exercices — Edge Computing FY2026 existe par addition vérifiée — et ne lève aucun [S3b].
+SEGS_10Q = [("data_center", "nvda:DataCenterMember"), ("edge", "nvda:EdgeComputingMember")]
+ARCH_10Q = arch_nvda_10k(
+    blocs=[_bloc_publie(bid, m) for bid, m in SEGS_10Q],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires",
+                        "formule": "data_center__chiffre_affaires_du_bloc + edge__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[{"bloc": bid, "variable": "chiffre_affaires_du_bloc",
+                         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}
+                        for bid, _ in SEGS_10Q])
+r = valide_ou_motif(ARCH_10Q)
+b.check(r.startswith("OK") and "[S3b]" not in r and "[S2]" not in r,
+        f"[S2]/[S3b] — architecture sur le découpage le plus récent : exercices trouvés (addition vérifiée), "
+        f"aucun signal : {r[:300]}")
+ARCH_10Q_SANS_EDGE = arch_nvda_10k(
+    blocs=[_bloc_publie("data_center", "nvda:DataCenterMember")],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires", "formule": "data_center__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[{"bloc": "data_center", "variable": "chiffre_affaires_du_bloc",
+                         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}])
+r = valide_ou_motif(ARCH_10Q_SANS_EDGE)
+b.check(r.startswith("[S2]") and "FY2026-01-25" in r and "EdgeComputing" in r,
+        f"[S2] — période de référence = l'EXERCICE FY2026 du découpage récent (pas un cumul) ; Edge Computing "
+        f"non couvert est nommé : {r[:300]}")
 
 # [S1] : un membre inventé.
 ARCH_S1 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:InventeMember")] +
                         [_bloc_publie(bid, m) for bid, m in SEGS_10K[1:]])
 r = valide_ou_motif(ARCH_S1)
 b.check(r.startswith("[S1]"), f"[S1] — membre inventé refusé : {r[:200]}")
+
+# [S1] — REGROUPEMENT (1.2.0, cause ①) : plusieurs membres publiés d'un bloc, de parents
+# DIFFÉRENTS dans la hiérarchie relevée — `nvda:HyperscaleMember` (enfant de Data Center au 10-Q)
+# et `nvda:GamingMember` (premier niveau, aucun parent) n'ont pas le même parent.
+ARCH_REGROUP_KO = arch_nvda_10k(blocs=[
+    _bloc_publie("regroupe", "nvda:HyperscaleMember", rattachement={
+        "type": "publie", "axe": "activites", "membres": ["nvda:HyperscaleMember", "nvda:GamingMember"]})],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires", "formule": "regroupe__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[{"bloc": "regroupe", "variable": "chiffre_affaires_du_bloc",
+                        "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}],
+    autres_axes=[{"axe": "clients", "usage": "usage de test suffisamment long"}, {"axe": "geographie", "usage": "usage de test suffisamment long"},
+                {"axe": "secteurs", "usage": "usage de test suffisamment long"}])
+r = valide_ou_motif(ARCH_REGROUP_KO)
+b.check(r.startswith("[S1]") and "parents différents" in r,
+        f"[S1] — regroupement de membres à parents différents refusé : {r[:300]}")
+
+# [S1] — REGROUPEMENT valide : deux membres de premier niveau (même parent, `None`).
+_RESTE_BLOC = {"id": "reste", "libelle": "Reste", "role": "activite", "statut": "metier_actuel",
+              "origine": "interne", "maille": "estime",
+              "rattachement": {"type": "agrege", "ligne": "chiffre_affaires"},
+              "variables": ["chiffre_affaires_du_bloc"], "pieces": [1],
+              "motif": "Reste non couvert par le regroupement, motif de longueur suffisante."}
+ARCH_REGROUP_OK = arch_nvda_10k(blocs=[
+    _bloc_publie("regroupe", "nvda:DataCenterMember", rattachement={
+        "type": "publie", "axe": "activites", "membres": ["nvda:DataCenterMember", "nvda:GamingMember"]}),
+    _RESTE_BLOC],
+    passage_a_l_agrege=[{"ligne": "chiffre_affaires",
+                        "formule": "regroupe__chiffre_affaires_du_bloc + reste__chiffre_affaires_du_bloc"}],
+    cellules_attendues=[
+        {"bloc": "regroupe", "variable": "chiffre_affaires_du_bloc",
+         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}},
+        {"bloc": "reste", "variable": "chiffre_affaires_du_bloc",
+         "periodes": list(MATIERE_NVDA.periodes_projetees), "auteur": {"type": "demande_ciblee"}}],
+    autres_axes=[{"axe": "clients", "usage": "usage de test suffisamment long"}, {"axe": "geographie", "usage": "usage de test suffisamment long"},
+                {"axe": "secteurs", "usage": "usage de test suffisamment long"}])
+r = valide_ou_motif(ARCH_REGROUP_OK)
+b.check(r.startswith("OK"),
+        f"[S1] — regroupement de deux membres de premier niveau (même parent `None`) tient : {r[:300]}")
 
 # [S2] : découpage mixte (Data Center + Gaming + Edge Computing, 10-K + 10-Q mêlés).
 ARCH_S2 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:DataCenterMember"),
@@ -370,7 +445,11 @@ ARCH_S2 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:DataCenterMembe
 r = valide_ou_motif(ARCH_S2)
 b.check(r.startswith("[S2]") and "découpage mixte" in r, f"[S2] — découpage mixte refusé : {r[:250]}")
 
-# [S3] : un bloc et son propre sous-membre côte à côte au premier niveau (Data Center ET Compute).
+# Double compte Data Center / Compute — depuis le lot M3 bis (cause ①), l'emboîtement entre deux
+# blocs PUBLIÉS est DÉRIVÉ (`faits_publies.est_premier_niveau_publie`) : Compute (membre descendant
+# de Data Center dans la hiérarchie relevée) est automatiquement classé HORS premier niveau, donc
+# écarté de la somme [S7] attendue — c'est [S7] qui nomme le double compte (« en trop »), plus [S3]
+# (qui ne porte plus que sur l'AXE, §5 de la spec M3 bis : voir le docstring de `_s3`).
 ARCH_S3 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:DataCenterMember"),
                                _bloc_publie("compute", "nvda:ComputeMember"),
                                _bloc_publie("gaming", "nvda:GamingMember"),
@@ -388,7 +467,9 @@ ARCH_S3 = arch_nvda_10k(blocs=[_bloc_publie("data_center", "nvda:DataCenterMembe
                              "auteur": {"type": "demande_ciblee"}}
                             for bid in ("data_center", "compute", "gaming", "proviz", "automotive", "oem")])
 r = valide_ou_motif(ARCH_S3)
-b.check(r.startswith("[S3]"), f"[S3] — Data Center et Compute côte à côte refusé : {r[:250]}")
+b.check(r.startswith("[S7]") and "compute" in r and "en trop" in r,
+        f"[S7] — Data Center et Compute côte à côte : Compute (dérivé hors premier niveau, "
+        f"descendant de Data Center) est « en trop » dans la formule de passage : {r[:300]}")
 
 # [S3] (sous-cas 2) : les blocs publiés de premier niveau sont sur PLUSIEURS axes.
 VENT_DEUX_AXES = {
@@ -401,15 +482,16 @@ VENT_DEUX_AXES = {
 }
 MATIERE_DEUX_AXES = matiere_fictive(ventilation_structure=VENT_DEUX_AXES)
 ARCH_DEUX_AXES = Architecture.model_validate({
-    "schema_version": "architecture-1.1.0", "ticker_id": "FICTIF", "version": 1, "archetype": "rentable",
+    "schema_version": "architecture-1.2.0", "ticker_id": "FICTIF", "version": 1, "archetype": "rentable",
     "famille": "industrielle", "version_referentiel": REF.version,
     "blocs": [
         {"id": "produit_a", "libelle": "Produit A", "role": "activite", "statut": "metier_actuel",
-         "maille": "publie", "rattachement": {"type": "publie", "axe": "activites",
-                                               "membre": "fictif:ProduitAMember"},
+         "origine": "interne", "maille": "publie",
+         "rattachement": {"type": "publie", "axe": "activites", "membres": ["fictif:ProduitAMember"]},
          "variables": ["chiffre_affaires_du_bloc"], "motif": "Bloc sur l'axe activites, motif suffisant."},
-        {"id": "us", "libelle": "US", "role": "activite", "statut": "metier_actuel", "maille": "publie",
-         "rattachement": {"type": "publie", "axe": "geographie", "membre": "fictif:USMember"},
+        {"id": "us", "libelle": "US", "role": "activite", "statut": "metier_actuel",
+         "origine": "interne", "maille": "publie",
+         "rattachement": {"type": "publie", "axe": "geographie", "membres": ["fictif:USMember"]},
          "variables": ["chiffre_affaires_du_bloc"], "motif": "Bloc sur l'axe geographie, motif suffisant."},
     ],
     "variables_propres": [],
@@ -427,17 +509,21 @@ b.check(r.startswith("[S3]") and "plusieurs axes" in r,
         f"[S3] — un seul axe au premier niveau, plusieurs axes refusés : {r[:250]}")
 
 # [S3b] : signal déjà observé sur `ARCH_10K` ci-dessus — revérifié ici explicitement.
-b.check("n'est pas la plus récente publiée" in valide_ou_motif(ARCH_10K),
-        "[S3b] — signal : le découpage du 10-K n'est pas le plus récent (10-Q)")
+# Lot P1 (§3) : [S3b] = « l'architecture suit un découpage autre que celui de référence » — le
+# texte change (l'ancien disait « la période de référence n'est pas la plus récente publiée », ce
+# qui se déclenchait aussi pour un exercice face à un cumul du MÊME découpage).
+b.check("découpage ANTÉRIEUR" in valide_ou_motif(ARCH_10K),
+        "[S3b] — signal : l'architecture suit le découpage du 10-K, antérieur au découpage de référence (10-Q)")
 
 # [S4] : un bloc parent rattaché à un bloc COMMUN.
 arch_s4_dict = ARCH_10K.model_dump(mode="json")
 arch_s4_dict["blocs"] = arch_s4_dict["blocs"] + [
-    {"id": "commun", "libelle": "Commun", "role": "commun", "statut": "metier_actuel", "maille": "estime",
+    {"id": "commun", "libelle": "Commun", "role": "commun", "statut": "metier_actuel",
+     "origine": "interne", "maille": "estime",
      "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
      "variables": ["couts_communs"], "motif": "Bloc commun de test, motif suffisant.", "pieces": [1]},
     {"id": "sous_commun", "libelle": "Sous-commun", "role": "activite", "statut": "metier_actuel",
-     "maille": "estime", "rattachement": {"type": "parent", "bloc": "commun"},
+     "origine": "interne", "maille": "estime", "rattachement": {"type": "parent", "bloc": "commun"},
      "variables": ["couts_communs"], "motif": "Bloc rattaché à un commun, motif suffisant.", "pieces": [1]},
 ]
 ARCH_S4 = Architecture.model_validate(arch_s4_dict)
@@ -451,15 +537,18 @@ MATIERE_RVMD = matiere_fictive(ticker_id="RVMD", raison_sociale="Revolution Medi
                                periodes_projetees=tuple(f"FY{2025+i}" for i in range(1, 11)),
                                pieces_citables=frozenset({1, 2}))
 ARCH_RVMD = Architecture.model_validate({
-    "schema_version": "architecture-1.1.0", "ticker_id": "RVMD", "version": 1, "archetype": "rentable",
+    "schema_version": "architecture-1.2.0", "ticker_id": "RVMD", "version": 1, "archetype": "rentable",
     "famille": "industrielle", "version_referentiel": REF.version,
     "blocs": [
         {"id": "produit", "libelle": "Produit commercialisé", "role": "activite", "statut": "metier_actuel",
-         "maille": "estime", "rattachement": {"type": "agrege", "ligne": "chiffre_affaires"},
+         "origine": "interne", "maille": "estime",
+         "rattachement": {"type": "agrege", "ligne": "chiffre_affaires"},
          "variables": ["chiffre_affaires_du_bloc"], "motif": "RVMD n'a aucune ventilation publiée : "
          "le produit commercialisé est estimé, rattaché au chiffre d'affaires.", "pieces": [1]},
         {"id": "programme_x", "libelle": "Programme en développement X", "role": "programme",
-         "statut": "en_developpement", "maille": "estime",
+         "statut": "en_developpement", "origine": "interne", "maille": "estime",
+         "jalon": {"franchi": "preuve de concept préclinique", "franchi_le": "2026-01-15",
+                   "prochain": "autorisation d'essai clinique de phase 1", "attendu_vers": "2027-01-15"},
          "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
          "variables": ["probabilite_de_succes"], "motif": "Programme en développement, ancré sur une "
          "classe de référence documentée en pièce.", "pieces": [1]},
@@ -475,7 +564,7 @@ r = valide_ou_motif(ARCH_RVMD, MATIERE_RVMD)
 b.check(r.startswith("OK"), f"[S5] — RVMD toute estimée (secteur_unique + programmes) tient : {r[:250]}")
 ARCH_RVMD_PUBLIE_dict = ARCH_RVMD.model_dump(mode="json")
 ARCH_RVMD_PUBLIE_dict["blocs"][0] = {**ARCH_RVMD_PUBLIE_dict["blocs"][0], "maille": "publie",
-                                     "rattachement": {"type": "publie", "axe": "activites", "membre": "x:M"}}
+                                     "rattachement": {"type": "publie", "axe": "activites", "membres": ["x:M"]}}
 ARCH_RVMD_PUBLIE = Architecture.model_validate(ARCH_RVMD_PUBLIE_dict)
 r = valide_ou_motif(ARCH_RVMD_PUBLIE, MATIERE_RVMD)
 b.check("[S5]" in r, f"[S5] — un bloc `publie` sur `secteur_unique` est refusé (avec [S1]/[S2] en "
@@ -521,7 +610,8 @@ b.check(r.startswith("[S7]") and "aucune formule" in r,
 ARCH_S8_dict = ARCH_10K.model_dump(mode="json")
 ARCH_S8_dict["blocs"].append({
     "id": "extension_x", "libelle": "Extension annoncée", "role": "activite", "statut": "extension_annoncee",
-    "maille": "estime", "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
+    "origine": "interne", "maille": "estime",
+    "rattachement": {"type": "agrege", "ligne": "recherche_developpement"},
     "variables": ["taille_du_marche"], "motif": "Extension annoncée de test, motif suffisant.",
     "pieces": [1]})
 ARCH_S8_dict["passage_a_l_agrege"].append(
@@ -534,6 +624,170 @@ ARCH_S9_dict = ARCH_10K.model_dump(mode="json")
 ARCH_S9_dict["cellules_attendues"][0]["periodes"] = ARCH_S9_dict["cellules_attendues"][0]["periodes"][:-1]
 r = valide_ou_motif(Architecture.model_validate(ARCH_S9_dict))
 b.check(r.startswith("[S9]"), f"[S9] — période projetée non couverte refusée : {r[:250]}")
+
+# ── [S10] (1.2.0, cause ①) : un axe de la ventilation sans bloc publié ET sans `autres_axes`. ───
+ARCH_S10_dict = ARCH_10K.model_dump(mode="json")
+ARCH_S10_dict["autres_axes"] = [a for a in ARCH_S10_dict["autres_axes"] if a["axe"] != "secteurs"]
+r = valide_ou_motif(Architecture.model_validate(ARCH_S10_dict))
+b.check(r.startswith("[S10]") and "secteurs" in r,
+        f"[S10] — axe `secteurs` sans bloc publié ET sans usage déclaré, refusé : {r[:250]}")
+b.check(ARCH_10K.autres_axes and valide_ou_motif(ARCH_10K).startswith("OK"),
+        "[S10] — ARCH_10K (tous les autres axes déclarés en `autres_axes`) tient")
+
+# ── [S11] (1.2.0, cause ④) : les formules de passage sont TYPÉES (dimension, échelle, période). ─
+# Blocs fictifs isolés (RattachementAgrege sur une ligne sans `somme_vers_ligne`, pour que [S7] ne
+# s'en mêle pas — seules les variables PORTANT `somme_vers_ligne` entrent dans son vocabulaire).
+_BLOC_A = {"id": "a", "libelle": "A", "role": "commun", "statut": "metier_actuel", "origine": "interne",
+          "maille": "estime", "rattachement": {"type": "agrege", "ligne": "autres_charges_exploitation"},
+          "variables": ["taille_du_marche", "part_de_marche", "volume", "prix_moyen"],
+          "motif": "Bloc fictif de test [S11], motif de longueur suffisante pour le contrat.", "pieces": [1]}
+
+
+def arch_s11(formule: str, ligne: str = "autres_charges_exploitation") -> Architecture:
+    return Architecture.model_validate({
+        "schema_version": "architecture-1.2.0", "ticker_id": "RVMD", "version": 1, "archetype": "rentable",
+        "famille": "industrielle", "version_referentiel": REF.version, "blocs": [_BLOC_A],
+        "variables_propres": [], "passage_a_l_agrege": [{"ligne": ligne, "formule": formule}],
+        "cellules_attendues": [
+            {"bloc": "a", "variable": v, "periodes": ["sans_periode"] if v == "part_de_marche" else
+             list(MATIERE_RVMD.periodes_projetees), "auteur": {"type": "demande_ciblee"}}
+            for v in ("taille_du_marche", "volume", "prix_moyen")] + [
+            {"bloc": "a", "variable": "part_de_marche", "periodes": list(MATIERE_RVMD.periodes_projetees),
+             "auteur": {"type": "demande_ciblee"}}],
+    })
+
+
+r = valide_ou_motif(arch_s11("a__taille_du_marche + a__part_de_marche"), MATIERE_RVMD)
+b.check("[S11]" in r, f"[S11] — somme M$ + % refusée (dimension/échelle incohérente) : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__volume * a__prix_moyen"), MATIERE_RVMD)
+b.check("[S11]" in r and "échelle" in r,
+        f"[S11] — produit volume × prix_moyen SANS `/ 1000000` refusé (échelle 1 ≠ 10⁶) : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__volume * a__prix_moyen / 1000000"), MATIERE_RVMD)
+b.check(r.startswith("OK"), f"[S11] — produit volume × prix_moyen AVEC `/ 1000000` tient : {r[:300]}")
+
+# Un littéral qui n'est PAS un rapport d'échelles de la table est un COEFFICIENT, neutre (une
+# décote, une moitié) ; un littéral qui l'est (`/ 100`, `/ 1000000`) est une conversion d'unité.
+r = valide_ou_motif(arch_s11("a__taille_du_marche * 0.9 + a__taille_du_marche / 2"), MATIERE_RVMD)
+b.check(r.startswith("OK"), f"[S11] — coefficients `* 0.9` et `/ 2` sur des M$ : même échelle, tient : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__taille_du_marche * a__part_de_marche / 100"), MATIERE_RVMD)
+b.check(r.startswith("OK"), f"[S11] — M$ × % ramené par `/ 100` (conversion de la table) tient : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__taille_du_marche * a__part_de_marche"), MATIERE_RVMD)
+b.check("[S11]" in r, f"[S11] — M$ × % SANS `/ 100` refusé (échelle 10⁴ ≠ 10⁶) : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__taille_du_marche"), MATIERE_RVMD)
+b.check(r.startswith("OK"), f"[S11] — une seule variable M$ sur une ligne `flux` tient (facteur "
+                           f"`exercice` présent) : {r[:300]}")
+
+r = valide_ou_motif(arch_s11("a__taille_du_marche", ligne="capital_employe"), MATIERE_RVMD)
+b.check("[S11]" in r, f"[S11] — une variable `exercice` (taille_du_marche) sur une ligne `instant` "
+                     f"(`capital_employe`) refusée : {r[:300]}")
+
+# Stock (`cout_restant_de_developpement`, M$, `sans_periode`) dans une ligne ANNUELLE — le cas
+# nommé par la spec (§5, cause ④) : « …__cout_restant_de_developpement dans une ligne annuelle ».
+_BLOC_B = {**_BLOC_A, "id": "b", "variables": ["cout_restant_de_developpement"]}
+
+
+def arch_s11_b(formule: str, ligne: str) -> Architecture:
+    return Architecture.model_validate({
+        "schema_version": "architecture-1.2.0", "ticker_id": "RVMD", "version": 1, "archetype": "rentable",
+        "famille": "industrielle", "version_referentiel": REF.version, "blocs": [_BLOC_B],
+        "variables_propres": [], "passage_a_l_agrege": [{"ligne": ligne, "formule": formule}],
+        "cellules_attendues": [{"bloc": "b", "variable": "cout_restant_de_developpement",
+                               "periodes": ["sans_periode"], "auteur": {"type": "demande_ciblee"}}],
+    })
+
+
+r = valide_ou_motif(arch_s11_b("b__cout_restant_de_developpement", "recherche_developpement"), MATIERE_RVMD)
+b.check("[S11]" in r and "période" in r.lower(),
+        f"[S11] — stock `sans_periode` dans une ligne `flux` annuelle refusé : {r[:300]}")
+
+# Un facteur `sans_periode` est NEUTRE dans un produit : multiplié par une variable `exercice`
+# (`taille_du_marche`), le terme a bien un facteur `exercice` — tient.
+_BLOC_C = {**_BLOC_A, "id": "c", "variables": ["cout_restant_de_developpement", "taille_du_marche"]}
+arch_c = Architecture.model_validate({
+    "schema_version": "architecture-1.2.0", "ticker_id": "RVMD", "version": 1, "archetype": "rentable",
+    "famille": "industrielle", "version_referentiel": REF.version, "blocs": [_BLOC_C],
+    "variables_propres": [],
+    "passage_a_l_agrege": [{"ligne": "recherche_developpement",
+                           "formule": "c__taille_du_marche"}],
+    "cellules_attendues": [
+        {"bloc": "c", "variable": "taille_du_marche", "periodes": list(MATIERE_RVMD.periodes_projetees),
+         "auteur": {"type": "demande_ciblee"}},
+        {"bloc": "c", "variable": "cout_restant_de_developpement", "periodes": ["sans_periode"],
+         "auteur": {"type": "demande_ciblee"}}],
+})
+r = valide_ou_motif(arch_c, MATIERE_RVMD)
+b.check(r.startswith("OK"), f"[S11] — une seule variable `exercice` sur une ligne `flux` tient : {r[:300]}")
+
+# ── Les 4 architectures à blanc du 2026-10-22, REJOUÉES sous 1.2.0 (§7 de la spec M3 bis) ───────
+# Converties au plus proche (`membre`→`membres`, `origine` posée, `jalon` ajouté si manquant) dans
+# `checks/fixtures/architecte/2026-10-22/*_converti.json` — chacune refusée par la règle de SA
+# cause. `nvda_1_corrige.json` : la MÊME architecture, l'axe `activites` déclaré en `autres_axes`
+# et les blocs de marché retirés de l'arbre — elle, passe.
+print("§6bis les 4 architectures du 2026-10-22, rejouées sous 1.2.0")
+FIX_ARCH = Path(__file__).resolve().parent / "fixtures" / "architecte" / "2026-10-22"
+MATIERE_NVDA_COMPLETE = matiere_fictive(
+    ticker_id="NVDA", raison_sociale="NVIDIA Corp", cik=1045810,
+    periodes_historiques=("FY2022", "FY2023", "FY2024", "FY2025", "FY2026"),
+    periodes_projetees=tuple(f"FY{2026+i}" for i in range(1, 11)),
+    ventilation_structure=STRUCT_NVDA, socle_structure=SOCLE_STRUCT_NVDA,
+    socle_piece_id=1, ventilation_piece_id=2, pieces_citables=frozenset(range(800, 1100)))
+
+
+def rejoue_fixture(nom: str, matiere) -> str:
+    raw = json.loads((FIX_ARCH / nom).read_text(encoding="utf-8"))
+    try:
+        arch = Architecture.model_validate(raw)
+    except Exception as e:  # noqa: BLE001 — un refus de CONTRAT, pas de structure
+        return f"REFUS DU CONTRAT : {e}"
+    return valide_ou_motif(arch, matiere)
+
+r = rejoue_fixture("nvda_1_converti.json", MATIERE_NVDA_COMPLETE)
+b.check("[S10]" in r and "activites" in r,
+        f"nvda_1 convertie 1.2.0 — refusée par [S10] (axe `activites` sans bloc publié ET sans "
+        f"usage déclaré) : {r[:300]}")
+
+r = rejoue_fixture("nvda_1_corrige.json", MATIERE_NVDA_COMPLETE)
+b.check(r.startswith("OK"),
+        f"nvda_1 CORRIGÉE (axe `activites` en `autres_axes`, marchés retirés de l'arbre) — tient : {r[:300]}")
+
+r = rejoue_fixture("nvda_2_converti.json", MATIERE_NVDA_COMPLETE)
+b.check("[S10]" in r,
+        f"nvda_2 convertie 1.2.0 — refusée par [S10] (mêmes axes oubliés que nvda_1) : {r[:300]}")
+
+# nvda_2, variante : Networking et Data Center cités PAR ADRESSE (publié), comme le passage 2 les
+# aurait montrés frères — exactement le double-axe nommé par la spec (§7).
+r = rejoue_fixture("nvda_2_s3.json", MATIERE_NVDA_COMPLETE)
+b.check("[S3]" in r and "plusieurs axes" in r,
+        f"nvda_2 (Networking/Data Center cités par adresse, publiés) — refusée par [S3], plusieurs "
+        f"axes au premier niveau (`secteurs` et `activites`) : {r[:300]}")
+
+r = rejoue_fixture("rvmd_1_converti.json", MATIERE_RVMD)
+b.check(r.startswith("OK") or "[S11]" in r,
+        f"rvmd_1 convertie 1.2.0 (jalon ajouté par la conversion) — contrat tient, structure jugée "
+        f"par [S11] le cas échéant : {r[:300]}")
+
+# RVMD — la conversion a ajouté le `jalon` requis par le contrat (cause ⑤), ce qui laisse la
+# formule de passage `recherche_developpement = programmes_precliniques__cout_restant_de_
+# developpement` seule en cause : un STOCK (`sans_periode`) dans une ligne ANNUELLE — exactement
+# la cause ④ mesurée le 2026-10-22.
+raw_rvmd1 = json.loads((FIX_ARCH / "rvmd_1_converti.json").read_text(encoding="utf-8"))
+arch_rvmd1 = Architecture.model_validate(raw_rvmd1)
+formule_rd = next(p.formule for p in arch_rvmd1.passage_a_l_agrege if p.ligne == "recherche_developpement")
+b.check("cout_restant_de_developpement" in formule_rd,
+        f"rvmd_1 — la formule de passage `recherche_developpement` lit bien le stock sans période "
+        f"(cause ④ mesurée le 2026-10-22) : {formule_rd}")
+r = valide_ou_motif(arch_rvmd1, MATIERE_RVMD)
+b.check("[S11]" in r,
+        f"rvmd_1 convertie 1.2.0 — [S11] refuse le stock `cout_restant_de_developpement` "
+        f"(sans_periode) dans la ligne annuelle `recherche_developpement` : {r[:300]}")
+
+r = rejoue_fixture("rvmd_2_converti.json", MATIERE_RVMD)
+b.check("[S11]" in r, f"rvmd_2 convertie 1.2.0 — même cause ④ que rvmd_1, refusée par [S11] : {r[:300]}")
 
 # ═══════════════════════════════════════════════════════════════════════════════════════════════
 print("§7 le renvoi")
@@ -573,7 +827,7 @@ def faux_agent(reponses):
 # la ventilation de `matiere_fictive()`) — c'est CE refus que le renvoi de l'architecte doit rejouer,
 # pas une réparation de JSON malformé (celle-ci est déjà le rôle interne de `run_json_agent`).
 _EXEMPLE_AVEC_MEMBRE_INVENTE = json.loads(json.dumps(_EXEMPLE_ARCHITECTURE))
-_EXEMPLE_AVEC_MEMBRE_INVENTE["blocs"][0]["rattachement"]["membre"] = "fictif:MembreInventeMember"
+_EXEMPLE_AVEC_MEMBRE_INVENTE["blocs"][0]["rattachement"]["membres"] = ["fictif:MembreInventeMember"]
 SORTIE_INVALIDE = json.dumps(_EXEMPLE_AVEC_MEMBRE_INVENTE)
 SORTIE_VALIDE = json.dumps(_EXEMPLE_ARCHITECTURE)
 

@@ -1,0 +1,628 @@
+{
+  "schema_version": "architecture-1.2.0",
+  "ticker_id": "NVDA",
+  "version": 1,
+  "archetype": "rentable",
+  "famille": "industrielle",
+  "version_referentiel": "1.2.0",
+  "blocs": [
+    {
+      "id": "compute_networking",
+      "libelle": "Compute & Networking",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "secteurs",
+        "membres": [
+          "nvda:ComputeAndNetworkingSegmentMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié dans la ventilation `secteurs` (premier niveau). Retenu car il couvre le Data Center et l'Edge Computing, et permet de rattacher les sous-détails publiés au 10-Q (AI Clouds, Hyperscale, Edge Computing) sans double compte.",
+      "pieces": [],
+      "origine": "interne"
+    },
+    {
+      "id": "graphics",
+      "libelle": "Graphics",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "publie",
+      "rattachement": {
+        "type": "publie",
+        "axe": "secteurs",
+        "membres": [
+          "nvda:GraphicsSegmentMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié dans la ventilation `secteurs` (premier niveau). Regroupe Gaming, Professional Visualization, Automotive et OEM and Other, conformément au découpage publié.",
+      "pieces": [],
+      "origine": "interne"
+    },
+    {
+      "id": "data_center",
+      "libelle": "Data Center",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "compute_networking"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Sous-détail publié dans l'axe `activites` (membre DataCenterMember) pour les exercices FY2024-FY2026 et TTM2026-07-26. Rattaché à Compute & Networking car le segment publié `ComputeAndNetworkingSegmentMember` inclut Data Center et Edge Computing (cf. ventilation `secteurs`).",
+      "pieces": [
+        857,
+        896
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "edge_computing",
+      "libelle": "Edge Computing",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "compute_networking"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Membre nouveau apparu au 10-Q (cumuls S1 FY2026 et S1 FY2027). Rattaché à Compute & Networking car le segment publié l'inclut (cf. ventilation `secteurs`).",
+      "pieces": [
+        896
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "ai_clouds_industrial_enterprise",
+      "libelle": "AI Clouds, Industrial, & Enterprise",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "data_center"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Sous-détail publié au 10-Q (enfant de Data Center). Rattaché à Data Center pour respecter la hiérarchie publiée.",
+      "pieces": [
+        896
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "hyperscale",
+      "libelle": "Hyperscale",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "data_center"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Sous-détail publié au 10-Q (enfant de Data Center). Rattaché à Data Center pour respecter la hiérarchie publiée.",
+      "pieces": [
+        896
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "gaming",
+      "libelle": "Gaming",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "graphics"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Membre publié de l'axe `activites` pour FY2024-FY2026. Rattaché à Graphics car le segment publié Graphics inclut Gaming (cf. ventilation `secteurs`).",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "professional_visualization",
+      "libelle": "Professional Visualization",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "graphics"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Membre publié de l'axe `activites` pour FY2024-FY2026. Rattaché à Graphics car le segment publié Graphics inclut Professional Visualization (cf. ventilation `secteurs`).",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "automotive",
+      "libelle": "Automotive",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "graphics"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Membre publié de l'axe `activites` pour FY2024-FY2026. Rattaché à Graphics car le segment publié Graphics inclut Automotive (cf. ventilation `secteurs`).",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "oem_and_other",
+      "libelle": "OEM and Other",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "parent",
+        "bloc": "graphics"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Membre publié de l'axe `activites` pour FY2024-FY2026. Rattaché à Graphics car le segment publié Graphics inclut OEM and Other (cf. ventilation `secteurs`).",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "extension_vera_cpu",
+      "libelle": "Extension annoncée — Vera CPU",
+      "role": "activite",
+      "statut": "extension_annoncee",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "chiffre_affaires"
+      },
+      "variables": [
+        "taille_du_marche",
+        "annee_de_lancement",
+        "ventes_au_pic"
+      ],
+      "motif": "TAM CPU data center IA agentique annoncé par la direction (200 Md$) — activité pas encore vendue (annoncée le 2026-05-20). N'entre dans aucune formule de passage.",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    },
+    {
+      "id": "en_developpement_hugging_face",
+      "libelle": "En développement — Hugging Face",
+      "role": "activite",
+      "statut": "en_developpement",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "chiffre_affaires"
+      },
+      "variables": [
+        "probabilite_de_succes",
+        "annee_de_lancement",
+        "ventes_au_pic",
+        "cout_restant_de_developpement"
+      ],
+      "motif": "Acquisition de Hugging Face annoncée le 2026-09-02, pas encore intégrée — programme en développement susceptible d'entrer dans les scénarios.",
+      "pieces": [
+        847
+      ],
+      "origine": "interne",
+      "jalon": {
+        "franchi": "jalon franchi de test (fixture M3 bis, conversion 1.2.0)",
+        "franchi_le": "2026-01-01",
+        "prochain": "jalon suivant de test (fixture M3 bis)",
+        "attendu_vers": "2027-01-01"
+      }
+    },
+    {
+      "id": "commun",
+      "libelle": "Frais communs non affectés",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "maille": "estime",
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "autres_charges_exploitation"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément ; taux d'impôt et capital par point de croissance se lisent au socle des comptes.",
+      "pieces": [
+        857
+      ],
+      "origine": "interne"
+    }
+  ],
+  "variables_propres": [],
+  "passage_a_l_agrege": [
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "compute_networking__chiffre_affaires_du_bloc + graphics__chiffre_affaires_du_bloc"
+    }
+  ],
+  "cellules_attendues": [
+    {
+      "bloc": "compute_networking",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "graphics",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "data_center",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "ai_clouds_industrial_enterprise",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "hyperscale",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2026",
+        "FY2027"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "gaming",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2024",
+        "FY2025",
+        "FY2026"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "professional_visualization",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2024",
+        "FY2025",
+        "FY2026"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "automotive",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2024",
+        "FY2025",
+        "FY2026"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "oem_and_other",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2024",
+        "FY2025",
+        "FY2026"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_2"
+      }
+    },
+    {
+      "bloc": "extension_vera_cpu",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "extension_vera_cpu",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "extension_vera_cpu",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2030"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "en_developpement_hugging_face",
+      "variable": "probabilite_de_succes",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "en_developpement_hugging_face",
+      "variable": "annee_de_lancement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "en_developpement_hugging_face",
+      "variable": "ventes_au_pic",
+      "periodes": [
+        "FY2030"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "en_developpement_hugging_face",
+      "variable": "cout_restant_de_developpement",
+      "periodes": [
+        "sans_periode"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "capital_par_point_de_croissance",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_3"
+      }
+    }
+  ],
+  "autres_axes": [],
+  "manques_du_dossier": []
+}

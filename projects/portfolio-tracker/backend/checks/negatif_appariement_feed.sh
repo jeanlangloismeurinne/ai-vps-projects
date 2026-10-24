@@ -117,6 +117,10 @@ mutations=(
 "$SRC¦    valeur = float(ex[\"val\"]) + float(cumul[\"val\"]) - float(comp[\"val\"])¦    valeur = float(ex[\"val\"]) + float(cumul[\"val\"]) + float(comp[\"val\"])  # mutation¦−1 223,033 M\$"
 # L'AFFIRMATION D'ORIGINE : la préférence s'inverse, le dépôt le plus tardif (ou l'amendement) gagne.
 "$SRC¦    return min(points, key=lambda p: (str(p.get(\"form\") or \"\").endswith(\"/A\"),¦    return max(points, key=lambda p: (str(p.get(\"form\") or \"\").endswith(\"/A\"),  # mutation¦affirmation d'ORIGINE"
+# UN RETRAITEMENT (lot P1, §2.4) : la version la plus RÉCEMMENT déposée cesse de l'emporter — le
+# retraitement du comparatif RVMD (−900,0 M\$, 10-K suivant) ne serait plus pris, l'originale
+# (−897,741 M\$) resterait, en silence.
+"$SRC¦    plus_recent_filed = max(str(p.get(\"filed\") or \"\") for p in candidats)¦    plus_recent_filed = min(str(p.get(\"filed\") or \"\") for p in candidats)  # mutation: le plus ANCIEN l'emporte¦la version RETRAITÉE"
 # LE MÉLANGE douze mois + exercice clos n'est plus refusé.
 "$SRC¦    if glissantes and any(cadrages[c] == \"flux\" for c in directes):¦    if False:  # mutation: le mélange de périodes passe¦douze mois et exercice clos dans une même formule"
 # LE RECUL : la fin commune devient la plus ANCIENNE — on arrange le concept en retard.
@@ -138,6 +142,9 @@ mutations=(
 "$SRC¦    flux = {c for c, _ in references if cadrage(c) == \"flux\"}¦    flux = {c for c, _ in references}  # mutation: le cadrage ignoré¦seul le FLUX glisse"
 # L'exact réécrit garde son statut : « recopié tel quel » mentirait.
 "$SRC¦        statut=\"approximation\", expression=expression, deterministe=True,¦        expression=expression, deterministe=True,  # mutation: reste exact¦agrégat déterministe \`[ttm]\` et le DIT"
+# Tout dépôt non amendé redevient candidat au retraitement : le résultat ARRONDI du document de
+# convocation (DEF 14A, déposé après le 10-K) remplace l'exercice publié (cas réel RVMD du 2026-10-23).
+"$SRC¦    reguliers = [p for p in groupe if str(p.get(\"form\") or \"\") in FORMES_RAPPORT_PERIODIQUE]¦    reguliers = [p for p in groupe if not str(p.get(\"form\") or \"\").endswith(\"/A\")]  # mutation¦document de convocation (DEF 14A) ne retraite pas"
 )
 
 passes=0; ratees=0

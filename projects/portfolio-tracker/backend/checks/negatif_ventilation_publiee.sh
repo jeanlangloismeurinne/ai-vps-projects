@@ -13,20 +13,22 @@ set -u
 cd "$(dirname "$0")/.." || exit 1
 CHECK="checks/check_ventilation_publiee.py"
 SRC="app/knowledge/ventilation.py"
+PERI="app/knowledge/perimetre.py"
 XBRL="app/knowledge/ventilation_xbrl.py"
 FEED="app/knowledge/ventilation_feed.py"
+APPAR="app/knowledge/appariement_feed.py"
 
 mutations=(
 # Qualificateur neutre non retiré : les faits `secteurs` (toujours qualifiés par
 # `ConsolidationItemsAxis=OperatingSegmentsMember`) portent alors « un axe de plus » et sont
 # disqualifiés — l'axe secteurs perd ses cellules.
 "$SRC¦    restants = [(a, m) for (a, m) in membres if (a, m) not in neutres]¦    restants = list(membres)¦[V1]"
-# Hiérarchie ignorée : Compute et Networking rejoignent le premier niveau de `activites` — la somme
-# dépasse le total publié, le raccord ne boucle plus.
-"$SRC¦        premier_niveau = {m for m in presents if parent_de.get(m) not in presents}¦        premier_niveau = set(presents)¦[V2]"
+# Hiérarchie ignorée (raccords de la VUE, lot P1 §8 point 2) : les enfants de Data Center rejoignent
+# le premier niveau au cumul du 10-Q — la somme dépasse le total publié, le raccord ne boucle plus.
+"$PERI¦        pn = premier_niveau_de(membres, parent_de)¦        pn = set(membres)¦[V15ter]"
 # Tolérance de bouclage multipliée par 1 000 : l'écart réel de resultat_exploitation (−8 910 M$)
 # est absorbé, le raccord devient « boucle » au lieu de « non_ventile ».
-"$SRC¦                \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) else \"non_ventile\")¦                \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) * 1000 else \"non_ventile\")¦[V4]"
+"$PERI¦            statut = \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) else \"non_ventile\"¦            statut = \"boucle\" if abs(reste) <= tolerance_bouclage(total, somme) * 1000 else \"non_ventile\"¦[V4]"
 # `xsi:nil` lu comme zéro : un fait sans texte (nil ou vide) est désormais lu « 0 » au lieu
 # d'être écarté — le garde-fou visible de `lire_instance` (le test `xsi:nil`) reste en place, mais
 # la valeur par défaut qu'il protégeait est maintenant fabriquée juste avant lui.
@@ -34,9 +36,9 @@ mutations=(
 # Sous-détail relevé : un axe en trop (non déclaré qualificateur) n'exclut plus le fait — la
 # provision CCB × Apple Card de JPM devient un fait ordinaire au lieu d'un sous-détail.
 "$SRC¦        if hors:¦        if False:¦[V10]"
-# Douze mois glissants remplacés par l'exercice : Data Center au 2026-07-26 redevient 193 737 M$
-# (l'exercice FY2026) au lieu de 277 798 M$ (l'identité à trois points).
-"$SRC¦                valeur, _compo = douze_mois_glissants(pts, fin_ttm, f\"{axe_id}:{ligne}:{membre}\")¦                valeur = pts[0][\"val\"]¦[V5]"
+# Douze mois glissants remplacés par le premier terme lu (l'exercice) : Data Center au 2026-07-26
+# redevient 193 737 M$ au lieu de 277 798 M$ (l'identité à trois points, calculée sur la série).
+"$PERI¦                    valeur, compo = douze_mois_glissants(pts, fin_ttm, f\"{axe}:{ligne}:{membre}\")¦                    valeur, compo = pts[0][\"val\"], douze_mois_glissants(pts, fin_ttm, f\"{axe}:{ligne}:{membre}\")[1]¦[V5]"
 # Un 10-K antérieur choisi au lieu du dernier.
 "$FEED¦        return max(candidats, key=lambda c: (c[\"report\"], c[\"filed\"])) if candidats else None¦        return min(candidats, key=lambda c: (c[\"report\"], c[\"filed\"])) if candidats else None¦[V1]"
 # Refus bancaire retiré : JPM (famille bancaire, 3 segments ventilés) tenterait d'écrire sans base.
@@ -50,16 +52,35 @@ mutations=(
 # Emboîtement aplati : Compute/Networking retrouvent le même niveau que Data Center — un lecteur
 # les additionnerait deux fois.
 "$SRC¦                prefixe = \"    \" + \"  \" * profondeur + (\"↳ \" if profondeur else \"\")¦                prefixe = \"    \"¦[V14]"
-# Changement de découpage remis à « non_ventile » : le TTM activites (Gaming/ProViz/Auto/OEM
-# absents du 10-Q) redevient un montant non affecté, faux sens pour un redécoupage d'axe.
-"$SRC¦                        statut = \"decoupage_change\"¦                        statut = \"non_ventile\"¦[V13]"
-# Membres nouveaux sans valeur : Hyperscale/AI Clouds/Edge Computing redeviennent un simple
-# décompte, l'information la plus précieuse du dépôt disparaît.
-"$SRC¦                    elif axe_def.raccord == \"total\" and fait.debut in debuts_cumul_valides and fait.fin:¦                    elif False:¦[V15]"
+# Lot P1 tranche B — le regroupement cesse d'être une addition vérifiée : Edge Computing perd son
+# historique (FY2024-FY2026), les douze mois par marché ne bouclent plus.
+"$PERI¦_ADDITIONS = (\"renommage\", \"regroupement\")¦_ADDITIONS = (\"renommage\",)¦[V13]"
+# Un membre au contenu CHANGÉ redevient continu : le semestre 2024 des pays (ancien critère
+# d'attribution) serait servi dans le découpage de référence comme publié.
+"$PERI¦            return None   # perturbé : cette valeur directe n'est PAS une continuité fiable¦            pass¦[V13d]"
+# Le rendu tait l'addition vérifiée : un chiffre reconstitué se lirait comme publié.
+"$SRC¦                    origine = (f\" — addition vérifiée : {_libs(c['passage_de'])}\" if c.get(\"passage_de\")¦                    origine = (\"\" if c.get(\"passage_de\")¦[V13b] Edge Computing FY2024"
+# Le relevé brut redevient rendable : un lecteur additionnerait deux découpages.
+"$SRC¦    if not vue.get(\"vue\"):¦    if False:¦[V13c]"
+# Les cumuls ne sont plus relevés pour tous les membres : Hyperscale/AI Clouds/Edge Computing (et
+# Data Center au même cumul) perdent leur valeur.
+"$SRC¦                    if pid is None and fait.debut in debuts_cumul_valides:¦                    if False:¦[V15]"
 # Conflits de hiérarchie non filtrés : le bruit des lignes de bilan et pays fiscaux revient.
 "$SRC¦        if (m := re.match(r\"« ([^»]+) »\", c)) and m.group(1) in membres_en_usage¦        if True¦[V16]"
 # Grandeur de concentration ignorée : une part des créances redevient « du chiffre d'affaires ».
 "$SRC¦            grandeur = GRANDEURS_DE_CONCENTRATION.get(reference) if reference else None¦            grandeur = \"du chiffre d'affaires\"¦[V17]"
+# Signal d'acquisition significative (§4 bis) : le chiffre d'affaires de l'exercice de référence
+# n'est plus transmis au producteur du signal — une acquisition au-dessus du seuil (part du CA) ne
+# peut plus être comparée à rien, le signal disparaît en silence.
+"$SRC¦    dernier_exercice_fin = max(fin_vers_fy, default=None)¦    dernier_exercice_fin = None¦[V18bis]"
+# Garde (iv), lot P1 §8 — la régression EXACTE de `c551003`, rejouée là où elle vivrait désormais :
+# la série du découpage de référence prendrait la version d'ORIGINE (le jumeau, le dépôt le plus
+# ancien) au lieu de la version RETRAITÉE au semestre 2025. Σ pays des douze mois = 323 559 M$ ≠
+# 302 970 M$ : l'invariant de l'agrégat SUR LA VUE SERVIE doit rougir NOMMÉMENT ([V19]).
+# (L'ancienne mutation de `appariement_feed._choisir_terme` est devenue inerte ICI : les douze mois
+# de la vue se calculent sur une série à UNE valeur par période ; elle reste gardée par
+# `check_appariement*` pour le socle.)
+"$PERI¦    cellules_ref = [c for c in cellules if c.depot in depots_ref]¦    cellules_ref = list(reversed(cellules))  # MUTATION : origine au lieu du retraité¦[V19]"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

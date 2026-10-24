@@ -41,7 +41,23 @@ signature_de_l_architecture: true
 # l_architecte`) — le basculer ne réécrit rien et n'invalide aucune architecture déjà proposée.
 porte_admet_reponses_refusees: true
 
-version: "1.1.0"
+version: "1.2.0"
+
+# Les UNITÉS du catalogue — DÉTENTEUR UNIQUE (lot M3 bis §5, cause ④ : les formules ne sont pas
+# typées). Pour chaque unité réellement employée par `variables[].unite`, sa dimension PHYSIQUE
+# (exposants de montant, de quantité, de temps — jamais lue ailleurs, jamais recopiée) et son
+# échelle par rapport à l'unité de base ($ pour un montant, une unité pour une quantité, une année
+# pour un temps). [R7] (`referentiel.py`) refuse toute fiche dont `unite` est absente de cette
+# table. `app/modele_entreprise/dimensions.py` est le seul lecteur de cette table.
+unites:
+  "M$": {montant: 1, quantite: 0, temps: 0, echelle: 1000000}
+  "$/unité": {montant: 1, quantite: -1, temps: 0, echelle: 1}
+  "unités": {montant: 0, quantite: 1, temps: 0, echelle: 1}
+  "%": {montant: 0, quantite: 0, temps: 0, echelle: 0.01}
+  "%/an": {montant: 0, quantite: 0, temps: -1, echelle: 0.01}
+  "(0-1)": {montant: 0, quantite: 0, temps: 0, echelle: 1}
+  "année": {montant: 0, quantite: 0, temps: 1, echelle: 1}
+  "années": {montant: 0, quantite: 0, temps: 1, echelle: 1}
 
 # Les FAMILLES DE COMPTES (09 §12.1). Le format AGRÉGÉ du classeur EST le gabarit de la famille du
 # titre : industrielle et commerciale lisent les mêmes lignes (rentable, pré-revenus) ; une banque
@@ -246,7 +262,7 @@ variables:
     periode: sans_periode
     origines_admises: [jugement]
     controle: probabilite
-    questions_sources: [se_2, mo_4]
+    questions_sources: [se_2, mo_4, me_7]
     familles: [industrielle]
     methode_de_fourchette: [classe_de_reference]
 
@@ -259,7 +275,7 @@ variables:
     periode: sans_periode
     origines_admises: [piece, jugement]
     controle: annee
-    questions_sources: [se_2, me_5]
+    questions_sources: [se_2, me_5, me_7]
     familles: [industrielle]
     methode_de_fourchette: [fourchette_publiee, classe_de_reference]
 
@@ -272,7 +288,7 @@ variables:
     periode: exercice
     origines_admises: [jugement]
     controle: positif
-    questions_sources: [me_5, me_4]
+    questions_sources: [me_5, me_4, me_7]
     familles: [industrielle]
     methode_de_fourchette: [classe_de_reference, recit_chiffre]
 
@@ -293,14 +309,30 @@ variables:
     libelle: Coût restant à engager pour développer le bloc
     definition: >-
       Montant total encore nécessaire pour amener le programme du bloc à son prochain jalon décisif,
-      au-delà des sommes déjà dépensées.
+      au-delà des sommes déjà dépensées — un MONTANT SANS PÉRIODE (`periode: sans_periode`), jamais
+      une ligne annuelle du business plan : la dépense de l'EXERCICE pour ce même programme est
+      `depense_de_developpement_du_bloc` (lot M3 bis §4.2 ; cause ④, §5 : une dimension temporelle
+      ne se mélange jamais entre un reste à engager et une cadence annuelle).
     unite: M$
     periode: sans_periode
     origines_admises: [piece, jugement]
     controle: positif_ou_nul
-    questions_sources: [qf_7]
+    questions_sources: [qf_7, me_7]
     familles: [industrielle]
     methode_de_fourchette: [fourchette_publiee, classe_de_reference]
+
+  - id: depense_de_developpement_du_bloc
+    libelle: Dépense de recherche et développement de l'exercice pour le programme du bloc
+    definition: >-
+      Ce que le compte de résultat de l'exercice supporte pour le programme du bloc — distincte de
+      `cout_restant_de_developpement`, qui est un montant SANS période (lot M3 bis §4.2).
+    unite: M$
+    periode: exercice
+    origines_admises: [piece, jugement, calcul]
+    controle: positif_ou_nul
+    questions_sources: [me_7, qf_7]
+    familles: [industrielle]
+    methode_de_fourchette: [dispersion_observee, recit_chiffre]
 
   - id: encours
     libelle: Encours moyen porté par le bloc
@@ -383,7 +415,8 @@ patrons:
     blocs:
       - role: programme
         variables: [probabilite_de_succes, annee_de_lancement, ventes_au_pic, duree_d_exclusivite,
-                    cout_restant_de_developpement, taille_du_marche, part_de_marche, marge_contributive]
+                    cout_restant_de_developpement, depense_de_developpement_du_bloc,
+                    taille_du_marche, part_de_marche, marge_contributive]
       - role: commun
         variables: [couts_communs]
   financiere:

@@ -639,6 +639,39 @@ _m = leve(resoudre_points, _cons_ttm("CashAndCashEquivalentsAtCarryingValue[ttm]
           {"CashAndCashEquivalentsAtCarryingValue": _CASH_RVMD})
 check("§9 `[ttm]` sur un solde de bilan → refus nommé (un solde n'a pas de durée)",
       _m is not None and "solde de bilan" in _m, f"→ {_m!r}"[:200])
+
+# ── §9bis UN RETRAITEMENT DU SOCLE (lot P1, §2.4) — la version la plus RÉCEMMENT déposée l'emporte,
+# jamais la plus ancienne (prédicat `perimetre.points_douze_mois_coherents`, détenteur unique) ──────
+print("\n[9bis] un terme retraité (deux VALEURS différentes) → la version la plus récente l'emporte")
+_OCF_RETRAITE = list(_OCF_RVMD) + [
+    # L'exercice 2025 (−897,741 M$ à l'origine) est RETRAITÉ dans le comparatif d'un 10-K RÉGULIER
+    # déposé plus tard (jamais un amendement « /A » — celui-là ne l'emporte jamais, §9 ci-dessus), à
+    # une valeur DIFFÉRENTE (−900,000 M$) — fictif, aucune société réelle n'est nommée.
+    _p("2025-01-01", "2025-12-31", -900_000_000.0, "10-K", "FY", "0001193125-27-900001", "2027-02-24"),
+]
+try:
+    _f9bis = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _OCF_RETRAITE})
+    _v9bis = _f9bis.structure["value"]
+    # −900,000 (exercice RETRAITÉ) + −741,484 (cumul S1 2026) − (−416,192) (cumul S1 2025) = −1 225,292 M$
+    check("§9bis la version RETRAITÉE (−900,0 M$) est prise, jamais l'originale (−897,741 M$)",
+          abs(_v9bis - (-1_225_292_000.0)) < 1.0 and abs(_v9bis - (-1_223_033_000.0)) > 1.0,
+          f"→ {_v9bis}")
+    _ing9bis = _f9bis.structure["ingredients"][0]
+    _accn_ex = next(c["accn"] for c in _ing9bis["composantes"] if c["role"] == "exercice")
+    check("§9bis la provenance de l'exercice porte l'ACCESSION du dépôt retraité (10-K suivant), pas l'original",
+          _accn_ex == "0001193125-27-900001", f"→ {_accn_ex}")
+except Exception as e:
+    check("§9bis un retraitement cohérent s'exécute (version la plus récente)", False, repr(e)[:200])
+
+# Un retraitement AMBIGU (deux valeurs DIFFÉRENTES à la MÊME date de dépôt la plus récente) → refus
+# NOMMÉ, jamais un mélange silencieux.
+_OCF_AMBIGU = list(_OCF_RVMD) + [
+    _p("2025-01-01", "2025-12-31", -900_000_000.0, "10-K", "FY", "0001193125-27-900001", "2027-02-24"),
+    _p("2025-01-01", "2025-12-31", -901_000_000.0, "10-K", "FY", "0001193125-27-900002", "2027-02-24"),
+]
+_m9bis = leve(resoudre_points, _cons_ttm(), {"NetCashProvidedByUsedInOperatingActivities": _OCF_AMBIGU})
+check("§9bis un retraitement AMBIGU (deux valeurs à la même date de dépôt) → refus NOMMÉ",
+      _m9bis is not None and "retraitement ambigu" in _m9bis, f"→ {_m9bis!r}"[:200])
 # Deux flux glissants : UNE fin, la plus récente. Celui qui ne la publie pas fait refuser — on ne
 # recule pas à une fin plus ancienne pour l'arranger (ce serait le repli sous un autre nom).
 _m = leve(resoudre_points,
@@ -656,6 +689,25 @@ try:
           abs(_fa2.structure["value"] - (-1_223_033_000.0)) < 1.0, f"→ {_fa2.structure['value']}")
 except Exception as e:
     check("§9 exercice amendé s'exécute", False, repr(e)[:200])
+# Un document qui n'est PAS un rapport financier périodique ne retraite rien. Copié du réel (RVMD,
+# `NetIncomeLoss`, publié en prod le 2026-10-23, socle #1771) : le document de convocation (DEF 14A,
+# tableau rémunération/performance) recopie le résultat 2025 ARRONDI (−1 131,000 M$ contre
+# −1 131,301 M$ au 10-K) et, déposé après le 10-K, était pris pour un retraitement. Toute société
+# américaine publie ce tableau depuis 2022 : la cause n'est pas propre à RVMD.
+_NI_RVMD = [
+    _p("2025-01-01", "2025-06-30", -461_203_000.0, "10-Q", "Q2", "0000950170-25-104022", "2025-08-06"),
+    _p("2025-01-01", "2025-12-31", -1_131_301_000.0, "10-K", "FY", "0001193125-26-071563", "2026-02-25"),
+    _p("2025-01-01", "2025-12-31", -1_131_000_000.0, "DEF 14A", "FY", "0001193125-26-182453", "2026-04-27"),
+    _p("2026-01-01", "2026-06-30", -1_098_187_000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+    _p("2025-01-01", "2025-06-30", -461_203_000.0, "10-Q", "Q2", "0001193125-26-335104", "2026-08-05"),
+]
+try:
+    _fp = _fait_ttm(facts={"NetCashProvidedByUsedInOperatingActivities": _NI_RVMD})
+    check("§9 le chiffre arrondi d'un document de convocation (DEF 14A) ne retraite pas l'exercice : "
+          "−1 131,301 − 1 098,187 + 461,203 = −1 768,285 M$",
+          abs(_fp.structure["value"] - (-1_768_285_000.0)) < 1.0, f"→ {_fp.structure['value']}")
+except Exception as e:
+    check("§9 exercice recopié par un document non financier s'exécute", False, repr(e)[:200])
 
 
 # ── §10 LA DEMANDE PRÉCISE LA PÉRIODE (#113, arbitrage du 2026-10-04) ──────────────────────────────

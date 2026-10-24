@@ -45,9 +45,9 @@ class Matiere:
     socle_structure: dict
     ventilation_texte: str
     ventilation_piece_id: Optional[int]
-    # La structure de la ventilation (axes/cellules/raccords/membres_nouveaux, `structure_de_
-    # ventilation`) — `None` si `secteur_unique`/`sans_ventilation` : [S1]-[S3] de `structure.py` la
-    # lisent, le RENDU texte ne leur suffit pas (ils ont besoin de la hiérarchie des membres).
+    # La VUE SERVIE de la ventilation (`perimetre.vue_servie` : série dans le découpage de référence,
+    # découpage antérieur, chroniques, raccords) — `None` si `secteur_unique`/`sans_ventilation` :
+    # [S1]-[S3b] de `structure.py` la lisent, le RENDU texte ne leur suffit pas (hiérarchie, régimes).
     ventilation_structure: Optional[dict]
     questions_texte: tuple[str, ...]          # une section par question, dans l'ordre de la porte
     notes_flash_texte: str
@@ -139,6 +139,7 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
     )
     from app.knowledge.socle_feed import SocleIndisponible, assurer_socle, socle_en_vigueur
     from app.knowledge.ventilation import charger_referentiel as charger_referentiel_ventilation
+    from app.knowledge.perimetre import est_structure_courante, vue_servie
     from app.knowledge.ventilation import relever, rendre_ventilation, structure_de_ventilation
     from app.knowledge.ventilation_feed import (
         VentilationIndisponible, assurer_ventilation, lire_depots, ventilation_en_vigueur,
@@ -195,6 +196,11 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
 
     # ── La ventilation ──────────────────────────────────────────────────────────────────────────
     vent_piece = await ventilation_en_vigueur(conn, ticker_id)
+    # Une pièce publiée avant le lot P1 (cellules fusionnées, cumuls des seuls membres « nouveaux »)
+    # ne porte pas la forme que lit la vue servie : elle se relève (à blanc) ou se republie
+    # (`publier`), jamais servie amputée.
+    if vent_piece is not None and not est_structure_courante(vent_piece["structure"]):
+        vent_piece = None
     if vent_piece is not None:
         structure_vent, vent_id = vent_piece["structure"], vent_piece["id"]
     elif publier:
@@ -205,7 +211,7 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
         structure_vent, vent_id = publie_v.structure, publie_v.entry_id
     else:
         try:
-            depots = await lire_depots(emetteur.cik)
+            depots = await lire_depots(emetteur.cik, referentiel=ref_vent)
         except VentilationIndisponible as e:
             raise MatiereRefusee(f"ventilation non relevable à blanc : {e}") from e
         v = relever(depots, gabarit, ref_vent, structure_socle)
@@ -221,9 +227,9 @@ async def charger_matiere(conn, ticker_id: str, *, publier: bool) -> Matiere:
             f"L'émetteur ne publie qu'un secteur : tous les blocs seront estimés et se raccordent à "
             f"une ligne des comptes (statut `{statut_vent}`).")
     else:
-        ventilation_structure_pour_s = structure_vent
+        ventilation_structure_pour_s = vue_servie(structure_vent, structure_socle)
         ventilation_texte = rendre_ventilation(
-            structure_vent, raison_sociale=emetteur.raison_sociale, avec_identifiants=True)
+            ventilation_structure_pour_s, raison_sociale=emetteur.raison_sociale, avec_identifiants=True)
         if vent_id is None:
             ventilation_texte += "\n(pièce non encore publiée — ventilation relevée à blanc, pas écrite.)"
 
