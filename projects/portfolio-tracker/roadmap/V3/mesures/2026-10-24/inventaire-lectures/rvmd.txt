@@ -1,0 +1,99 @@
+dossier : 35 pièce(s) remise(s) sur 473 courante(s) · plafond 40
+  · 13 chemise(s) — un point instruit chacune
+  · 433 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 1 lecture(s) de dépôt jointe(s) d'office : [944]
+  · 5 version(s) antérieure(s) gardée(s) en base, non remise(s) : [964, 965, 966, 967, 968]
+  · chemises à plusieurs versions : me_5.marche_adressable×4, me_5.part_deja_prise×3
+  ⚠️ 2 chemise(s) à DATATION HÉTÉROGÈNE — la pièce en vigueur a été collectée AVANT une antérieure : me_5.marche_adressable, me_5.part_deja_prise. Deux horloges dans la même chemise (clôture de période vs date déclarée) ; le remède est à la production des entries, pas à l'assemblage.
+pièces rendues : 35 · 39685 caractères (~9921 jetons)
+modèle : deepseek-ai/DeepSeek-V4.1-Flash-1017 · 3 lecture(s) indépendante(s)
+
+── lecture 1 : 3 fiche(s) admise(s), 19 écartée(s) · 12363 in / 4145 out · 0.0050 $ · 1 tentative(s)
+  · nouvelle classe d'inhibiteurs RAS(ON) anti-résistance × (aucun marché nommé) — stade préclinique, essai first-in-human prévu ; dernier : — ; prochain : essai first-in-human (T4 2026) ; interne ; pièces [971]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  ✗ RASONQUE (daraxonrasib) × adénocarcinome canalaire pancréatique (PDAC) métastatique en seconde ligne et plus, adultes ayant reçu au moins une ligne de traitement systémique antérieure ou non candidats à une thérapie systémique multi-agents, États-Unis — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [944, 951, 973]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique en première ligne (RASolute 303) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969, 951]
+  ✗ RASONQUE (daraxonrasib) × PDAC réséqué, en adjuvant (RASolute 304) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969, 951]
+  ✗ RASONQUE (daraxonrasib) × NSCLC RAS mutant pré-traité (RASolve 301) — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) + zoldonrasib × PDAC métastatique RAS G12D en première ligne (RASolute 309) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1660, 1661, 970]
+  ✗ zoldonrasib (RMC-9805) × PDAC métastatique KRAS G12D en première ligne (RASolute 305) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ zoldonrasib (RMC-9805) × NSCLC métastatique non-épidermoïde RAS G12D en première ligne, en combinaison avec pembrolizumab et chimiothérapie à base de platine (RASolve 308) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ elironrasib (RMC-6291) × NSCLC RAS G12C en première ligne (RASolve 307) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ RMC-5127 × tumeurs solides RAS G12V — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [970, 971]
+  ✗ programme (ON)Path × patients sous RASONQUE sous assurance commerciale et Medicare — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [947, 949]
+  ✗ RASONQUE (daraxonrasib) × Europe — soumissions à l'Agence européenne des médicaments (EMA) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [975]
+  ✗ collaboration avec BeOne Medicines × marchés asiatiques sélectionnés — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1668, 1669]
+  ✗ collaboration avec Bristol Myers Squibb × PDAC — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ collaboration avec Amgen × PDAC en seconde ligne — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ collaboration avec Summit Therapeutics × tumeurs solides (évaluation des inhibiteurs RAS(ON) avec ivonescimab) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ collaboration avec Tango Therapeutics × PDAC ou cancer du poumon MTAP-déplété, RAS mutant — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ collaboration avec Iambic Therapeutics × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ collaboration avec Break Through Cancer × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666, 1667]
+  ✗ baux des quatre bâtiments Seaport Boulevard (nouveau siège social) × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1664, 1665]
+  · non nommés : 2 (pièces [970])
+
+── lecture 2 : 3 fiche(s) admise(s), 22 écartée(s) · 12363 in / 4719 out · 0.0053 $ · 1 tentative(s)
+  · RMC-5127 × (aucun marché nommé) — stade phase 1/1b ; dernier : — ; prochain : — ; interne ; pièces [970]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  ✗ RASONQUE (daraxonrasib) × adénocarcinome canalaire pancréatique (PDAC) métastatique en seconde ligne et plus, adultes ayant reçu au moins une ligne de traitement systémique antérieure ou non candidats à une thérapie systémique multi-agents — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [944]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique en première ligne — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × PDAC réséqué en adjuvant — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × NSCLC RAS mutant pré-traité — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique RAS G12D en première ligne, en combinaison avec zoldonrasib — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1660]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique préalablement traité en Europe (soumission EMA) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [975]
+  ✗ RASONQUE (daraxonrasib) × patients atteints de PDAC métastatique préalablement traité aux États-Unis via programme d'accès élargi — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [975]
+  ✗ RASONQUE (daraxonrasib) × patients sous assurance commerciale et Medicare prescrits RASONQUE (support patient) — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [947]
+  ✗ RASONQUE (daraxonrasib) × payeurs : Medicare Part D principalement, assureurs commerciaux en second — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [948]
+  ✗ zoldonrasib (RMC-9805) × PDAC métastatique KRAS G12D en première ligne — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ zoldonrasib (RMC-9805) × NSCLC métastatique non-épidermoïde RAS G12D en première ligne, en combinaison avec pembrolizumab et chimiothérapie à base de platine — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ zoldonrasib (RMC-9805) × PDAC métastatique KRAS G12D en première ligne, en combinaison avec daraxonrasib — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ elironrasib (RMC-6291) × NSCLC RAS G12C en première ligne — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ nouvelle classe chimique de tri-complex RAS(ON) inhibitors anti-résistance × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [971]
+  ✗ collaboration clinique avec Bristol Myers Squibb (navlimetostat + daraxonrasib) × PDAC — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Amgen (AMG 193 + daraxonrasib) × PDAC en seconde ligne — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Summit Therapeutics (ivonescimab + inhibiteurs RAS(ON)) × tumeurs solides multiples — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration avec Iambic Therapeutics (modèles IA) × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Tango Therapeutics (vopimetostat + daraxonrasib ou zoldonrasib) × PDAC ou cancer du poumon MTAP-déplété, RAS mutant — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration avec Break Through Cancer × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration avec BeOne Medicines (droits régionaux et collaboration clinique sur les inhibiteurs RAS(ON)) × marchés asiatiques sélectionnés — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1668]
+  ✗ baux de quatre bâtiments à Redwood City (nouveau siège social) × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1664]
+  · non nommés : 2 (pièces [970])
+
+── lecture 3 : 3 fiche(s) admise(s), 22 écartée(s) · 12363 in / 4762 out · 0.0053 $ · 1 tentative(s)
+  · RMC-5127 × (aucun marché nommé) — stade phase 1/1b ; dernier : en Phase 1/1b depuis janvier 2026 (2026-01) ; prochain : — ; interne ; pièces [970]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  ✗ RASONQUE (daraxonrasib) × adénocarcinome canalaire pancréatique (PDAC) métastatique chez l'adulte après au moins une ligne de traitement systémique antérieure ou non candidat à une thérapie systémique multi-agents — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [944]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique en première ligne (RASolute 303) — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × PDAC réséqué en adjuvant (RASolute 304) — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × NSCLC RAS mutant pré-traité (RASolve 301) — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [969]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique RAS G12D en première ligne, en doublet avec zoldonrasib (RASolute 309) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1660]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique préalablement traité — Europe (soumissions EMA) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [975]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique préalablement traité — programme d'accès élargi aux États-Unis — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [975]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique préalablement traité — patients sous assurance commerciale et Medicare — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [947]
+  ✗ RASONQUE (daraxonrasib) × PDAC métastatique — payeurs : Medicare Part D principalement, assureurs commerciaux en second — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [948]
+  ✗ zoldonrasib (RMC-9805) × PDAC métastatique KRAS G12D en première ligne (RASolute 305) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ zoldonrasib (RMC-9805) × NSCLC métastatique non-épidermoïde RAS G12D en première ligne, avec pembrolizumab et chimiothérapie à base de platine (RASolve 308) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ zoldonrasib (RMC-9805) × PDAC métastatique KRAS G12D en première ligne, en doublet avec daraxonrasib (RASolute 309) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1660]
+  ✗ elironrasib (RMC-6291) × NSCLC RAS G12C en première ligne (RASolve 307) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [970]
+  ✗ nouvelle classe chimique de tri-complex RAS(ON) inhibitors anti-résistance × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [971]
+  ✗ collaboration clinique avec Bristol Myers Squibb (navlimetostat + daraxonrasib) × PDAC — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Amgen (AMG 193 + daraxonrasib) × PDAC en deuxième ligne (2L) — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Summit Therapeutics (ivonescimab + inhibiteurs RAS(ON)) × tumeurs solides multiples — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration avec Iambic Therapeutics (modèles IA) × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration clinique avec Tango Therapeutics (vopimetostat + daraxonrasib ou zoldonrasib) × PDAC ou cancer du poumon MTAP-déplété, RAS mutant — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ collaboration avec Break Through Cancer × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1666]
+  ✗ accord de collaboration et de droits régionaux avec BeOne Medicines × certains marchés asiatiques sélectionnés — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1668]
+  ✗ baux de quatre bâtiments à Redwood City (nouveau siège social) × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1664]
+  · non nommés : 2 (pièces [970])
+
+── comparaison : union 4 · présentes dans TOUTES les lectures 2
+  ■□□  nouvelle classe d'inhibiteurs ras(on) anti-résistance × (aucun marché nommé)
+  ■■■  rmc-0708 × (aucun marché nommé)
+  □■■  rmc-5127 × (aucun marché nommé)
+  ■■■  rmc-8839 × (aucun marché nommé)
+
+BILAN inventaire RVMD : 3 lecture(s), fiches admises [3, 3, 3], écartées [19, 22, 22], coût 0.0156 $
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/inventaire-lectures/rvmd.json

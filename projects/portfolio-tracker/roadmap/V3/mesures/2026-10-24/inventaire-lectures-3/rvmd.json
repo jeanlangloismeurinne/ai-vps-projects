@@ -1,0 +1,972 @@
+[
+  {
+    "fiches": [
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy",
+        "extrait": "On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).",
+        "stade": "approuvé",
+        "dernier_jalon": {
+          "libelle": "approbation FDA",
+          "date": "2026-08-26"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          944
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": null,
+        "extrait": "RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "recrutement actif",
+          "date": "2026-04"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          948,
+          969,
+          975,
+          1660
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "PDAC réséqué (setting adjuvant)",
+        "extrait": "RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2025-12"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "NSCLC RAS mutant pré-traité",
+        "extrait": "RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.",
+        "stade": "phase 3",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "zoldonrasib",
+        "marche_vise": "1L PDAC métastatique KRAS G12D",
+        "extrait": "RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-05"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "zoldonrasib",
+        "marche_vise": "1L NSCLC métastatique non-épidermoïde RAS G12D",
+        "extrait": "RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-08-14"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "elironrasib",
+        "marche_vise": "1L NSCLC RAS G12C",
+        "extrait": "RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.",
+        "stade": "phase 3 (initiation prévue)",
+        "dernier_jalon": null,
+        "prochain_jalon": {
+          "libelle": "initiation",
+          "date": "T4 2026"
+        },
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "RMC-5127",
+        "marche_vise": null,
+        "extrait": "Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)",
+        "stade": "phase 1/1b",
+        "dernier_jalon": {
+          "libelle": "en Phase 1/1b depuis janvier 2026",
+          "date": "2026-01"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970,
+          971
+        ]
+      },
+      {
+        "nom": "RMC-0708",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "RMC-8839",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "tri-complex RAS(ON) inhibitors",
+        "marche_vise": null,
+        "extrait": "Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.",
+        "stade": "préclinique, essai first-in-human prévu",
+        "dernier_jalon": null,
+        "prochain_jalon": {
+          "libelle": "essai first-in-human",
+          "date": "T4 2026"
+        },
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "BeOne Medicines",
+        "marche_vise": "select Asian markets",
+        "extrait": "Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.",
+        "stade": "accord annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce de la collaboration",
+          "date": "2026-08-10"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1668
+        ]
+      },
+      {
+        "nom": "Bristol Myers Squibb",
+        "marche_vise": "PDAC",
+        "extrait": "In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2026-02"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Amgen",
+        "marche_vise": "2L PDAC",
+        "extrait": "In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-02"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Summit Therapeutics",
+        "marche_vise": "multiple solid tumor settings",
+        "extrait": "In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-06"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Iambic Therapeutics",
+        "marche_vise": null,
+        "extrait": "In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.",
+        "stade": "collaboration",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-05"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Tango Therapeutics",
+        "marche_vise": "MTAP-depleted, RAS mutant PDAC or lung cancer",
+        "extrait": "In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2024-11"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Break Through Cancer",
+        "marche_vise": null,
+        "extrait": "In November 2024, we entered into a collaboration with Break Through Cancer.",
+        "stade": "collaboration",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2024-11"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      }
+    ],
+    "ecartees": [
+      {
+        "fiche": {
+          "nom": "RASONQUE",
+          "marche_vise": "patients sous assurance commerciale et Medicare",
+          "extrait": "Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.",
+          "stade": "lancé",
+          "dernier_jalon": {
+            "libelle": "lancement du programme (ON)Path",
+            "date": "2026-08-26"
+          },
+          "prochain_jalon": null,
+          "origine": "interne",
+          "pieces": [
+            947
+          ]
+        },
+        "motif": "['extrait'] absent LITTÉRALEMENT des pièces citées [947]"
+      }
+    ],
+    "signaux": [
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : marché « PDAC métastatique en première ligne » non recopié des pièces [969] — retiré",
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré",
+      "« RASONQUE » : marché « Medicare Part D et assureurs commerciaux » non recopié des pièces [948] — retiré",
+      "« RASONQUE » : nom absent des pièces citées [975], présent ailleurs au dossier",
+      "« RASONQUE » : marché « Europe » non recopié des pièces [975] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 1,
+      "extrait": "Le pipeline compte ainsi six composés RAS(ON) : daraxonrasib (multi-sélectif), zoldonrasib (G12D), elironrasib (G12C), RMC-5127 (G12V, en Phase 1/1b depuis janvier 2026), RMC-0708 et RMC-8839 (précliniques).",
+      "pieces": [
+        971
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy\",\n      \"extrait\": \"On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).\",\n      \"stade\": \"approuvé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"approbation FDA\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        944\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"PDAC métastatique en première ligne\",\n      \"extrait\": \"RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"recrutement actif\",\n        \"date\": \"2026-04\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"PDAC réséqué (setting adjuvant)\",\n      \"extrait\": \"RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2025-12\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"NSCLC RAS mutant pré-traité\",\n      \"extrait\": \"RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"metastatic RAS G12D PDAC en première ligne\",\n      \"extrait\": \"RASolute 309 (NCT07805954) is a global, randomized, open-label Phase 3 trial evaluating RASONQUE plus zoldonrasib compared with gemcitabine and nab-paclitaxel (GnP) as a first-line treatment in adult patients with metastatic RAS G12D PDAC.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début du traitement des patients\",\n        \"date\": \"2026-10-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1660\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"patients sous assurance commerciale et Medicare\",\n      \"extrait\": \"Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.\",\n      \"stade\": \"lancé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"lancement du programme (ON)Path\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        947\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"Medicare Part D et assureurs commerciaux\",\n      \"extrait\": \"Pour RASONQUE (daraxonrasib), le client payeur visé est principalement Medicare Part D (le cancer du pancréas touchant une population âgée, et RASONQUE étant un médicament oral), avec les assureurs commerciaux comme second marché.\",\n      \"stade\": \"non_dit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"non_dit\",\n      \"pieces\": [\n        948\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"Europe\",\n      \"extrait\": \"la société a commencé les soumissions à l'Agence européenne des médicaments (EMA) dans le cadre d'un nouveau processus d'examen phasé conçu pour accélérer l'évaluation\",\n      \"stade\": \"soumissions réglementaires en cours\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début des soumissions à l'EMA\",\n        \"date\": null\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        975\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib\",\n      \"marche_vise\": \"1L PDAC métastatique KRAS G12D\",\n      \"extrait\": \"RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib\",\n      \"marche_vise\": \"1L NSCLC métastatique non-épidermoïde RAS G12D\",\n      \"extrait\": \"RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-08-14\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"elironrasib\",\n      \"marche_vise\": \"1L NSCLC RAS G12C\",\n      \"extrait\": \"RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.\",\n      \"stade\": \"phase 3 (initiation prévue)\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"initiation\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"RMC-5127\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)\",\n      \"stade\": \"phase 1/1b\",\n      \"dernier_jalon\": {\n        \"libelle\": \"en Phase 1/1b depuis janvier 2026\",\n        \"date\": \"2026-01\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970,\n        971\n      ]\n    },\n    {\n      \"nom\": \"RMC-0708\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"RMC-8839\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"tri-complex RAS(ON) inhibitors\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.\",\n      \"stade\": \"préclinique, essai first-in-human prévu\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"essai first-in-human\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"BeOne Medicines\",\n      \"marche_vise\": \"select Asian markets\",\n      \"extrait\": \"Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.\",\n      \"stade\": \"accord annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce de la collaboration\",\n        \"date\": \"2026-08-10\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1668\n      ]\n    },\n    {\n      \"nom\": \"Bristol Myers Squibb\",\n      \"marche_vise\": \"PDAC\",\n      \"extrait\": \"In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2026-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Amgen\",\n      \"marche_vise\": \"2L PDAC\",\n      \"extrait\": \"In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Summit Therapeutics\",\n      \"marche_vise\": \"multiple solid tumor settings\",\n      \"extrait\": \"In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-06\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Iambic Therapeutics\",\n      \"marche_vise\": null,\n      \"extrait\": \"In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Tango Therapeutics\",\n      \"marche_vise\": \"MTAP-depleted, RAS mutant PDAC or lung cancer\",\n      \"extrait\": \"In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Break Through Cancer\",\n      \"marche_vise\": null,\n      \"extrait\": \"In November 2024, we entered into a collaboration with Break Through Cancer.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 1,\n    \"extrait\": \"Le pipeline compte ainsi six composés RAS(ON) : daraxonrasib (multi-sélectif), zoldonrasib (G12D), elironrasib (G12C), RMC-5127 (G12V, en Phase 1/1b depuis janvier 2026), RMC-0708 et RMC-8839 (précliniques).\",\n    \"pieces\": [\n      971\n    ]\n  }\n}"
+  },
+  {
+    "fiches": [
+      {
+        "nom": "RASONQUE (daraxonrasib)",
+        "marche_vise": "adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy",
+        "extrait": "On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).",
+        "stade": "approuvé",
+        "dernier_jalon": {
+          "libelle": "approbation FDA",
+          "date": "2026-08-26"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          944
+        ]
+      },
+      {
+        "nom": "RASONQUE (daraxonrasib)",
+        "marche_vise": "1L PDAC métastatique",
+        "extrait": "RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "recrutement actif",
+          "date": "2026-04"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE (daraxonrasib)",
+        "marche_vise": "PDAC réséqué (setting adjuvant)",
+        "extrait": "RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2025-12"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE (daraxonrasib)",
+        "marche_vise": "NSCLC RAS mutant pré-traité",
+        "extrait": "RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.",
+        "stade": "phase 3",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE (daraxonrasib)",
+        "marche_vise": null,
+        "extrait": "RASolute 309 (NCT07805954) is a global, randomized, open-label Phase 3 trial evaluating RASONQUE plus zoldonrasib compared with gemcitabine and nab-paclitaxel (GnP) as a first-line treatment in adult patients with metastatic RAS G12D PDAC.",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "début du traitement des patients",
+          "date": "2026-10-05"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          948,
+          975,
+          1660
+        ]
+      },
+      {
+        "nom": "zoldonrasib (RMC-9805)",
+        "marche_vise": "1L PDAC métastatique KRAS G12D",
+        "extrait": "RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-05"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "zoldonrasib (RMC-9805)",
+        "marche_vise": "1L NSCLC métastatique non-épidermoïde RAS G12D",
+        "extrait": "RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-08-14"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "elironrasib (RMC-6291)",
+        "marche_vise": "1L NSCLC RAS G12C",
+        "extrait": "RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.",
+        "stade": "phase 3 (initiation prévue)",
+        "dernier_jalon": null,
+        "prochain_jalon": {
+          "libelle": "initiation",
+          "date": "T4 2026"
+        },
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "RMC-5127",
+        "marche_vise": null,
+        "extrait": "Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)",
+        "stade": "phase 1/1b",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "RMC-0708",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "RMC-8839",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      }
+    ],
+    "ecartees": [
+      {
+        "fiche": {
+          "nom": "tri-complex RAS(ON) inhibitors (nouvelle classe anti-résistance)",
+          "marche_vise": null,
+          "extrait": "Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.",
+          "stade": "préclinique, essai first-in-human prévu",
+          "dernier_jalon": null,
+          "prochain_jalon": {
+            "libelle": "essai first-in-human",
+            "date": "T4 2026"
+          },
+          "origine": "interne",
+          "pieces": [
+            971
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "(ON)Path",
+          "marche_vise": "patients sous assurance commerciale et Medicare",
+          "extrait": "Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.",
+          "stade": "lancé",
+          "dernier_jalon": {
+            "libelle": "lancement",
+            "date": "2026-08-26"
+          },
+          "prochain_jalon": null,
+          "origine": "interne",
+          "pieces": [
+            947
+          ]
+        },
+        "motif": "['extrait'] absent LITTÉRALEMENT des pièces citées [947]"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec BeOne Medicines",
+          "marche_vise": "select Asian markets",
+          "extrait": "Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.",
+          "stade": "annoncé",
+          "dernier_jalon": {
+            "libelle": "annonce",
+            "date": "2026-08-10"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1668
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Bristol Myers Squibb",
+          "marche_vise": "PDAC",
+          "extrait": "In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.",
+          "stade": "collaboration clinique",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2026-02"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Amgen",
+          "marche_vise": "2L PDAC",
+          "extrait": "In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.",
+          "stade": "collaboration clinique",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2025-02"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Summit Therapeutics",
+          "marche_vise": "multiple solid tumor settings",
+          "extrait": "In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.",
+          "stade": "collaboration clinique",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2025-06"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Tango Therapeutics",
+          "marche_vise": "MTAP-depleted, RAS mutant PDAC or lung cancer",
+          "extrait": "In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.",
+          "stade": "collaboration clinique",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2024-11"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Iambic Therapeutics",
+          "marche_vise": null,
+          "extrait": "In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.",
+          "stade": "collaboration",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2025-05"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      },
+      {
+        "fiche": {
+          "nom": "collaboration avec Break Through Cancer",
+          "marche_vise": null,
+          "extrait": "In November 2024, we entered into a collaboration with Break Through Cancer.",
+          "stade": "collaboration",
+          "dernier_jalon": {
+            "libelle": "entrée dans la collaboration",
+            "date": "2024-11"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1666
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      }
+    ],
+    "signaux": [
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [944], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [1660], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré",
+      "« RASONQUE (daraxonrasib) » : marché « Medicare Part D et assureurs commerciaux » non recopié des pièces [948] — retiré",
+      "« RASONQUE (daraxonrasib) » : nom absent des pièces citées [975], présent ailleurs au dossier",
+      "« RASONQUE (daraxonrasib) » : marché « Europe (soumissions à l'EMA) » non recopié des pièces [975] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 1,
+      "extrait": "Le pipeline compte ainsi six composés RAS(ON) : daraxonrasib (multi-sélectif), zoldonrasib (G12D), elironrasib (G12C), RMC-5127 (G12V, en Phase 1/1b depuis janvier 2026), RMC-0708 et RMC-8839 (précliniques).",
+      "pieces": [
+        971
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy\",\n      \"extrait\": \"On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).\",\n      \"stade\": \"approuvé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"approbation FDA\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        944\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"1L PDAC métastatique\",\n      \"extrait\": \"RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"recrutement actif\",\n        \"date\": \"2026-04\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"PDAC réséqué (setting adjuvant)\",\n      \"extrait\": \"RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2025-12\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"NSCLC RAS mutant pré-traité\",\n      \"extrait\": \"RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"metastatic RAS G12D PDAC en première ligne\",\n      \"extrait\": \"RASolute 309 (NCT07805954) is a global, randomized, open-label Phase 3 trial evaluating RASONQUE plus zoldonrasib compared with gemcitabine and nab-paclitaxel (GnP) as a first-line treatment in adult patients with metastatic RAS G12D PDAC.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début du traitement des patients\",\n        \"date\": \"2026-10-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1660\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib (RMC-9805)\",\n      \"marche_vise\": \"1L PDAC métastatique KRAS G12D\",\n      \"extrait\": \"RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib (RMC-9805)\",\n      \"marche_vise\": \"1L NSCLC métastatique non-épidermoïde RAS G12D\",\n      \"extrait\": \"RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-08-14\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"elironrasib (RMC-6291)\",\n      \"marche_vise\": \"1L NSCLC RAS G12C\",\n      \"extrait\": \"RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.\",\n      \"stade\": \"phase 3 (initiation prévue)\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"initiation\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"RMC-5127\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)\",\n      \"stade\": \"phase 1/1b\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"RMC-0708\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"RMC-8839\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"tri-complex RAS(ON) inhibitors (nouvelle classe anti-résistance)\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.\",\n      \"stade\": \"préclinique, essai first-in-human prévu\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"essai first-in-human\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"(ON)Path\",\n      \"marche_vise\": \"patients sous assurance commerciale et Medicare\",\n      \"extrait\": \"Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.\",\n      \"stade\": \"lancé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"lancement\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        947\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"Medicare Part D et assureurs commerciaux\",\n      \"extrait\": \"Pour RASONQUE (daraxonrasib), le client payeur visé est principalement Medicare Part D (le cancer du pancréas touchant une population âgée, et RASONQUE étant un médicament oral), avec les assureurs commerciaux comme second marché.\",\n      \"stade\": \"lancé\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        948\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE (daraxonrasib)\",\n      \"marche_vise\": \"Europe (soumissions à l'EMA)\",\n      \"extrait\": \"Le 10-Q de Revolution Medicines, Inc. pour la période close le 2026-06-30 (déposé le 2026-08-05) et le communiqué de presse associé (EX-99.1) indiquent que la société a commencé les soumissions à l'Agence européenne des médicaments (EMA) dans le cadre d'un nouveau processus d'examen phasé conçu pour accélérer l'évaluation\",\n      \"stade\": \"soumissions réglementaires en cours\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        975\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec BeOne Medicines\",\n      \"marche_vise\": \"select Asian markets\",\n      \"extrait\": \"Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.\",\n      \"stade\": \"annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-08-10\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1668\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Bristol Myers Squibb\",\n      \"marche_vise\": \"PDAC\",\n      \"extrait\": \"In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2026-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Amgen\",\n      \"marche_vise\": \"2L PDAC\",\n      \"extrait\": \"In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Summit Therapeutics\",\n      \"marche_vise\": \"multiple solid tumor settings\",\n      \"extrait\": \"In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-06\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Tango Therapeutics\",\n      \"marche_vise\": \"MTAP-depleted, RAS mutant PDAC or lung cancer\",\n      \"extrait\": \"In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Iambic Therapeutics\",\n      \"marche_vise\": null,\n      \"extrait\": \"In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"collaboration avec Break Through Cancer\",\n      \"marche_vise\": null,\n      \"extrait\": \"In November 2024, we entered into a collaboration with Break Through Cancer.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 1,\n    \"extrait\": \"Le pipeline compte ainsi six composés RAS(ON) : daraxonrasib (multi-sélectif), zoldonrasib (G12D), elironrasib (G12C), RMC-5127 (G12V, en Phase 1/1b depuis janvier 2026), RMC-0708 et RMC-8839 (précliniques).\",\n    \"pieces\": [\n      971\n    ]\n  }\n}"
+  },
+  {
+    "fiches": [
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy",
+        "extrait": "On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).",
+        "stade": "approuvé",
+        "dernier_jalon": {
+          "libelle": "approbation FDA",
+          "date": "2026-08-26"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          944
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "1L PDAC métastatique",
+        "extrait": "RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "recrutement actif",
+          "date": "2026-04"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "PDAC réséqué (setting adjuvant)",
+        "extrait": "RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2025-12"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": "NSCLC RAS mutant pré-traité",
+        "extrait": "RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "Breakthrough Therapy Designation FDA",
+          "date": null
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          969
+        ]
+      },
+      {
+        "nom": "RASONQUE",
+        "marche_vise": null,
+        "extrait": "RASolute 309 (NCT07805954) is a global, randomized, open-label Phase 3 trial evaluating RASONQUE plus zoldonrasib compared with gemcitabine and nab-paclitaxel (GnP) as a first-line treatment in adult patients with metastatic RAS G12D PDAC.",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "début du traitement des patients",
+          "date": "2026-10-05"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          975,
+          1660
+        ]
+      },
+      {
+        "nom": "zoldonrasib",
+        "marche_vise": "1L PDAC métastatique KRAS G12D",
+        "extrait": "RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-05"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "zoldonrasib",
+        "marche_vise": "1L NSCLC métastatique non-épidermoïde RAS G12D",
+        "extrait": "RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14",
+        "stade": "phase 3",
+        "dernier_jalon": {
+          "libelle": "ouverture",
+          "date": "2026-08-14"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "elironrasib",
+        "marche_vise": "1L NSCLC RAS G12C",
+        "extrait": "RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.",
+        "stade": "phase 3",
+        "dernier_jalon": null,
+        "prochain_jalon": {
+          "libelle": "initiation",
+          "date": "T4 2026"
+        },
+        "origine": "interne",
+        "pieces": [
+          970
+        ]
+      },
+      {
+        "nom": "RMC-5127",
+        "marche_vise": null,
+        "extrait": "Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)",
+        "stade": "phase 1/1b",
+        "dernier_jalon": {
+          "libelle": "en Phase 1/1b depuis janvier 2026",
+          "date": "2026-01"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          970,
+          971
+        ]
+      },
+      {
+        "nom": "RMC-0708",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "RMC-8839",
+        "marche_vise": null,
+        "extrait": "Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "tri-complex RAS(ON) inhibitors",
+        "marche_vise": null,
+        "extrait": "Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.",
+        "stade": "préclinique",
+        "dernier_jalon": null,
+        "prochain_jalon": {
+          "libelle": "essai first-in-human",
+          "date": "T4 2026"
+        },
+        "origine": "interne",
+        "pieces": [
+          971
+        ]
+      },
+      {
+        "nom": "BeOne Medicines",
+        "marche_vise": "select Asian markets",
+        "extrait": "Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.",
+        "stade": "accord annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce de la collaboration",
+          "date": "2026-08-10"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1668
+        ]
+      },
+      {
+        "nom": "Bristol Myers Squibb",
+        "marche_vise": "PDAC",
+        "extrait": "In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2026-02"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Amgen",
+        "marche_vise": "2L PDAC",
+        "extrait": "In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-02"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Summit Therapeutics",
+        "marche_vise": "multiple solid tumor settings",
+        "extrait": "In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-06"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Iambic Therapeutics",
+        "marche_vise": null,
+        "extrait": "In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.",
+        "stade": "collaboration",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2025-05"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Tango Therapeutics",
+        "marche_vise": "MTAP-depleted, RAS mutant PDAC or lung cancer",
+        "extrait": "In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.",
+        "stade": "collaboration clinique",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2024-11"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      },
+      {
+        "nom": "Break Through Cancer",
+        "marche_vise": null,
+        "extrait": "In November 2024, we entered into a collaboration with Break Through Cancer.",
+        "stade": "collaboration",
+        "dernier_jalon": {
+          "libelle": "entrée dans la collaboration",
+          "date": "2024-11"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1666
+        ]
+      }
+    ],
+    "ecartees": [
+      {
+        "fiche": {
+          "nom": "(ON)Path",
+          "marche_vise": "patients sous assurance commerciale et Medicare",
+          "extrait": "Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.",
+          "stade": "lancé",
+          "dernier_jalon": {
+            "libelle": "lancement",
+            "date": "2026-08-26"
+          },
+          "prochain_jalon": null,
+          "origine": "interne",
+          "pieces": [
+            947
+          ]
+        },
+        "motif": "['extrait'] absent LITTÉRALEMENT des pièces citées [947]"
+      }
+    ],
+    "signaux": [
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier",
+      "« RASONQUE » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré",
+      "« RASONQUE » : nom absent des pièces citées [975], présent ailleurs au dossier",
+      "« RASONQUE » : marché « Europe » non recopié des pièces [975] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 2,
+      "extrait": "Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537) et les essais de combinaison RMC-APEX-103 (avec ivonescimab, NCT07397338) et RMC-LUNG-101 (NCT06162221).",
+      "pieces": [
+        970
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy\",\n      \"extrait\": \"On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy (the “FDA Approval”).\",\n      \"stade\": \"approuvé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"approbation FDA\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        944\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"1L PDAC métastatique\",\n      \"extrait\": \"RASolute 303 (NCT07491445) — Phase 3, 1L PDAC métastatique, daraxonrasib en monothérapie ou en combinaison avec gemcitabine + nab-paclitaxel vs SOC, 900 patients, recrutement actif depuis avril 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"recrutement actif\",\n        \"date\": \"2026-04\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"PDAC réséqué (setting adjuvant)\",\n      \"extrait\": \"RASolute 304 (NCT07252232) — Phase 3, PDAC réséqué (setting adjuvant), 500 patients, ouvert depuis décembre 2025\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2025-12\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"NSCLC RAS mutant pré-traité\",\n      \"extrait\": \"RASolve 301 (NCT06881784) — Phase 3, NSCLC RAS mutant pré-traité, daraxonrasib vs docétaxel, 590 patients, recrutement actif.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"Breakthrough Therapy Designation FDA\",\n        \"date\": null\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        969\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"metastatic RAS G12D PDAC en première ligne\",\n      \"extrait\": \"RASolute 309 (NCT07805954) is a global, randomized, open-label Phase 3 trial evaluating RASONQUE plus zoldonrasib compared with gemcitabine and nab-paclitaxel (GnP) as a first-line treatment in adult patients with metastatic RAS G12D PDAC.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début du traitement des patients\",\n        \"date\": \"2026-10-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1660\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib\",\n      \"marche_vise\": \"1L PDAC métastatique KRAS G12D\",\n      \"extrait\": \"RASolute 305 (NCT07621718) — Phase 3, zoldonrasib (RMC-9805) en 1L PDAC métastatique KRAS G12D, 670 patients, ouvert mai 2026\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"zoldonrasib\",\n      \"marche_vise\": \"1L NSCLC métastatique non-épidermoïde RAS G12D\",\n      \"extrait\": \"RASolve 308 (NCT07777822) — Phase 3, zoldonrasib + pembrolizumab + chimiothérapie à base de platine en 1L NSCLC métastatique non-épidermoïde RAS G12D, 430 patients, ouvert le 2026-08-14\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": {\n        \"libelle\": \"ouverture\",\n        \"date\": \"2026-08-14\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"elironrasib\",\n      \"marche_vise\": \"1L NSCLC RAS G12C\",\n      \"extrait\": \"RASolve 307 — Phase 3, elironrasib (RMC-6291) en 1L NSCLC RAS G12C, initiation prévue T4 2026.\",\n      \"stade\": \"phase 3\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"initiation\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970\n      ]\n    },\n    {\n      \"nom\": \"RMC-5127\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537)\",\n      \"stade\": \"phase 1/1b\",\n      \"dernier_jalon\": {\n        \"libelle\": \"en Phase 1/1b depuis janvier 2026\",\n        \"date\": \"2026-01\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        970,\n        971\n      ]\n    },\n    {\n      \"nom\": \"RMC-0708\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"RMC-8839\",\n      \"marche_vise\": null,\n      \"extrait\": \"Deux candidats allèle-sélectifs supplémentaires sont en développement préclinique : RMC-0708 (sélectif Q61H, picomolaire, non-covalent) et RMC-8839 (sélectif G13C, picomolaire, covalent), tous deux décrits comme soumis à la priorisation du portefeuille.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"tri-complex RAS(ON) inhibitors\",\n      \"marche_vise\": null,\n      \"extrait\": \"Le 10-Q du 2026-06-30 (déposé le 2026-08-05) de Revolution Medicines, Inc. décrit une nouvelle classe chimique de tri-complex RAS(ON) inhibitors conçue pour surmonter la résistance médicamenteuse induite par RAS, avec un essai first-in-human prévu au T4 2026.\",\n      \"stade\": \"préclinique\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": {\n        \"libelle\": \"essai first-in-human\",\n        \"date\": \"T4 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        971\n      ]\n    },\n    {\n      \"nom\": \"(ON)Path\",\n      \"marche_vise\": \"patients sous assurance commerciale et Medicare\",\n      \"extrait\": \"Le communiqué de presse de Revolution Medicines, Inc. du 2026-08-26 annonçant l'approbation FDA de RASONQUE (daraxonrasib) décrit le lancement du programme (ON)Path, un programme complet de support patient disponible pour les patients à qui RASONQUE a été prescrit.\",\n      \"stade\": \"lancé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"lancement\",\n        \"date\": \"2026-08-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        947\n      ]\n    },\n    {\n      \"nom\": \"BeOne Medicines\",\n      \"marche_vise\": \"select Asian markets\",\n      \"extrait\": \"Under the regional rights agreement, Revolution Medicines has granted BeOne exclusive rights in select Asian markets to develop and commercialize or solely commercialize, depending on the market, these four clinical-stage RAS(ON) inhibitors.\",\n      \"stade\": \"accord annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce de la collaboration\",\n        \"date\": \"2026-08-10\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1668\n      ]\n    },\n    {\n      \"nom\": \"Bristol Myers Squibb\",\n      \"marche_vise\": \"PDAC\",\n      \"extrait\": \"In February 2026, we entered into a clinical collaboration with Bristol Myers Squibb (BMS) pursuant to which BMS plans to evaluate its compound navlimetostat, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with PDAC as part of a BMS-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2026-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Amgen\",\n      \"marche_vise\": \"2L PDAC\",\n      \"extrait\": \"In February 2025, we entered into a clinical collaboration with Amgen Inc. (Amgen) pursuant to which Amgen is evaluating its compound AMG 193, an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib in patients with 2L PDAC as part of an Amgen-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-02\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Summit Therapeutics\",\n      \"marche_vise\": \"multiple solid tumor settings\",\n      \"extrait\": \"In June 2025, we entered into a clinical collaboration with Summit Therapeutics, Inc. (Summit) pursuant to which we are evaluating the safety and efficacy, in multiple solid tumor settings, of our clinical-stage RAS(ON) Inhibitors, including daraxonrasib, elironrasib and zoldonrasib, in combination with Summit’s ivonescimab, a PD-1/VEGF bispecific antibody.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-06\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Iambic Therapeutics\",\n      \"marche_vise\": null,\n      \"extrait\": \"In May 2025, we entered into a collaboration with Iambic Therapeutics (Iambic), pursuant to which Iambic uses its artificial intelligence capabilities to generate customized models through training with our proprietary data.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2025-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Tango Therapeutics\",\n      \"marche_vise\": \"MTAP-depleted, RAS mutant PDAC or lung cancer\",\n      \"extrait\": \"In November 2024, we entered into a clinical collaboration with Tango Therapeutics, Inc. (Tango) pursuant to which Tango is evaluating its compound vopimetostat (TNG462), an MTA-cooperative PRMT5 inhibitor, in combination with daraxonrasib or zoldonrasib in patients with MTAP-depleted, RAS mutant PDAC or lung cancer as part of a Tango-sponsored trial.\",\n      \"stade\": \"collaboration clinique\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"Break Through Cancer\",\n      \"marche_vise\": null,\n      \"extrait\": \"In November 2024, we entered into a collaboration with Break Through Cancer.\",\n      \"stade\": \"collaboration\",\n      \"dernier_jalon\": {\n        \"libelle\": \"entrée dans la collaboration\",\n        \"date\": \"2024-11\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1666\n      ]\n    },\n    {\n      \"nom\": \"RASONQUE\",\n      \"marche_vise\": \"Europe\",\n      \"extrait\": \"Le 10-Q de Revolution Medicines, Inc. pour la période close le 2026-06-30 (déposé le 2026-08-05) et le communiqué de presse associé (EX-99.1) indiquent que la société a commencé les soumissions à l'Agence européenne des médicaments (EMA) dans le cadre d'un nouveau processus d'examen phasé conçu pour accélérer l'évaluation\",\n      \"stade\": \"soumissions réglementaires en cours\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début des soumissions à l'EMA\",\n        \"date\": null\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        975\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 2,\n    \"extrait\": \"Le site clinicaltrials de Revolution Medicines liste également RMC-5127 (G12V-sélectif) en Phase 1/1b (NCT07349537) et les essais de combinaison RMC-APEX-103 (avec ivonescimab, NCT07397338) et RMC-LUNG-101 (NCT06162221).\",\n    \"pieces\": [\n      970\n    ]\n  }\n}"
+  }
+]

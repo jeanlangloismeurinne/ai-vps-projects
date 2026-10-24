@@ -1,0 +1,140 @@
+
+==============================================================================
+NVDA · modele_economique · archétype « rentable »
+==============================================================================
+  fait postérieur à lire · me_1 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_2 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_3 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_4 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_5 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_6 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+  fait postérieur à lire · me_7 · 0001045810-26-000078 · 8-K du 2026-09-02 (déposé le 2026-09-03), items 8.01 (autre événement important) — rouvre au titre de : perimetre (note flash du 2026-10-18 : « On September 2, 2026, NVIDIA Corporation (“NVIDIA”) entered into a definitive agreement to acquire Hugging Face, Inc. (“Hugging Face”). »)
+dossier : 53 pièce(s) remise(s) sur 412 courante(s) · plafond 40
+  · 22 chemise(s) — un point instruit chacune
+  · 359 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 0 lecture(s) de dépôt jointe(s) d'office : aucune
+  · 0 version(s) antérieure(s) gardée(s) en base, non remise(s) : aucune
+  ⚠️ PLAFOND INSUFFISANT — 53 pièce(s) remise(s) (en vigueur, sœurs et lectures jointes) pour un plafond de 40 : aucune n'a été coupée, le plafond est le problème.
+  · tiers {'A': 29, 'B': 3, 'B+': 1, 'B-': 6, 'C+': 14}
+
+  · me_1 [repondu] rang B / nature interpretation / sens proposition_distinctive
+      Les clients payeurs sont les clients directs — AIBs, distributeurs, ODMs, OEMs, CSPs, AI model makers et intégrateurs de systèmes — qui signent et règlent les achats ; les clients indirects (CSPs, Neocloud builders, AI model makers, entreprises, secteur public) achètent via eux. Le besoin servi est l'accélération des workloads de calcul intensif (IA, HPC, rendu graphique) ; les clients choisissent NVIDIA pour la performance, l'écosystème CUDA (plus de 7,5 millions de développeurs), le coût total de possession supérieur aux approches CPU-only et les délais de mise sur le marché. Les alternatives sont les GPU/puces custom d'AMD, Huawei, Intel, les accélérateurs internes des grands clouds (Alibaba, Google, Amazon, Baidu, Huawei, Microsoft) et les fournisseurs de CPU Arm et de SoC.
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1651, 1655]) — L'acquisition de Hugging Face, si elle se conclut, étend la portée de NVIDIA vers l'écosystème open-source des développeurs IA (18 millions de développeurs, 200 000 entreprises) sans changer la proposition de valeur actuelle pour les clients directs existants ; la plateforme restera ouverte et multi-accélérateur, donc ne crée pas d'obligation d'achat de calcul NVIDIA.
+      cite : [981, 986, 984, 980, 985, 1010, 1651, 1655]
+
+  · me_2 [repondu] rang A / nature mesure / sens revenus_transactionnels
+      Le chiffre d'affaires est essentiellement transactionnel : S1 FY2027, le Data Center (ventes de matériel/systèmes) représente 164 269 MUSD sur 177 837 MUSD (92,4 %), et les segments Compute & Networking (162 850 MUSD) et Graphics (14 987 MUSD) incluent des offres logicielles récurrentes (AI Enterprise, DGX Cloud, Omniverse) sans ventilation chiffrée distincte. Les obligations de performance restantes (revenus déjà engagés non reconnus) ne s'élèvent qu'à 3,20 MdUSD au 2026-07-26, soit environ 1,8 % du revenu semestriel, ce qui confirme la prédominance des ventes transactionnelles.
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1651]) — L'acquisition de Hugging Face (clôture attendue au premier semestre 2027) pourrait apporter des revenus de plateforme/abonnements, mais elle n'est pas conclue et ne change pas la répartition actuelle des revenus, qui reste dominée par les ventes transactionnelles de matériel.
+      cite : [1014, 989, 991, 1003, 1010]
+
+  · me_4 [repondu] rang A / nature interpretation / sens moteurs_maitrises
+      Les deux moteurs principaux du chiffre d'affaires sont : (1) la demande en IA et calcul accéléré pour data centers, qui a tiré la croissance de S1 FY2027 (Data Center +105 % en glissement annuel, 164 269 MUSD sur 177 837 MUSD) ; (2) les contraintes d'approvisionnement et le prix de la mémoire, qui limitent la capacité à répondre à la demande et pèsent sur les coûts (engagements d'approvisionnement passés de 119 à 279 Mds USD, principalement pour la mémoire). Le premier est partiellement maîtrisé par NVIDIA (architecture, roadmap, prix), le second est subi (capacité des fonderies, prix de la mémoire, demande macro).
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1651]) — L'acquisition de Hugging Face n'affecte pas les moteurs identifiés : elle ne change ni la demande data center ni les contraintes d'approvisionnement ; elle pourrait à terme élargir l'écosystème mais sans effet chiffré sur les moteurs actuels.
+      cite : [997, 999, 1000, 1014, 1003, 1010, 1651]
+
+  · me_6 [repondu] rang A / nature mesure / sens dependance_notable
+      La dépendance est notable : un client direct représentait 22 % du revenu total FY2026 et un autre 14 % ; le premier produit/ligne, le Data Center, représente 92,4 % du revenu S1 FY2027 ; la dépendance aux fournisseurs tiers (fonderies, mémoire) est confirmée sans substitut rapide, avec des engagements d'approvisionnement de 279 Mds USD principalement pour la mémoire ; l'exposition à la Chine est tombée à 9,1 % du revenu FY2026 (19 677 MUSD) sous l'effet des restrictions à l'exportation, qui ont exclu NVIDIA du marché chinois du calcul data center.
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1653]) — L'acquisition de Hugging Face ajoute une dépendance potentielle aux restrictions gouvernementales sur les modèles open-source (notamment ceux d'origine chinoise), ce qui pourrait accroître l'exposition réglementaire, mais sans changer les dépendances actuelles (clients, produit, fournisseurs).
+      cite : [1013, 1014, 1015, 1018, 1019, 1000, 1010]
+
+  ≈ me_5 [approxime] rang B / nature interpretation / sens croissance_ample
+      Le corpus ne fournit pas de taille de marché adressable globale pour le modèle actuel (GPU/accélérateurs data center) ; il fournit un TAM de 200 Mds USD pour le seul Vera CPU (marché nouveau, non encore adressé). En l'absence de TAM pour le cœur d'activité, la part de marché ne peut être reconstruite que partiellement : sur le TAM CPU de 200 Mds USD, la visibilité de revenus CPU annoncée est de près de 20 Mds USD pour l'exercice en cours, soit environ 10 %.
+      chiffre : marche_adressable : non établi — Le corpus ne fournit pas de taille de marché adressable pour le modèle actuel (GPU/accélérateurs data center) ; seul un TAM de 200 000 M$ pour le Vera CPU (marché nouveau) est cité.
+      chiffre : part_deja_prise : non établi — La part du marché adressable global ne peut être calculée faute de TAM pour le cœur d'activité ; sur le seul TAM CPU de 200 Mds USD, la part serait d'environ 10 % (20 Mds USD de visibilité), mais ce n'est pas la part du marché du modèle actuel.
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1651]) — L'acquisition de Hugging Face (clôture attendue au premier semestre 2027) étend le marché adressable vers l'écosystème open-source des développeurs IA, mais sans chiffre de marché ; elle ne modifie pas la part de marché actuelle du modèle GPU/accélérateurs.
+      cite : [1004, 1010, 1651]
+      méthode : Aucune part de marché globale n'est calculable ; la seule estimation possible concerne le TAM CPU de 200 Mds USD annoncé par la direction, rapporté à la visibilité de revenus CPU de près de 20 Mds USD pour l'exercice en cours, soit environ 10 %.
+      hypothèses : ['Le TAM de 200 Mds USD pour le Vera CPU est un marché nouveau, distinct du marché GPU/accélérateurs du modèle actuel, donc non représentatif du marché adressable du modèle actuel.', "La visibilité de revenus CPU de près de 20 Mds USD pour l'exercice en cours est utilisée comme approximation de la part captée sur ce TAM CPU."]
+      sensibilité : Si la visibilité de revenus CPU était inférieure (par exemple 15 Mds USD), la part sur le TAM CPU serait de 7,5 % ; si le TAM CPU était plus élevé (par exemple 300 Mds USD), la part serait de 6,7 %.
+
+  ≈ me_7 [approxime] rang A- / nature interpretation / sens portefeuille_etabli
+      L'entreprise prépare plusieurs programmes : (1) Vera Rubin, architecture data center next-gen, en expéditions de production depuis le T3 FY2027, succédant à Blackwell, marché data center existant ; (2) Vera CPU, premier CPU pour IA agentique, nouveau marché (TAM de 200 Mds USD annoncé par la direction), visibilité de près de 20 Mds USD de revenus pour l'exercice en cours ; (3) IA souveraine (Japon, Corée), extension vers de nouveaux clients/zones ; (4) acquisition de Hugging Face, accord définitif du 2026-09-02, clôture attendue au premier semestre 2027, prix d'environ 11,9 Mds USD, marché nouveau (écosystème open-source). La R&D totale FY2026 s'élève à 18,50 Mds USD, sans ventilation par programme.
+      chiffre : nombre_de_programmes = 4 unités (au 2026-10-24)
+      chiffre : nombre_de_programmes_non_nommes = 0 unités (au 2026-10-24)
+      chiffre : depense_de_developpement = 18500 M$ (exercice clos le 2026-01-25)
+      fait postérieur lu : 0001045810-26-000078 (pièces [1010, 1651]) — L'acquisition de Hugging Face (accord définitif du 2026-09-02, clôture attendue au premier semestre 2027, prix d'environ 11,9 Mds USD) est un programme d'extension vers un marché nouveau (écosystème open-source des développeurs IA) ; elle est comptée dans l'inventaire comme programme (4).
+      cite : [997, 1010, 1011, 1012, 1650, 1651]
+      méthode : Le nombre de programmes (4) est reconstruit en comptant les éléments nommés dans les sources : Vera Rubin, Vera CPU, IA souveraine (Japon/Corée), acquisition Hugging Face. Le TAM de 200 Mds USD pour Vera CPU et la visibilité de 20 Mds USD proviennent d'une source de presse financière (appel résultats), non d'un relevé comptable ; ils sont donc traités comme des estimations de la direction. La dépense de développement est relevée dans le 10-K FY2026 (18,50 Mds USD), sans ventilation par programme.
+      hypothèses : ["Les quatre éléments nommés (Vera Rubin, Vera CPU, IA souveraine, Hugging Face) sont considérés comme des programmes distincts, bien que l'émetteur ne les numérote pas explicitement.", 'Le TAM de 200 Mds USD pour Vera CPU et la visibilité de 20 Mds USD sont des annonces de la direction, non vérifiées par des relevés indépendants.', "La dépense de développement de 18,50 Mds USD couvre l'ensemble de la R&D, sans qu'aucune ventilation par programme ne soit publiée."]
+      sensibilité : Si l'IA souveraine était considérée comme une extension du programme Vera Rubin plutôt qu'un programme distinct, le nombre de programmes serait de 3 ; si d'autres programmes non nommés existaient, le nombre serait plus élevé. Le TAM CPU pourrait varier selon la définition du marché.
+
+  ⚠ me_3 [non_fondable] remède collecte / haute
+      manque : Le corpus ne fournit ni le prix par unité vendue ni les coûts variables par unité (coût des marchandises vendues, redevances, livraison) pour aucune ligne d'activité ; il ne fournit pas non plus de marge brute sur plusieurs périodes. Il manque les données de coût des ventes et de marge brute, ainsi que les volumes unitaires, pour calculer l'économie unitaire.
+
+  télémétrie : 447632 in / 11685 out · $0.0379
+  ok   les 7 questions applicables passent contrat ET pont (aucun refus)
+  ok   les 0 `sans_objet` sont exactement ceux du référentiel pour cet archétype
+  ok   les 7 questions du framework sortent toutes nommées
+
+==============================================================================
+RVMD · modele_economique · archétype « rentable »
+==============================================================================
+  fait postérieur à lire · me_1 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade, reglementaire_favorable (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_1 · 0001193125-26-335039 · 8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))
+  fait postérieur à lire · me_2 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_3 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_3 · 0001193125-26-335039 · 8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : surprise_allocation, surprise_execution (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))
+  fait postérieur à lire · me_4 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_4 · 0001193125-26-335039 · 8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : surprise_execution (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))
+  fait postérieur à lire · me_5 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade, reglementaire_favorable (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_5 · 0001193125-26-335039 · 8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))
+  fait postérieur à lire · me_6 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_7 · 0001193125-26-366931 · 8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade, reglementaire_favorable (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)
+  fait postérieur à lire · me_7 · 0001193125-26-335039 · 8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable, surprise_execution (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))
+dossier : 35 pièce(s) remise(s) sur 473 courante(s) · plafond 40
+  · 13 chemise(s) — un point instruit chacune
+  · 433 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 1 lecture(s) de dépôt jointe(s) d'office : [944]
+  · 5 version(s) antérieure(s) gardée(s) en base, non remise(s) : [964, 965, 966, 967, 968]
+  · chemises à plusieurs versions : me_5.marche_adressable×4, me_5.part_deja_prise×3
+  ⚠️ 2 chemise(s) à DATATION HÉTÉROGÈNE — la pièce en vigueur a été collectée AVANT une antérieure : me_5.marche_adressable, me_5.part_deja_prise. Deux horloges dans la même chemise (clôture de période vs date déclarée) ; le remède est à la production des entries, pas à l'assemblage.
+  · tiers {'A': 18, 'B-': 5, 'C+': 12}
+
+  · me_1 [repondu] rang A / nature interpretation / sens proposition_distinctive
+      Le client payeur est l'assureur (assurance commerciale ou Medicare) qui couvre les patients atteints de PDAC métastatique préalablement traité, à qui RASONQUE est prescrit ; le besoin servi est le traitement de ce cancer ; l'alternative écartée est la chimiothérapie cytotoxique au choix de l'investigateur, comparateur de l'essai pivot RASolute 302. Le motif de choix observé n'est pas encore établi par le corpus.
+      fait postérieur lu : 0001193125-26-366931 (pièces [944]) — L'approbation FDA du 2026-08-26 établit le cadre réglementaire de la proposition : RASONQUE est approuvé pour le PDAC métastatique préalablement traité, sur la base de l'essai RASolute 302 versus chimiothérapie cytotoxique ; cela fonde la proposition distinctive mais ne change pas l'identification du client payeur (assureurs) ni le besoin servi.
+      cite : [944, 949, 973]
+
+  · me_4 [repondu] rang A / nature interpretation / sens moteurs_subis
+      Les moteurs du chiffre d'affaires futur sont : (1) le nombre de patients atteints de PDAC métastatique préalablement traité à qui RASONQUE est prescrit, (2) la couverture et le remboursement par les assureurs (commercial et Medicare, avec remises de 20-30 %), et (3) le prix net par traitement. Ces moteurs sont largement subis : la prescription dépend des médecins et de l'évolution de la maladie, la couverture des assureurs et les remises gouvernementales sont hors du contrôle de l'entreprise.
+      fait postérieur lu : 0001193125-26-366931 (pièces [944]) — L'approbation FDA du 2026-08-26 rend le produit prescriptible, ce qui ouvre le moteur du nombre de patients, mais la couverture assureur et les remises restent des moteurs subis.
+      cite : [944, 949, 973]
+
+  · me_6 [repondu] rang A / nature mesure / sens dependance_critique
+      Le modèle dépend de manière critique d'un seul produit, RASONQUE (daraxonrasib), seule source de revenus potentielle ; la dépendance à un client unique n'est pas établie (les payeurs sont des assureurs multiples), mais la dépendance au produit est totale. La société dépend aussi de tiers pour la production commerciale, sans substitut garanti.
+      fait postérieur lu : 0001193125-26-366931 (pièces [944]) — L'approbation FDA du 2026-08-26 confirme que RASONQUE est le premier et seul produit commercialisé, renforçant la dépendance critique au produit unique.
+      cite : [973, 974]
+
+  ≈ me_3 [approxime] rang A- / nature interpretation / sens economie_unitaire_non_etablie
+      Le prix catalogue d'une unité (30 jours de traitement) est de 39 800 USD, mais les coûts variables par unité ne sont pas publiés ; le corpus indique seulement des remises gouvernementales estimées à 20-30 % du prix catalogue pour certains patients Medicare Part D. L'économie unitaire nette ne peut donc pas être établie à partir du corpus.
+      fait postérieur lu : 0001193125-26-366931 (pièces [944]) — L'approbation FDA du 2026-08-26 fixe le prix catalogue de RASONQUE à 39 800 USD pour 30 jours, mais ne fournit pas les coûts variables par unité ; l'économie unitaire reste non établie.
+      cite : [944, 949]
+      méthode : Le prix catalogue est relevé dans le 8-K ; les remises gouvernementales sont citées par le CFO dans le communiqué de presse. Les coûts variables par unité ne sont pas publiés, donc l'économie unitaire nette ne peut pas être calculée.
+      hypothèses : ['Le prix catalogue de 39 800 USD pour 30 jours est le prix de référence, mais le prix net après remises et copay pourrait être inférieur.', "Les remises gouvernementales de 20-30 % ne s'appliquent qu'à certains patients Medicare Part D, pas à tous les patients."]
+      sensibilité : Si les remises moyennes étaient de 25 %, le prix net serait d'environ 29 850 USD, soit une baisse de 25 % par rapport au prix catalogue ; sans données sur les coûts variables, la marge unitaire reste inconnue.
+
+  ≈ me_7 [approxime] rang A- / nature interpretation / sens portefeuille_etabli
+      Le portefeuille futur comprend : (1) RASONQUE (daraxonrasib) — déjà approuvé et vendu, indications en extension : RASolute 303 (1L PDAC, Phase 3, recrutement actif depuis avril 2026), RASolute 304 (adjuvant PDAC, Phase 3, ouvert depuis décembre 2025), RASolve 301 (NSCLC RAS mutant pré-traité, Phase 3, recrutement actif) ; (2) zoldonrasib — en Phase 3 (RASolute 309, 1L PDAC RAS G12D, recrutement commencé) ; (3) elironrasib — en développement clinique ; (4) RMC-5127 — en Phase 1. La dépense de R&D totale 2025 est de 987,3 MUSD, sans ventilation par programme. Le prochain jalon de chaque programme n'est pas daté dans le corpus.
+      chiffre : nombre_de_programmes = 4 unités (à la date de l'analyse (2026-10-24))
+      chiffre : nombre_de_programmes_non_nommes = 0 unités (à la date de l'analyse (2026-10-24))
+      chiffre : depense_de_developpement = 987.3 M$ (exercice 2025)
+      fait postérieur lu : 0001193125-26-366931 (pièces [944]) — L'approbation FDA du 2026-08-26 fait passer RASONQUE du statut de candidat à celui de produit commercialisé, ce qui le retire du portefeuille de programmes en développement pour l'indication approuvée ; les extensions d'indication restent des programmes.
+      cite : [972, 973, 969, 1660, 1662, 944]
+      méthode : Le nombre de programmes est reconstruit à partir des candidats cliniques nommés dans le corpus (daraxonrasib, zoldonrasib, elironrasib, RMC-5127) ; les stades et jalons sont relevés dans les sources citées. La dépense de R&D totale 2025 est relevée dans le communiqué de résultats, sans ventilation par programme.
+      hypothèses : ["Les quatre candidats nommés (daraxonrasib, zoldonrasib, elironrasib, RMC-5127) constituent l'ensemble des programmes en développement, sans programmes non nommés.", 'La dépense de R&D totale 2025 (987,3 MUSD) est utilisée comme proxy de la dépense de développement, faute de ventilation par programme.']
+      sensibilité : Si des programmes non nommés existaient, le nombre de programmes serait plus élevé ; la dépense par programme pourrait différer de la moyenne implicite (987,3 / 4 ≈ 246,8 MUSD).
+
+  ⚠ me_2 [non_fondable] remède collecte / haute
+      manque : Il manque tout chiffre d'affaires réalisé : le corpus établit que la société était pré-revenus jusqu'à l'approbation FDA du 2026-08-26 (aucune ligne de revenus dans les comptes au 2026-06-30), et aucun chiffre de ventes de RASONQUE post-approbation n'est fourni. Il manque donc la répartition du chiffre d'affaires par source et la part adossée à des engagements pluriannuels pour toute période post-lancement.
+
+  ⚠ me_5 [non_fondable] remède collecte / haute
+      manque : Il manque la taille du marché adressable (en M$) pour le PDAC métastatique préalablement traité aux États-Unis, et toute donnée de ventes de RASONQUE pour calculer la part déjà prise ; le corpus ne fournit ni l'un ni l'autre.
+
+  télémétrie : 205846 in / 6223 out · $0.0176
+  ok   les 7 questions applicables passent contrat ET pont (aucun refus)
+  ok   les 0 `sans_objet` sont exactement ceux du référentiel pour cet archétype
+  ok   les 7 questions du framework sortent toutes nommées
+
+==============================================================================
+6 vérifications OK, 0 échec(s)
+⚠️ Le reste s'apprécie À LA LECTURE : les `verbatim` répondent-ils à la question POSÉE (et pas à côté) ? les `non_fondable` nomment-ils un manque qu'une collecte peut combler ? une `approximation` déclare-t-elle des hypothèses qu'on peut contester ? un `sens` est-il celui que le verbatim décrit ?

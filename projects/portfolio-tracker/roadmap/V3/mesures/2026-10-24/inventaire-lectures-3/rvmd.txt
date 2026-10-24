@@ -1,0 +1,125 @@
+dossier : 35 pièce(s) remise(s) sur 473 courante(s) · plafond 40
+  · 13 chemise(s) — un point instruit chacune
+  · 433 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 1 lecture(s) de dépôt jointe(s) d'office : [944]
+  · 5 version(s) antérieure(s) gardée(s) en base, non remise(s) : [964, 965, 966, 967, 968]
+  · chemises à plusieurs versions : me_5.marche_adressable×4, me_5.part_deja_prise×3
+  ⚠️ 2 chemise(s) à DATATION HÉTÉROGÈNE — la pièce en vigueur a été collectée AVANT une antérieure : me_5.marche_adressable, me_5.part_deja_prise. Deux horloges dans la même chemise (clôture de période vs date déclarée) ; le remède est à la production des entries, pas à l'assemblage.
+pièces rendues : 35 · 39685 caractères (~9921 jetons)
+modèle : deepseek-ai/DeepSeek-V4.1-Flash-1017 · 3 lecture(s) indépendante(s)
+
+── lecture 1 : 18 fiche(s) admise(s), 1 écartée(s) · 28934 in / 7321 out · 0.0102 $ · 2 tentative(s)
+  · RASONQUE × adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy — stade approuvé ; dernier : approbation FDA (2026-08-26) ; prochain : — ; interne ; pièces [944]
+  · RASONQUE × (aucun marché nommé) — stade phase 3 ; dernier : recrutement actif (2026-04) ; prochain : — ; interne ; pièces [948, 969, 975, 1660]
+  · RASONQUE × PDAC réséqué (setting adjuvant) — stade phase 3 ; dernier : ouverture (2025-12) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE × NSCLC RAS mutant pré-traité — stade phase 3 ; dernier : — ; prochain : — ; interne ; pièces [969]
+  · zoldonrasib × 1L PDAC métastatique KRAS G12D — stade phase 3 ; dernier : ouverture (2026-05) ; prochain : — ; interne ; pièces [970]
+  · zoldonrasib × 1L NSCLC métastatique non-épidermoïde RAS G12D — stade phase 3 ; dernier : ouverture (2026-08-14) ; prochain : — ; interne ; pièces [970]
+  · elironrasib × 1L NSCLC RAS G12C — stade phase 3 (initiation prévue) ; dernier : — ; prochain : initiation (T4 2026) ; interne ; pièces [970]
+  · RMC-5127 × (aucun marché nommé) — stade phase 1/1b ; dernier : en Phase 1/1b depuis janvier 2026 (2026-01) ; prochain : — ; interne ; pièces [970, 971]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · tri-complex RAS(ON) inhibitors × (aucun marché nommé) — stade préclinique, essai first-in-human prévu ; dernier : — ; prochain : essai first-in-human (T4 2026) ; interne ; pièces [971]
+  · BeOne Medicines × select Asian markets — stade accord annoncé ; dernier : annonce de la collaboration (2026-08-10) ; prochain : — ; partenariat ; pièces [1668]
+  · Bristol Myers Squibb × PDAC — stade collaboration clinique ; dernier : entrée dans la collaboration (2026-02) ; prochain : — ; partenariat ; pièces [1666]
+  · Amgen × 2L PDAC — stade collaboration clinique ; dernier : entrée dans la collaboration (2025-02) ; prochain : — ; partenariat ; pièces [1666]
+  · Summit Therapeutics × multiple solid tumor settings — stade collaboration clinique ; dernier : entrée dans la collaboration (2025-06) ; prochain : — ; partenariat ; pièces [1666]
+  · Iambic Therapeutics × (aucun marché nommé) — stade collaboration ; dernier : entrée dans la collaboration (2025-05) ; prochain : — ; partenariat ; pièces [1666]
+  · Tango Therapeutics × MTAP-depleted, RAS mutant PDAC or lung cancer — stade collaboration clinique ; dernier : entrée dans la collaboration (2024-11) ; prochain : — ; partenariat ; pièces [1666]
+  · Break Through Cancer × (aucun marché nommé) — stade collaboration ; dernier : entrée dans la collaboration (2024-11) ; prochain : — ; partenariat ; pièces [1666]
+  ✗ RASONQUE × patients sous assurance commerciale et Medicare — ['extrait'] absent LITTÉRALEMENT des pièces citées [947]
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : marché « PDAC métastatique en première ligne » non recopié des pièces [969] — retiré
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré
+  ⚠ « RASONQUE » : marché « Medicare Part D et assureurs commerciaux » non recopié des pièces [948] — retiré
+  ⚠ « RASONQUE » : nom absent des pièces citées [975], présent ailleurs au dossier
+  ⚠ « RASONQUE » : marché « Europe » non recopié des pièces [975] — retiré
+  · non nommés : 1 (pièces [971])
+
+── lecture 2 : 11 fiche(s) admise(s), 9 écartée(s) · 29016 in / 7485 out · 0.0103 $ · 2 tentative(s)
+  · RASONQUE (daraxonrasib) × adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy — stade approuvé ; dernier : approbation FDA (2026-08-26) ; prochain : — ; interne ; pièces [944]
+  · RASONQUE (daraxonrasib) × 1L PDAC métastatique — stade phase 3 ; dernier : recrutement actif (2026-04) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE (daraxonrasib) × PDAC réséqué (setting adjuvant) — stade phase 3 ; dernier : ouverture (2025-12) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE (daraxonrasib) × NSCLC RAS mutant pré-traité — stade phase 3 ; dernier : — ; prochain : — ; interne ; pièces [969]
+  · RASONQUE (daraxonrasib) × (aucun marché nommé) — stade phase 3 ; dernier : début du traitement des patients (2026-10-05) ; prochain : — ; interne ; pièces [948, 975, 1660]
+  · zoldonrasib (RMC-9805) × 1L PDAC métastatique KRAS G12D — stade phase 3 ; dernier : ouverture (2026-05) ; prochain : — ; interne ; pièces [970]
+  · zoldonrasib (RMC-9805) × 1L NSCLC métastatique non-épidermoïde RAS G12D — stade phase 3 ; dernier : ouverture (2026-08-14) ; prochain : — ; interne ; pièces [970]
+  · elironrasib (RMC-6291) × 1L NSCLC RAS G12C — stade phase 3 (initiation prévue) ; dernier : — ; prochain : initiation (T4 2026) ; interne ; pièces [970]
+  · RMC-5127 × (aucun marché nommé) — stade phase 1/1b ; dernier : — ; prochain : — ; interne ; pièces [970]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  ✗ tri-complex RAS(ON) inhibitors (nouvelle classe anti-résistance) × None — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ (ON)Path × patients sous assurance commerciale et Medicare — ['extrait'] absent LITTÉRALEMENT des pièces citées [947]
+  ✗ collaboration avec BeOne Medicines × select Asian markets — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Bristol Myers Squibb × PDAC — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Amgen × 2L PDAC — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Summit Therapeutics × multiple solid tumor settings — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Tango Therapeutics × MTAP-depleted, RAS mutant PDAC or lung cancer — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Iambic Therapeutics × None — ['nom'] absent LITTÉRALEMENT du dossier
+  ✗ collaboration avec Break Through Cancer × None — ['nom'] absent LITTÉRALEMENT du dossier
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [944], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [1660], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré
+  ⚠ « RASONQUE (daraxonrasib) » : marché « Medicare Part D et assureurs commerciaux » non recopié des pièces [948] — retiré
+  ⚠ « RASONQUE (daraxonrasib) » : nom absent des pièces citées [975], présent ailleurs au dossier
+  ⚠ « RASONQUE (daraxonrasib) » : marché « Europe (soumissions à l'EMA) » non recopié des pièces [975] — retiré
+  · non nommés : 1 (pièces [971])
+
+── lecture 3 : 19 fiche(s) admise(s), 1 écartée(s) · 12550 in / 3614 out · 0.0047 $ · 1 tentative(s)
+  · RASONQUE × metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy — stade approuvé ; dernier : approbation FDA (2026-08-26) ; prochain : — ; interne ; pièces [944]
+  · RASONQUE × 1L PDAC métastatique — stade phase 3 ; dernier : recrutement actif (2026-04) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE × PDAC réséqué (setting adjuvant) — stade phase 3 ; dernier : ouverture (2025-12) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE × NSCLC RAS mutant pré-traité — stade phase 3 ; dernier : Breakthrough Therapy Designation FDA (non daté) ; prochain : — ; interne ; pièces [969]
+  · RASONQUE × (aucun marché nommé) — stade phase 3 ; dernier : début du traitement des patients (2026-10-05) ; prochain : — ; interne ; pièces [975, 1660]
+  · zoldonrasib × 1L PDAC métastatique KRAS G12D — stade phase 3 ; dernier : ouverture (2026-05) ; prochain : — ; interne ; pièces [970]
+  · zoldonrasib × 1L NSCLC métastatique non-épidermoïde RAS G12D — stade phase 3 ; dernier : ouverture (2026-08-14) ; prochain : — ; interne ; pièces [970]
+  · elironrasib × 1L NSCLC RAS G12C — stade phase 3 ; dernier : — ; prochain : initiation (T4 2026) ; interne ; pièces [970]
+  · RMC-5127 × (aucun marché nommé) — stade phase 1/1b ; dernier : en Phase 1/1b depuis janvier 2026 (2026-01) ; prochain : — ; interne ; pièces [970, 971]
+  · RMC-0708 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · RMC-8839 × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : — ; interne ; pièces [971]
+  · tri-complex RAS(ON) inhibitors × (aucun marché nommé) — stade préclinique ; dernier : — ; prochain : essai first-in-human (T4 2026) ; interne ; pièces [971]
+  · BeOne Medicines × select Asian markets — stade accord annoncé ; dernier : annonce de la collaboration (2026-08-10) ; prochain : — ; partenariat ; pièces [1668]
+  · Bristol Myers Squibb × PDAC — stade collaboration clinique ; dernier : entrée dans la collaboration (2026-02) ; prochain : — ; partenariat ; pièces [1666]
+  · Amgen × 2L PDAC — stade collaboration clinique ; dernier : entrée dans la collaboration (2025-02) ; prochain : — ; partenariat ; pièces [1666]
+  · Summit Therapeutics × multiple solid tumor settings — stade collaboration clinique ; dernier : entrée dans la collaboration (2025-06) ; prochain : — ; partenariat ; pièces [1666]
+  · Iambic Therapeutics × (aucun marché nommé) — stade collaboration ; dernier : entrée dans la collaboration (2025-05) ; prochain : — ; partenariat ; pièces [1666]
+  · Tango Therapeutics × MTAP-depleted, RAS mutant PDAC or lung cancer — stade collaboration clinique ; dernier : entrée dans la collaboration (2024-11) ; prochain : — ; partenariat ; pièces [1666]
+  · Break Through Cancer × (aucun marché nommé) — stade collaboration ; dernier : entrée dans la collaboration (2024-11) ; prochain : — ; partenariat ; pièces [1666]
+  ✗ (ON)Path × patients sous assurance commerciale et Medicare — ['extrait'] absent LITTÉRALEMENT des pièces citées [947]
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : nom absent des pièces citées [969], présent ailleurs au dossier
+  ⚠ « RASONQUE » : marché « metastatic RAS G12D PDAC en première ligne » non recopié des pièces [1660] — retiré
+  ⚠ « RASONQUE » : nom absent des pièces citées [975], présent ailleurs au dossier
+  ⚠ « RASONQUE » : marché « Europe » non recopié des pièces [975] — retiré
+  · non nommés : 2 (pièces [970])
+
+── comparaison : union 20 · présentes dans TOUTES les lectures 9
+  ■□■  amgen × 2l pdac
+  ■□■  beone medicines × select asian markets
+  ■□■  break through cancer × (aucun marché nommé)
+  ■□■  bristol myers squibb × pdac
+  ■■■  elironrasib × 1l nsclc ras g12c
+  ■□■  iambic therapeutics × (aucun marché nommé)
+  ■■■  rasonque × (aucun marché nommé)
+  □■■  rasonque × 1l pdac métastatique
+  ■■□  rasonque × adult patients with metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy
+  □□■  rasonque × metastatic pancreatic adenocarcinoma who have received at least one prior systemic therapy or who are not candidates for multiagent systemic therapy
+  ■■■  rasonque × nsclc ras mutant pré-traité
+  ■■■  rasonque × pdac réséqué
+  ■■■  rmc-0708 × (aucun marché nommé)
+  ■■■  rmc-5127 × (aucun marché nommé)
+  ■■■  rmc-8839 × (aucun marché nommé)
+  ■□■  summit therapeutics × multiple solid tumor settings
+  ■□■  tango therapeutics × mtap-depleted, ras mutant pdac or lung cancer
+  ■□■  tri-complex ras inhibitors × (aucun marché nommé)
+  ■■■  zoldonrasib × 1l nsclc métastatique non-épidermoïde ras g12d
+  ■■■  zoldonrasib × 1l pdac métastatique kras g12d
+
+BILAN inventaire RVMD : 3 lecture(s), fiches admises [18, 11, 19], écartées [1, 9, 1], coût 0.0252 $
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/inventaire-lectures-3/rvmd.json

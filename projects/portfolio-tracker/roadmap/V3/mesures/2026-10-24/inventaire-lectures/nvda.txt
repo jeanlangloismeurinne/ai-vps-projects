@@ -1,0 +1,82 @@
+dossier : 53 pièce(s) remise(s) sur 412 courante(s) · plafond 40
+  · 22 chemise(s) — un point instruit chacune
+  · 359 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 0 lecture(s) de dépôt jointe(s) d'office : aucune
+  · 0 version(s) antérieure(s) gardée(s) en base, non remise(s) : aucune
+  ⚠️ PLAFOND INSUFFISANT — 53 pièce(s) remise(s) (en vigueur, sœurs et lectures jointes) pour un plafond de 40 : aucune n'a été coupée, le plafond est le problème.
+pièces rendues : 53 · 63231 caractères (~15807 jetons)
+modèle : deepseek-ai/DeepSeek-V4.1-Flash-1017 · 3 lecture(s) indépendante(s)
+
+── lecture 1 : 1 fiche(s) admise(s), 19 écartée(s) · 18657 in / 3481 out · 0.0058 $ · 1 tentative(s)
+  · engagements d'approvisionnement et de capacité × (aucun marché nommé) — stade engagements contractés ; dernier : engagements portés à 279 Mds USD (2026-07-26) ; prochain : — ; partenariat ; pièces [997, 1000]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997, 1011]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1644]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Vera Rubin NVL72 × data center, IA à l'échelle du rack — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera Rubin NVL72 × data center, IA à l'échelle du rack — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Groq 3 LPX × data center, inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ GB300 NVL72 × data center, inférence, entraînement et traitement de données — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1004]
+  ✗ acquisition de Hugging Face × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1651]
+  ✗ acquisition de Hugging Face × écosystème open-source des développeurs IA — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ acquisition de Hugging Face × plus de 200 000 entreprises utilisant la plateforme — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ acquisition de Hugging Face × portée mondiale de la communauté open-source — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ IA souveraine × déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ IA souveraine × Japon — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ IA souveraine × Corée — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ robotique et physical AI × robotique et applications de physical AI — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ inference × déploiements data center pour l'inférence IA — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ AI Clouds, Industrial & Enterprise × entreprises et clouds IA (au-delà des hyperscalers) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ expansion géographique mondiale × expansion mondiale (États-Unis et reste du monde) — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  · non nommés : 1 (pièces [1645])
+
+── lecture 2 : 2 fiche(s) admise(s), 18 écartée(s) · 18657 in / 3589 out · 0.0059 $ · 1 tentative(s)
+  · N1X × marché PC — stade annoncé ; dernier : annonce au Computex 2026 (2026-06-01) ; prochain : — ; interne ; pièces [1004]
+  · engagements d'approvisionnement et de capacité × (aucun marché nommé) — stade engagements contractés ; dernier : engagements portés à 279 Mds USD (2026-07-26) ; prochain : — ; partenariat ; pièces [997, 1000]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997, 1011]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1644]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Groq 3 LPX × data center, inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ GB300 NVL72 × data center, inférence, entraînement et traitement de données — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1004]
+  ✗ acquisition de Hugging Face × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1651]
+  ✗ acquisition de Hugging Face × écosystème open-source des développeurs IA — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ acquisition de Hugging Face × plus de 200 000 entreprises utilisant la plateforme — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ acquisition de Hugging Face × portée mondiale de la communauté open-source — ['nom', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ IA souveraine × déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ AI factory nationale Vera Rubin au Japon (Noetra) × Japon, IA souveraine et physical AI — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ expansion de l'AI factory DSX de NAVER à GAK Sejong × Corée, IA souveraine — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ robotique et physical AI × robotique et applications de physical AI — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ inference × data center, inférence IA — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ AI Clouds, Industrial & Enterprise × entreprises et clouds IA (au-delà des hyperscalers) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ expansion géographique mondiale × États-Unis et monde — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  · non nommés : 1 (pièces [1647])
+
+── lecture 3 : 1 fiche(s) admise(s), 17 écartée(s) · 18657 in / 2867 out · 0.0055 $ · 1 tentative(s)
+  · engagements d'approvisionnement et de capacité × (aucun marché nommé) — stade engagements contractés ; dernier : engagements portés à 279 Mds USD (2026-07-26) ; prochain : — ; partenariat ; pièces [997, 1000]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997, 1644, 1646, 1648]
+  ✗ Vera Rubin × IA souveraine au Japon — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ Vera Rubin × IA souveraine en Corée — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1012]
+  ✗ Vera CPU × CPUs de datacenter pour charges de travail IA agentique — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1004]
+  ✗ Groq 3 LPX × inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ acquisition de Hugging Face × None — ['nom'] absent(s) LITTÉRALEMENT des pièces citées [1010, 1651, 1655]
+  ✗ Hugging Face × écosystème open-source des développeurs IA — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ Hugging Face × entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ Hugging Face × communauté open-source mondiale — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1010]
+  ✗ IA souveraine × déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ robotique et physical AI × robotique et applications de physical AI — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ inference × déploiements data center pour l'inférence IA — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ AI Clouds, Industrial & Enterprise × entreprises et clouds IA (au-delà des hyperscalers) — ['marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ expansion géographique mondiale × États-Unis et reste du monde — ['nom', 'marche_vise', 'extrait'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ NVIDIA AI Enterprise × None — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [989, 990]
+  ✗ DGX Cloud × None — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [989, 990]
+  ✗ Omniverse Enterprise × None — ['extrait'] absent(s) LITTÉRALEMENT des pièces citées [989, 990]
+  · non nommés : 1 (pièces [1645])
+
+── comparaison : union 2 · présentes dans TOUTES les lectures 1
+  ■■■  engagements d'approvisionnement et de capacité × (aucun marché nommé)
+  □■□  n1x × marché pc
+
+BILAN inventaire NVDA : 3 lecture(s), fiches admises [1, 2, 1], écartées [19, 18, 17], coût 0.0172 $
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/inventaire-lectures/nvda.json

@@ -1,0 +1,122 @@
+dossier : 53 pièce(s) remise(s) sur 412 courante(s) · plafond 40
+  · 22 chemise(s) — un point instruit chacune
+  · 359 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 0 lecture(s) de dépôt jointe(s) d'office : aucune
+  · 0 version(s) antérieure(s) gardée(s) en base, non remise(s) : aucune
+  ⚠️ PLAFOND INSUFFISANT — 53 pièce(s) remise(s) (en vigueur, sœurs et lectures jointes) pour un plafond de 40 : aucune n'a été coupée, le plafond est le problème.
+pièces rendues : 53 · 63231 caractères (~15807 jetons)
+modèle : deepseek-ai/DeepSeek-V4.1-Flash-1017 · 3 lecture(s) indépendante(s)
+
+── lecture 1 : 8 fiche(s) admise(s), 1 écartée(s) · 40234 in / 4742 out · 0.0109 $ · 2 tentative(s)
+  · Vera Rubin × (aucun marché nommé) — stade expéditions de production commencées ; dernier : début des expéditions de production (T3 FY2027) ; prochain : — ; interne ; pièces [997, 1011, 1644, 1648]
+  · Vera Rubin NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646]
+  · Groq 3 LPX × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; non_dit ; pièces [1646]
+  · GB300 NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646]
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé, visibilité de revenus ; dernier : annonce lors de l'appel de résultats du T1 FY2027 (2026-05-20) ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × (aucun marché nommé) — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (first half of 2027) ; acquisition ; pièces [1651, 1655]
+  · Hugging Face × portée mondiale de la communauté open-source — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · AI factory DSX de NAVER à GAK Sejong × (aucun marché nommé) — stade expansion annoncée ; dernier : communiqué de presse (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  ✗ AI factory nationale Vera Rubin au Japon × IA souveraine au Japon — ['nom'] absent LITTÉRALEMENT du dossier
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré
+  ⚠ « Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré
+  ⚠ « Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré
+  ⚠ « Groq 3 LPX » : marché « inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré
+  ⚠ « GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré
+  ⚠ « Hugging Face » : marché « écosystème open-source des développeurs IA » non recopié des pièces [1651] — retiré
+  ⚠ « Hugging Face » : marché « plus de 200 000 entreprises utilisant la plateforme » non recopié des pièces [1655] — retiré
+  ⚠ « AI factory DSX de NAVER à GAK Sejong » : marché « IA souveraine en Corée » non recopié des pièces [1012] — retiré
+  · non nommés : 1 (pièces [1647])
+
+── lecture 2 : 16 fiche(s) admise(s), 1 écartée(s) · 41273 in / 6820 out · 0.0123 $ · 2 tentative(s)
+  · Vera Rubin × (aucun marché nommé) — stade expéditions de production commencées ; dernier : début des expéditions de production (T3 FY2027) ; prochain : — ; interne ; pièces [997, 1011, 1644, 1648]
+  · Vera Rubin NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646]
+  · Groq 3 LPX × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; non_dit ; pièces [1646]
+  · GB300 NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646]
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé, visibilité de revenus ; dernier : annonce (2026-05-20) ; prochain : — ; interne ; pièces [1004]
+  · N1X × marché PC — stade annoncé ; dernier : annonce au Computex (2026-06-01) ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × (aucun marché nommé) — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (first half of 2027) ; acquisition ; pièces [1651, 1655]
+  · IA souveraine × Japon — stade partenariat annoncé ; dernier : annonce (2026-07-16) ; prochain : — ; partenariat ; pièces [1012]
+  · IA souveraine × Corée — stade expansion annoncée ; dernier : annonce (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  · IA souveraine × (aucun marché nommé) — stade déploiements mentionnés ; dernier : — ; prochain : — ; partenariat ; pièces [1011]
+  · Robotique et physical AI × (aucun marché nommé) — stade positionnement ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · Inference × déploiements data center pour l'inférence IA — stade moteur de croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · AI Clouds, Industrial & Enterprise × entreprises et clouds IA — stade diversification en cours ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · NVIDIA AI Enterprise × (aucun marché nommé) — stade offre logicielle récurrente ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · DGX Cloud × (aucun marché nommé) — stade offre d'abonnement cloud ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · Omniverse Enterprise × (aucun marché nommé) — stade offre logicielle ; dernier : — ; prochain : — ; interne ; pièces [990]
+  ✗ Hugging Face × portée mondiale de la communauté open-source — ['extrait'] absent LITTÉRALEMENT des pièces citées [1010]
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré
+  ⚠ « Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré
+  ⚠ « Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré
+  ⚠ « Groq 3 LPX » : marché « inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré
+  ⚠ « GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré
+  ⚠ « Hugging Face » : marché « écosystème open-source des développeurs IA » non recopié des pièces [1651] — retiré
+  ⚠ « Hugging Face » : marché « plus de 200 000 entreprises utilisant la plateforme » non recopié des pièces [1655] — retiré
+  ⚠ « IA souveraine » : marché « déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) » non recopié des pièces [1011] — retiré
+  ⚠ « Robotique et physical AI » : marché « robotique et applications de physical AI » non recopié des pièces [1011] — retiré
+  · non nommés : 1 (pièces [1647])
+
+── lecture 3 : 19 fiche(s) admise(s), 0 écartée(s) · 41641 in / 7514 out · 0.0128 $ · 2 tentative(s)
+  · Vera Rubin × (aucun marché nommé) — stade expéditions de production commencées ; dernier : début des expéditions de production (T3 FY2027) ; prochain : — ; interne ; pièces [997, 1011, 1644, 1648]
+  · Vera Rubin NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646, 1648]
+  · Groq 3 LPX × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; non_dit ; pièces [1646]
+  · GB300 NVL72 × (aucun marché nommé) — stade catalogue produit ; dernier : — ; prochain : — ; interne ; pièces [1646]
+  · Blackwell Ultra × data center — stade en montée en puissance ; dernier : — ; prochain : — ; interne ; pièces [1002]
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé ; dernier : annonce (2026-05-20) ; prochain : — ; interne ; pièces [1004]
+  · N1X × marché PC — stade annoncé ; dernier : annonce au Computex (2026-06-01) ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × (aucun marché nommé) — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (first half of 2027) ; acquisition ; pièces [1651]
+  · Hugging Face × écosystème open-source des développeurs IA — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · Hugging Face × plus de 200 000 entreprises utilisant la plateforme — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · Hugging Face × portée mondiale de la communauté open-source — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · IA souveraine × Japon — stade partenariat annoncé ; dernier : annonce du partenariat (2026-07-16) ; prochain : — ; partenariat ; pièces [1012]
+  · IA souveraine × Corée — stade expansion annoncée ; dernier : annonce de l'expansion (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  · IA souveraine × (aucun marché nommé) — stade déploiements en cours ; dernier : — ; prochain : — ; partenariat ; pièces [1011]
+  · Robotique et physical AI × (aucun marché nommé) — stade positionnement ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · Inference × déploiements data center pour l'inférence IA — stade moteur de croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · AI Clouds, Industrial & Enterprise × entreprises et clouds IA — stade diversification en cours ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · Expansion mondiale × (aucun marché nommé) — stade expansion en cours ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · Engagements d'approvisionnement et de capacité × data center infrastructure systems, primarily memory and manufacturing facilities — stade engagements contractés ; dernier : engagements portés à 279 Mds USD (2026-07-26) ; prochain : — ; partenariat ; pièces [997, 1000]
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré
+  ⚠ « Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré
+  ⚠ « Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré
+  ⚠ « Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré
+  ⚠ « Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1648] — retiré
+  ⚠ « Groq 3 LPX » : marché « data center, inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré
+  ⚠ « GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré
+  ⚠ « IA souveraine » : marché « déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) » non recopié des pièces [1011] — retiré
+  ⚠ « Robotique et physical AI » : marché « robotique et applications de physical AI » non recopié des pièces [1011] — retiré
+  ⚠ « Expansion mondiale » : marché « États-Unis et monde » non recopié des pièces [1011] — retiré
+  · non nommés : 1 (pièces [1645])
+
+── comparaison : union 23 · présentes dans TOUTES les lectures 6
+  □■■  ai clouds, industrial & enterprise × entreprises et clouds ia
+  ■□□  ai factory dsx de naver à gak sejong × (aucun marché nommé)
+  □□■  blackwell ultra × data center
+  □■□  dgx cloud × (aucun marché nommé)
+  □□■  engagements d'approvisionnement et de capacité × data center infrastructure systems, primarily memory and manufacturing facilities
+  □□■  expansion mondiale × (aucun marché nommé)
+  ■■■  gb300 nvl72 × (aucun marché nommé)
+  ■■■  groq 3 lpx × (aucun marché nommé)
+  ■■■  hugging face × (aucun marché nommé)
+  □□■  hugging face × plus de 200 000 entreprises utilisant la plateforme
+  ■□■  hugging face × portée mondiale de la communauté open-source
+  □□■  hugging face × écosystème open-source des développeurs ia
+  □■■  ia souveraine × (aucun marché nommé)
+  □■■  ia souveraine × corée
+  □■■  ia souveraine × japon
+  □■■  inference × déploiements data center pour l'inférence ia
+  □■■  n1x × marché pc
+  □■□  nvidia ai enterprise × (aucun marché nommé)
+  □■□  omniverse enterprise × (aucun marché nommé)
+  □■■  robotique et physical ai × (aucun marché nommé)
+  ■■■  vera cpu × marché des cpus de datacenter pour charges de travail ia agentique
+  ■■■  vera rubin × (aucun marché nommé)
+  ■■■  vera rubin nvl72 × (aucun marché nommé)
+
+BILAN inventaire NVDA : 3 lecture(s), fiches admises [8, 16, 19], écartées [1, 1, 0], coût 0.0361 $
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/inventaire-lectures-3/nvda.json

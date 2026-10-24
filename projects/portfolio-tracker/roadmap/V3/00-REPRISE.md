@@ -61,7 +61,10 @@ pour trois indications → étape 4). Points ouverts : recouvrement clients × p
 trancher) ; RMC-5127 / RM-055 en lignes propres sans marché visé nommé (étape 3). **3 — EN COURS** (non déployé) inventaire à
 cases ([S18]) + un seul découpage par segment ([S19], produit OU clients) construits ; passage 2 refusé des deux côtés :
 question 3 de l'arbre mal posée (élément au lieu d'élément × marché) — correctif à valider avec l'utilisateur ; Rubin /
-IA souveraine instables sur V4-Pro. Puis 4
+IA souveraine instables sur V4-Pro. **RÉORIENTÉ le 2026-10-24** (utilisateur) : trois maillons — 1 INVENTAIRE
+(tâche séparée de `me_7`, V4.1 Flash, construit et mesuré : cœur relevé 3/3, périphérie et granularité des marchés
+fluctuent ; RM-055 manquant = PÉRIMÈTRE des pièces, à trancher), 2 CLASSER selon l'arbre (un modèle, à construire),
+3 CONSTRUIRE l'architecture (code, à construire). Ancien plan pour mémoire : 4
 (`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées). Jargon des TITRES du dossier
 (« Patron de départ de l'archétype », « Périodes du classeur ») : levier à part, non traité.
 Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la

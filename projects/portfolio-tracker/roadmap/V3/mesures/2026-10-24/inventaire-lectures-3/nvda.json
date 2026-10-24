@@ -1,0 +1,742 @@
+[
+  {
+    "fiches": [
+      {
+        "nom": "Vera Rubin",
+        "marche_vise": null,
+        "extrait": "Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.",
+        "stade": "expéditions de production commencées",
+        "dernier_jalon": {
+          "libelle": "début des expéditions de production",
+          "date": "T3 FY2027"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          997,
+          1011,
+          1644,
+          1648
+        ]
+      },
+      {
+        "nom": "Vera Rubin NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "Groq 3 LPX",
+        "marche_vise": null,
+        "extrait": "NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "non_dit",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "GB300 NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "Vera CPU",
+        "marche_vise": "marché des CPUs de datacenter pour charges de travail IA agentique",
+        "extrait": "le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.",
+        "stade": "annoncé, visibilité de revenus",
+        "dernier_jalon": {
+          "libelle": "annonce lors de l'appel de résultats du T1 FY2027",
+          "date": "2026-05-20"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1004
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": null,
+        "extrait": "On September 2, 2026, NVIDIA Corporation (\"NVIDIA\") entered into a definitive agreement to acquire Hugging Face, Inc. (\"Hugging Face\").",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "first half of 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1651,
+          1655
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": "portée mondiale de la communauté open-source",
+        "extrait": "Cette acquisition étend la portée de NVIDIA vers : - Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ; - Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ; - Nouvelles zones : portée mondiale de la communauté open-source.",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "premier semestre 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1010
+        ]
+      },
+      {
+        "nom": "AI factory DSX de NAVER à GAK Sejong",
+        "marche_vise": null,
+        "extrait": "Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.",
+        "stade": "expansion annoncée",
+        "dernier_jalon": {
+          "libelle": "communiqué de presse",
+          "date": "2026-07-24"
+        },
+        "prochain_jalon": {
+          "libelle": "expansion à 200 MW",
+          "date": "2028"
+        },
+        "origine": "partenariat",
+        "pieces": [
+          1012
+        ]
+      }
+    ],
+    "ecartees": [
+      {
+        "fiche": {
+          "nom": "AI factory nationale Vera Rubin au Japon",
+          "marche_vise": "IA souveraine au Japon",
+          "extrait": "Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.",
+          "stade": "partenariat annoncé",
+          "dernier_jalon": {
+            "libelle": "communiqué de presse",
+            "date": "2026-07-16"
+          },
+          "prochain_jalon": null,
+          "origine": "partenariat",
+          "pieces": [
+            1012
+          ]
+        },
+        "motif": "['nom'] absent LITTÉRALEMENT du dossier"
+      }
+    ],
+    "signaux": [
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré",
+      "« Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré",
+      "« Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré",
+      "« Groq 3 LPX » : marché « inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré",
+      "« GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré",
+      "« Hugging Face » : marché « écosystème open-source des développeurs IA » non recopié des pièces [1651] — retiré",
+      "« Hugging Face » : marché « plus de 200 000 entreprises utilisant la plateforme » non recopié des pièces [1655] — retiré",
+      "« AI factory DSX de NAVER à GAK Sejong » : marché « IA souveraine en Corée » non recopié des pièces [1012] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 1,
+      "extrait": "La page liste également les architectures (Vera Rubin, Blackwell, MGX, STX) et les plateformes logicielles (DGX, HGX, Spectrum-X Ethernet, RTX PRO). Le système STX est décrit comme fondation modulaire pour un « data engine » universel basé sur l'architecture Vera Rubin, BlueField-4 et Spectrum-X.",
+      "pieces": [
+        1647
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.\",\n      \"stade\": \"expéditions de production commencées\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"T3 FY2027\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        997,\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"In fiscal year 2026, we unveiled the NVIDIA Rubin platform, which is expected to commence production shipments in the second half of fiscal year 2027. Built for agentic AI and reasoning, it excels at processing multi-step problem-solving and massive long-context workflows, delivering up to a 10x reduction in cost per token compared to Blackwell.\",\n      \"stade\": \"plateforme dévoilée, expéditions de production attendues\",\n      \"dernier_jalon\": {\n        \"libelle\": \"dévoilement de la plateforme Rubin\",\n        \"date\": \"FY2026\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"second half of fiscal year 2027\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1644\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"NVIDIA Rubin is in full production, and Rubin-based products will be available from partners the second half of 2026.\",\n      \"stade\": \"en production complète, produits partenaires attendus\",\n      \"dernier_jalon\": {\n        \"libelle\": \"production complète\",\n        \"date\": null\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"disponibilité des produits basés sur Rubin auprès des partenaires\",\n        \"date\": \"second half of 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1648\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin NVL72\",\n      \"marche_vise\": \"data center, rack-scale\",\n      \"extrait\": \"NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Groq 3 LPX\",\n      \"marche_vise\": \"inférence pour systèmes agentiques\",\n      \"extrait\": \"NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"non_dit\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"GB300 NVL72\",\n      \"marche_vise\": \"data center, inférence, entraînement et traitement de données\",\n      \"extrait\": \"NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Vera CPU\",\n      \"marche_vise\": \"marché des CPUs de datacenter pour charges de travail IA agentique\",\n      \"extrait\": \"le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.\",\n      \"stade\": \"annoncé, visibilité de revenus\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce lors de l'appel de résultats du T1 FY2027\",\n        \"date\": \"2026-05-20\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1004\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"écosystème open-source des développeurs IA\",\n      \"extrait\": \"On September 2, 2026, NVIDIA Corporation (\\\"NVIDIA\\\") entered into a definitive agreement to acquire Hugging Face, Inc. (\\\"Hugging Face\\\").\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"first half of 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1651\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"plus de 200 000 entreprises utilisant la plateforme\",\n      \"extrait\": \"More than 18 million developers, researchers and creators use Hugging Face to share more than 3 million models, 500,000 datasets and 1 million applications. More than 200,000 companies use the platform to discover, evaluate, customize and deploy AI.\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"first half of 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1655\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"portée mondiale de la communauté open-source\",\n      \"extrait\": \"Cette acquisition étend la portée de NVIDIA vers : - Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ; - Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ; - Nouvelles zones : portée mondiale de la communauté open-source.\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"premier semestre 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1010\n      ]\n    },\n    {\n      \"nom\": \"AI factory nationale Vera Rubin au Japon\",\n      \"marche_vise\": \"IA souveraine au Japon\",\n      \"extrait\": \"Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.\",\n      \"stade\": \"partenariat annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"communiqué de presse\",\n        \"date\": \"2026-07-16\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    },\n    {\n      \"nom\": \"AI factory DSX de NAVER à GAK Sejong\",\n      \"marche_vise\": \"IA souveraine en Corée\",\n      \"extrait\": \"Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.\",\n      \"stade\": \"expansion annoncée\",\n      \"dernier_jalon\": {\n        \"libelle\": \"communiqué de presse\",\n        \"date\": \"2026-07-24\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"expansion à 200 MW\",\n        \"date\": \"2028\"\n      },\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 1,\n    \"extrait\": \"La page liste également les architectures (Vera Rubin, Blackwell, MGX, STX) et les plateformes logicielles (DGX, HGX, Spectrum-X Ethernet, RTX PRO). Le système STX est décrit comme fondation modulaire pour un « data engine » universel basé sur l'architecture Vera Rubin, BlueField-4 et Spectrum-X.\",\n    \"pieces\": [\n      1647\n    ]\n  }\n}"
+  },
+  {
+    "fiches": [
+      {
+        "nom": "Vera Rubin",
+        "marche_vise": null,
+        "extrait": "Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.",
+        "stade": "expéditions de production commencées",
+        "dernier_jalon": {
+          "libelle": "début des expéditions de production",
+          "date": "T3 FY2027"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          997,
+          1011,
+          1644,
+          1648
+        ]
+      },
+      {
+        "nom": "Vera Rubin NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "Groq 3 LPX",
+        "marche_vise": null,
+        "extrait": "NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "non_dit",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "GB300 NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "Vera CPU",
+        "marche_vise": "marché des CPUs de datacenter pour charges de travail IA agentique",
+        "extrait": "le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.",
+        "stade": "annoncé, visibilité de revenus",
+        "dernier_jalon": {
+          "libelle": "annonce",
+          "date": "2026-05-20"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1004
+        ]
+      },
+      {
+        "nom": "N1X",
+        "marche_vise": "marché PC",
+        "extrait": "Jensen Huang a également mentionné que le marché PC (via le processeur N1X annoncé au Computex 2026) représente un TAM de $200 milliards, mais cette information provient d'une source distincte (Computex, 2026-06-01).",
+        "stade": "annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce au Computex",
+          "date": "2026-06-01"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1004
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": null,
+        "extrait": "On September 2, 2026, NVIDIA Corporation (\"NVIDIA\") entered into a definitive agreement to acquire Hugging Face, Inc. (\"Hugging Face\").",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "first half of 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1651,
+          1655
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": "Japon",
+        "extrait": "Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.",
+        "stade": "partenariat annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce",
+          "date": "2026-07-16"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1012
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": "Corée",
+        "extrait": "Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.",
+        "stade": "expansion annoncée",
+        "dernier_jalon": {
+          "libelle": "annonce",
+          "date": "2026-07-24"
+        },
+        "prochain_jalon": {
+          "libelle": "expansion à 200 MW",
+          "date": "2028"
+        },
+        "origine": "partenariat",
+        "pieces": [
+          1012
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": null,
+        "extrait": "IA souveraine : le document mentionne des déploiements d'infrastructure IA à l'échelle nationale, avec des partenariats gouvernementaux et industriels pour construire des « AI factories » souveraines (Japon, Corée, et d'autres pays).",
+        "stade": "déploiements mentionnés",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Robotique et physical AI",
+        "marche_vise": null,
+        "extrait": "Robotique et physical AI : la plateforme NVIDIA est explicitement positionnée pour la robotique et les applications de physical AI, avec des workloads couvrant « AI model training and inference, data analytics, scientific computing, robotics, and 3D graphics ».",
+        "stade": "positionnement",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Inference",
+        "marche_vise": "déploiements data center pour l'inférence IA",
+        "extrait": "Inference : la demande en inference est citée comme moteur de croissance, avec des déploiements data center pour l'inférence IA.",
+        "stade": "moteur de croissance",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "AI Clouds, Industrial & Enterprise",
+        "marche_vise": "entreprises et clouds IA",
+        "extrait": "Nouveaux clients : le 10-Q distingue les revenus par marché — Hyperscale ($48,7 Md au T2 FY27, +102% YoY) et AI Clouds, Industrial & Enterprise (ACIE, $40,3 Md, +138% YoY) — montrant une diversification au-delà des seuls hyperscalers vers les entreprises et clouds IA.",
+        "stade": "diversification en cours",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "NVIDIA AI Enterprise",
+        "marche_vise": null,
+        "extrait": "le segment Compute & Networking inclut « NVIDIA AI Enterprise and other software » et « DGX Cloud » ; le segment Graphics inclut « Omniverse Enterprise software ».",
+        "stade": "offre logicielle récurrente",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          989
+        ]
+      },
+      {
+        "nom": "DGX Cloud",
+        "marche_vise": null,
+        "extrait": "le segment Compute & Networking inclut « NVIDIA AI Enterprise and other software » et « DGX Cloud » ; le segment Graphics inclut « Omniverse Enterprise software ».",
+        "stade": "offre d'abonnement cloud",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          989
+        ]
+      },
+      {
+        "nom": "Omniverse Enterprise",
+        "marche_vise": null,
+        "extrait": "le segment Graphics inclut « Omniverse Enterprise software for building and operating 3D internet applications ».",
+        "stade": "offre logicielle",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          990
+        ]
+      }
+    ],
+    "ecartees": [
+      {
+        "fiche": {
+          "nom": "Hugging Face",
+          "marche_vise": "portée mondiale de la communauté open-source",
+          "extrait": "Cette acquisition étend la portée de NVIDIA vers : — Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ; — Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ; — Nouvelles zones : portée mondiale de la communauté open-source.",
+          "stade": "accord définitif signé, non conclu",
+          "dernier_jalon": {
+            "libelle": "accord définitif signé",
+            "date": "2026-09-02"
+          },
+          "prochain_jalon": {
+            "libelle": "clôture",
+            "date": "premier semestre 2027"
+          },
+          "origine": "acquisition",
+          "pieces": [
+            1010
+          ]
+        },
+        "motif": "['extrait'] absent LITTÉRALEMENT des pièces citées [1010]"
+      }
+    ],
+    "signaux": [
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré",
+      "« Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré",
+      "« Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré",
+      "« Groq 3 LPX » : marché « inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré",
+      "« GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré",
+      "« Hugging Face » : marché « écosystème open-source des développeurs IA » non recopié des pièces [1651] — retiré",
+      "« Hugging Face » : marché « plus de 200 000 entreprises utilisant la plateforme » non recopié des pièces [1655] — retiré",
+      "« IA souveraine » : marché « déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) » non recopié des pièces [1011] — retiré",
+      "« Robotique et physical AI » : marché « robotique et applications de physical AI » non recopié des pièces [1011] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 1,
+      "extrait": "La page liste également les architectures (Vera Rubin, Blackwell, MGX, STX) et les plateformes logicielles (DGX, HGX, Spectrum-X Ethernet, RTX PRO). Le système STX est décrit comme fondation modulaire pour un « data engine » universel basé sur l'architecture Vera Rubin, BlueField-4 et Spectrum-X.",
+      "pieces": [
+        1647
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.\",\n      \"stade\": \"expéditions de production commencées\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"T3 FY2027\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        997,\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"In fiscal year 2026, we unveiled the NVIDIA Rubin platform, which is expected to commence production shipments in the second half of fiscal year 2027. Built for agentic AI and reasoning, it excels at processing multi-step problem-solving and massive long-context workflows, delivering up to a 10x reduction in cost per token compared to Blackwell.\",\n      \"stade\": \"plateforme dévoilée, expéditions de production attendues\",\n      \"dernier_jalon\": {\n        \"libelle\": \"dévoilement de la plateforme\",\n        \"date\": \"FY2026\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"second half of fiscal year 2027\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1644\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"NVIDIA Rubin is in full production, and Rubin-based products will be available from partners the second half of 2026.\",\n      \"stade\": \"en production complète, produits partenaires attendus\",\n      \"dernier_jalon\": {\n        \"libelle\": \"production complète\",\n        \"date\": null\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"disponibilité des produits basés sur Rubin auprès des partenaires\",\n        \"date\": \"second half of 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1648\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin NVL72\",\n      \"marche_vise\": \"data center, rack-scale\",\n      \"extrait\": \"NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Groq 3 LPX\",\n      \"marche_vise\": \"inférence pour systèmes agentiques\",\n      \"extrait\": \"NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"non_dit\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"GB300 NVL72\",\n      \"marche_vise\": \"data center, inférence, entraînement et traitement de données\",\n      \"extrait\": \"NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Vera CPU\",\n      \"marche_vise\": \"marché des CPUs de datacenter pour charges de travail IA agentique\",\n      \"extrait\": \"le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.\",\n      \"stade\": \"annoncé, visibilité de revenus\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-05-20\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1004\n      ]\n    },\n    {\n      \"nom\": \"N1X\",\n      \"marche_vise\": \"marché PC\",\n      \"extrait\": \"Jensen Huang a également mentionné que le marché PC (via le processeur N1X annoncé au Computex 2026) représente un TAM de $200 milliards, mais cette information provient d'une source distincte (Computex, 2026-06-01).\",\n      \"stade\": \"annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce au Computex\",\n        \"date\": \"2026-06-01\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1004\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"écosystème open-source des développeurs IA\",\n      \"extrait\": \"On September 2, 2026, NVIDIA Corporation (\\\"NVIDIA\\\") entered into a definitive agreement to acquire Hugging Face, Inc. (\\\"Hugging Face\\\").\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"first half of 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1651\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"plus de 200 000 entreprises utilisant la plateforme\",\n      \"extrait\": \"More than 18 million developers, researchers and creators use Hugging Face to share more than 3 million models, 500,000 datasets and 1 million applications. More than 200,000 companies use the platform to discover, evaluate, customize and deploy AI.\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"first half of 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1655\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"portée mondiale de la communauté open-source\",\n      \"extrait\": \"Cette acquisition étend la portée de NVIDIA vers : — Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ; — Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ; — Nouvelles zones : portée mondiale de la communauté open-source.\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"premier semestre 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1010\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"Japon\",\n      \"extrait\": \"Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.\",\n      \"stade\": \"partenariat annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-07-16\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"Corée\",\n      \"extrait\": \"Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.\",\n      \"stade\": \"expansion annoncée\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-07-24\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"expansion à 200 MW\",\n        \"date\": \"2028\"\n      },\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays)\",\n      \"extrait\": \"IA souveraine : le document mentionne des déploiements d'infrastructure IA à l'échelle nationale, avec des partenariats gouvernementaux et industriels pour construire des « AI factories » souveraines (Japon, Corée, et d'autres pays).\",\n      \"stade\": \"déploiements mentionnés\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Robotique et physical AI\",\n      \"marche_vise\": \"robotique et applications de physical AI\",\n      \"extrait\": \"Robotique et physical AI : la plateforme NVIDIA est explicitement positionnée pour la robotique et les applications de physical AI, avec des workloads couvrant « AI model training and inference, data analytics, scientific computing, robotics, and 3D graphics ».\",\n      \"stade\": \"positionnement\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Inference\",\n      \"marche_vise\": \"déploiements data center pour l'inférence IA\",\n      \"extrait\": \"Inference : la demande en inference est citée comme moteur de croissance, avec des déploiements data center pour l'inférence IA.\",\n      \"stade\": \"moteur de croissance\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"AI Clouds, Industrial & Enterprise\",\n      \"marche_vise\": \"entreprises et clouds IA\",\n      \"extrait\": \"Nouveaux clients : le 10-Q distingue les revenus par marché — Hyperscale ($48,7 Md au T2 FY27, +102% YoY) et AI Clouds, Industrial & Enterprise (ACIE, $40,3 Md, +138% YoY) — montrant une diversification au-delà des seuls hyperscalers vers les entreprises et clouds IA.\",\n      \"stade\": \"diversification en cours\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"NVIDIA AI Enterprise\",\n      \"marche_vise\": null,\n      \"extrait\": \"le segment Compute & Networking inclut « NVIDIA AI Enterprise and other software » et « DGX Cloud » ; le segment Graphics inclut « Omniverse Enterprise software ».\",\n      \"stade\": \"offre logicielle récurrente\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        989\n      ]\n    },\n    {\n      \"nom\": \"DGX Cloud\",\n      \"marche_vise\": null,\n      \"extrait\": \"le segment Compute & Networking inclut « NVIDIA AI Enterprise and other software » et « DGX Cloud » ; le segment Graphics inclut « Omniverse Enterprise software ».\",\n      \"stade\": \"offre d'abonnement cloud\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        989\n      ]\n    },\n    {\n      \"nom\": \"Omniverse Enterprise\",\n      \"marche_vise\": null,\n      \"extrait\": \"le segment Graphics inclut « Omniverse Enterprise software for building and operating 3D internet applications ».\",\n      \"stade\": \"offre logicielle\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        990\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 1,\n    \"extrait\": \"La page liste également les architectures (Vera Rubin, Blackwell, MGX, STX) et les plateformes logicielles (DGX, HGX, Spectrum-X Ethernet, RTX PRO). Le système STX est décrit comme fondation modulaire pour un « data engine » universel basé sur l'architecture Vera Rubin, BlueField-4 et Spectrum-X.\",\n    \"pieces\": [\n      1647\n    ]\n  }\n}"
+  },
+  {
+    "fiches": [
+      {
+        "nom": "Vera Rubin",
+        "marche_vise": null,
+        "extrait": "Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.",
+        "stade": "expéditions de production commencées",
+        "dernier_jalon": {
+          "libelle": "début des expéditions de production",
+          "date": "T3 FY2027"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          997,
+          1011,
+          1644,
+          1648
+        ]
+      },
+      {
+        "nom": "Vera Rubin NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646,
+          1648
+        ]
+      },
+      {
+        "nom": "Groq 3 LPX",
+        "marche_vise": null,
+        "extrait": "NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "non_dit",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "GB300 NVL72",
+        "marche_vise": null,
+        "extrait": "NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.",
+        "stade": "catalogue produit",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1646
+        ]
+      },
+      {
+        "nom": "Blackwell Ultra",
+        "marche_vise": "data center",
+        "extrait": "Data Center revenue for the second quarter was a record $89.0 billion, up 117% from a year ago and up 18% sequentially, driven by the ramp of our Blackwell Ultra infrastructure",
+        "stade": "en montée en puissance",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1002
+        ]
+      },
+      {
+        "nom": "Vera CPU",
+        "marche_vise": "marché des CPUs de datacenter pour charges de travail IA agentique",
+        "extrait": "le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.",
+        "stade": "annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce",
+          "date": "2026-05-20"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1004
+        ]
+      },
+      {
+        "nom": "N1X",
+        "marche_vise": "marché PC",
+        "extrait": "Jensen Huang a également mentionné que le marché PC (via le processeur N1X annoncé au Computex 2026) représente un TAM de $200 milliards, mais cette information provient d'une source distincte (Computex, 2026-06-01).",
+        "stade": "annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce au Computex",
+          "date": "2026-06-01"
+        },
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1004
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": null,
+        "extrait": "On September 2, 2026, NVIDIA Corporation (\"NVIDIA\") entered into a definitive agreement to acquire Hugging Face, Inc. (\"Hugging Face\").",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "first half of 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1651
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": "écosystème open-source des développeurs IA",
+        "extrait": "Cette acquisition étend la portée de NVIDIA vers : - Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ;",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "premier semestre 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1010
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": "plus de 200 000 entreprises utilisant la plateforme",
+        "extrait": "Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ;",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "premier semestre 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1010
+        ]
+      },
+      {
+        "nom": "Hugging Face",
+        "marche_vise": "portée mondiale de la communauté open-source",
+        "extrait": "Nouvelles zones : portée mondiale de la communauté open-source.",
+        "stade": "accord définitif signé, non conclu",
+        "dernier_jalon": {
+          "libelle": "accord définitif signé",
+          "date": "2026-09-02"
+        },
+        "prochain_jalon": {
+          "libelle": "clôture",
+          "date": "premier semestre 2027"
+        },
+        "origine": "acquisition",
+        "pieces": [
+          1010
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": "Japon",
+        "extrait": "Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.",
+        "stade": "partenariat annoncé",
+        "dernier_jalon": {
+          "libelle": "annonce du partenariat",
+          "date": "2026-07-16"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1012
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": "Corée",
+        "extrait": "Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.",
+        "stade": "expansion annoncée",
+        "dernier_jalon": {
+          "libelle": "annonce de l'expansion",
+          "date": "2026-07-24"
+        },
+        "prochain_jalon": {
+          "libelle": "expansion à 200 MW",
+          "date": "2028"
+        },
+        "origine": "partenariat",
+        "pieces": [
+          1012
+        ]
+      },
+      {
+        "nom": "IA souveraine",
+        "marche_vise": null,
+        "extrait": "IA souveraine : le document mentionne des déploiements d'infrastructure IA à l'échelle nationale, avec des partenariats gouvernementaux et industriels pour construire des « AI factories » souveraines (Japon, Corée, et d'autres pays).",
+        "stade": "déploiements en cours",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Robotique et physical AI",
+        "marche_vise": null,
+        "extrait": "Robotique et physical AI : la plateforme NVIDIA est explicitement positionnée pour la robotique et les applications de physical AI, avec des workloads couvrant « AI model training and inference, data analytics, scientific computing, robotics, and 3D graphics ».",
+        "stade": "positionnement",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Inference",
+        "marche_vise": "déploiements data center pour l'inférence IA",
+        "extrait": "Inference : la demande en inference est citée comme moteur de croissance, avec des déploiements data center pour l'inférence IA.",
+        "stade": "moteur de croissance",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "AI Clouds, Industrial & Enterprise",
+        "marche_vise": "entreprises et clouds IA",
+        "extrait": "Nouveaux clients : le 10-Q distingue les revenus par marché — Hyperscale ($48,7 Md au T2 FY27, +102% YoY) et AI Clouds, Industrial & Enterprise (ACIE, $40,3 Md, +138% YoY) — montrant une diversification au-delà des seuls hyperscalers vers les entreprises et clouds IA.",
+        "stade": "diversification en cours",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Expansion mondiale",
+        "marche_vise": null,
+        "extrait": "Nouvelles zones géographiques : le document mentionne une expansion mondiale avec « strong momentum across the U.S. and around the world ».",
+        "stade": "expansion en cours",
+        "dernier_jalon": null,
+        "prochain_jalon": null,
+        "origine": "interne",
+        "pieces": [
+          1011
+        ]
+      },
+      {
+        "nom": "Engagements d'approvisionnement et de capacité",
+        "marche_vise": "data center infrastructure systems, primarily memory and manufacturing facilities",
+        "extrait": "Supply and capacity – We have partnered with our extensive network to secure the necessary supply and critical components needed to meet demand for the next several years, increasing supply commitments from $119 billion last quarter to $279 billion as of July 26, 2026. These supply commitments are for our data center infrastructure systems, primarily memory and manufacturing facilities, to produce our products for long-term demand across current and future product architectures.",
+        "stade": "engagements contractés",
+        "dernier_jalon": {
+          "libelle": "engagements portés à 279 Mds USD",
+          "date": "2026-07-26"
+        },
+        "prochain_jalon": null,
+        "origine": "partenariat",
+        "pieces": [
+          997,
+          1000
+        ]
+      }
+    ],
+    "ecartees": [],
+    "signaux": [
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [997, 1011] — retiré",
+      "« Vera Rubin » : nom absent des pièces citées [1644], présent ailleurs au dossier",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1644] — retiré",
+      "« Vera Rubin » : marché « data center, charges de travail IA agentique et raisonnement » non recopié des pièces [1648] — retiré",
+      "« Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1646] — retiré",
+      "« Vera Rubin NVL72 » : marché « data center, rack-scale » non recopié des pièces [1648] — retiré",
+      "« Groq 3 LPX » : marché « data center, inférence pour systèmes agentiques » non recopié des pièces [1646] — retiré",
+      "« GB300 NVL72 » : marché « data center, inférence, entraînement et traitement de données » non recopié des pièces [1646] — retiré",
+      "« IA souveraine » : marché « déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) » non recopié des pièces [1011] — retiré",
+      "« Robotique et physical AI » : marché « robotique et applications de physical AI » non recopié des pièces [1011] — retiré",
+      "« Expansion mondiale » : marché « États-Unis et monde » non recopié des pièces [1011] — retiré"
+    ],
+    "non_nommes": {
+      "nombre": 1,
+      "extrait": "Le 10-K mentionne également le début des expéditions des plateformes Blackwell Ultra (GB300) au deuxième trimestre de l'exercice fiscal 2026.",
+      "pieces": [
+        1645
+      ]
+    },
+    "brut": "{\n  \"fiches\": [\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"Our next-generation Data Center architecture, Vera Rubin, began production shipments in the third quarter of fiscal year 2027. We will be shipping both Blackwell and Rubin systems in the future and are currently experiencing certain supply constraints.\",\n      \"stade\": \"expéditions de production commencées\",\n      \"dernier_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"T3 FY2027\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        997,\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"In fiscal year 2026, we unveiled the NVIDIA Rubin platform, which is expected to commence production shipments in the second half of fiscal year 2027. Built for agentic AI and reasoning, it excels at processing multi-step problem-solving and massive long-context workflows, delivering up to a 10x reduction in cost per token compared to Blackwell.\",\n      \"stade\": \"plateforme dévoilée, expéditions de production attendues\",\n      \"dernier_jalon\": {\n        \"libelle\": \"dévoilement de la plateforme\",\n        \"date\": \"FY2026\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"début des expéditions de production\",\n        \"date\": \"second half of fiscal year 2027\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1644\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin\",\n      \"marche_vise\": \"data center, charges de travail IA agentique et raisonnement\",\n      \"extrait\": \"NVIDIA Rubin is in full production, and Rubin-based products will be available from partners the second half of 2026.\",\n      \"stade\": \"en production complète, produits partenaires attendus\",\n      \"dernier_jalon\": {\n        \"libelle\": \"production complète\",\n        \"date\": \"2026-01-05\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"disponibilité des produits basés sur Rubin auprès des partenaires\",\n        \"date\": \"second half of 2026\"\n      },\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1648\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin NVL72\",\n      \"marche_vise\": \"data center, rack-scale\",\n      \"extrait\": \"NVIDIA Vera Rubin NVL72 unifies 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA® ConnectX®-9 SuperNICs, and NVIDIA BlueField®-4 DPUs. It scales up intelligence in a rack-scale platform with the sixth-generation NVIDIA NVLink™ and NVLink Switch and scales out with NVIDIA Quantum-X800 InfiniBand and NVIDIA Spectrum-X™ Ethernet to power the AI industrial revolution at scale.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Vera Rubin NVL72\",\n      \"marche_vise\": \"data center, rack-scale\",\n      \"extrait\": \"NVIDIA Vera Rubin NVL72 offers a unified, secure system that combines 72 NVIDIA Rubin GPUs, 36 NVIDIA Vera CPUs, NVIDIA NVLink 6, NVIDIA ConnectX-9 SuperNICs and NVIDIA BlueField-4 DPUs.\",\n      \"stade\": \"annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-01-05\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1648\n      ]\n    },\n    {\n      \"nom\": \"Groq 3 LPX\",\n      \"marche_vise\": \"data center, inférence pour systèmes agentiques\",\n      \"extrait\": \"NVIDIA Groq 3 LPX™ is the inference accelerator for NVIDIA Vera Rubin, designed to meet the low-latency and large-context demands of agentic systems.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"non_dit\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"GB300 NVL72\",\n      \"marche_vise\": \"data center, inférence, entraînement et traitement de données\",\n      \"extrait\": \"NVIDIA GB300 NVL72 connects 36 NVIDIA Grace™ CPUs and 72 NVIDIA Blackwell Ultra GPUs in a rack-scale design, supercharging inference, training, and data processing.\",\n      \"stade\": \"catalogue produit\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1646\n      ]\n    },\n    {\n      \"nom\": \"Blackwell Ultra\",\n      \"marche_vise\": \"data center\",\n      \"extrait\": \"Data Center revenue for the second quarter was a record $89.0 billion, up 117% from a year ago and up 18% sequentially, driven by the ramp of our Blackwell Ultra infrastructure\",\n      \"stade\": \"en montée en puissance\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1002\n      ]\n    },\n    {\n      \"nom\": \"Vera CPU\",\n      \"marche_vise\": \"marché des CPUs de datacenter pour charges de travail IA agentique\",\n      \"extrait\": \"le CEO Jensen Huang a annoncé que le processeur Vera CPU — premier CPU conçu spécifiquement pour l'IA agentique — ouvre un nouveau TAM de $200 milliards pour NVIDIA, un marché que la société n'avait jamais adressé auparavant. La société a déclaré avoir une visibilité de près de $20 milliards de revenus CPU totaux pour l'exercice en cours.\",\n      \"stade\": \"annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce\",\n        \"date\": \"2026-05-20\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1004\n      ]\n    },\n    {\n      \"nom\": \"N1X\",\n      \"marche_vise\": \"marché PC\",\n      \"extrait\": \"Jensen Huang a également mentionné que le marché PC (via le processeur N1X annoncé au Computex 2026) représente un TAM de $200 milliards, mais cette information provient d'une source distincte (Computex, 2026-06-01).\",\n      \"stade\": \"annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce au Computex\",\n        \"date\": \"2026-06-01\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1004\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": null,\n      \"extrait\": \"On September 2, 2026, NVIDIA Corporation (\\\"NVIDIA\\\") entered into a definitive agreement to acquire Hugging Face, Inc. (\\\"Hugging Face\\\").\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"first half of 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1651\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"écosystème open-source des développeurs IA\",\n      \"extrait\": \"Cette acquisition étend la portée de NVIDIA vers : - Nouveaux segments : l'écosystème open-source des développeurs IA (18 millions de développeurs, 3 millions de modèles, 500 000 datasets, 1 million d'applications sur la plateforme Hugging Face) ;\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"premier semestre 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1010\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"plus de 200 000 entreprises utilisant la plateforme\",\n      \"extrait\": \"Nouveaux clients : plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA ;\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"premier semestre 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1010\n      ]\n    },\n    {\n      \"nom\": \"Hugging Face\",\n      \"marche_vise\": \"portée mondiale de la communauté open-source\",\n      \"extrait\": \"Nouvelles zones : portée mondiale de la communauté open-source.\",\n      \"stade\": \"accord définitif signé, non conclu\",\n      \"dernier_jalon\": {\n        \"libelle\": \"accord définitif signé\",\n        \"date\": \"2026-09-02\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"clôture\",\n        \"date\": \"premier semestre 2027\"\n      },\n      \"origine\": \"acquisition\",\n      \"pieces\": [\n        1010\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"Japon\",\n      \"extrait\": \"Japon (2026-07-16) : NVIDIA s'associe à Noetra Corp. pour construire une « AI factory » nationale Vera Rubin avec 13 750 CPU Vera et 27 500 GPU Rubin (140 MW), soutenue par le METI. Cette infrastructure alimentera le projet FRONTia pour la robotique et le physical AI, avec des modèles de fondation multimodaux ouverts.\",\n      \"stade\": \"partenariat annoncé\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce du partenariat\",\n        \"date\": \"2026-07-16\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"Corée\",\n      \"extrait\": \"Corée (2026-07-24) : NAVER, NVIDIA et Brookfield annoncent l'expansion de l'AI factory DSX de NAVER à GAK Sejong de 55 MW à 200 MW d'ici 2028, avec une trajectoire vers 1 GW. NVIDIA prévoit d'investir $1 milliard dans NAVER ; Brookfield a signé une lettre d'intention non contraignante pour financer jusqu'à $9 milliards.\",\n      \"stade\": \"expansion annoncée\",\n      \"dernier_jalon\": {\n        \"libelle\": \"annonce de l'expansion\",\n        \"date\": \"2026-07-24\"\n      },\n      \"prochain_jalon\": {\n        \"libelle\": \"expansion à 200 MW\",\n        \"date\": \"2028\"\n      },\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1012\n      ]\n    },\n    {\n      \"nom\": \"IA souveraine\",\n      \"marche_vise\": \"déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays)\",\n      \"extrait\": \"IA souveraine : le document mentionne des déploiements d'infrastructure IA à l'échelle nationale, avec des partenariats gouvernementaux et industriels pour construire des « AI factories » souveraines (Japon, Corée, et d'autres pays).\",\n      \"stade\": \"déploiements en cours\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Robotique et physical AI\",\n      \"marche_vise\": \"robotique et applications de physical AI\",\n      \"extrait\": \"Robotique et physical AI : la plateforme NVIDIA est explicitement positionnée pour la robotique et les applications de physical AI, avec des workloads couvrant « AI model training and inference, data analytics, scientific computing, robotics, and 3D graphics ».\",\n      \"stade\": \"positionnement\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Inference\",\n      \"marche_vise\": \"déploiements data center pour l'inférence IA\",\n      \"extrait\": \"Inference : la demande en inference est citée comme moteur de croissance, avec des déploiements data center pour l'inférence IA.\",\n      \"stade\": \"moteur de croissance\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"AI Clouds, Industrial & Enterprise\",\n      \"marche_vise\": \"entreprises et clouds IA\",\n      \"extrait\": \"Nouveaux clients : le 10-Q distingue les revenus par marché — Hyperscale ($48,7 Md au T2 FY27, +102% YoY) et AI Clouds, Industrial & Enterprise (ACIE, $40,3 Md, +138% YoY) — montrant une diversification au-delà des seuls hyperscalers vers les entreprises et clouds IA.\",\n      \"stade\": \"diversification en cours\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Expansion mondiale\",\n      \"marche_vise\": \"États-Unis et monde\",\n      \"extrait\": \"Nouvelles zones géographiques : le document mentionne une expansion mondiale avec « strong momentum across the U.S. and around the world ».\",\n      \"stade\": \"expansion en cours\",\n      \"dernier_jalon\": null,\n      \"prochain_jalon\": null,\n      \"origine\": \"interne\",\n      \"pieces\": [\n        1011\n      ]\n    },\n    {\n      \"nom\": \"Engagements d'approvisionnement et de capacité\",\n      \"marche_vise\": \"data center infrastructure systems, primarily memory and manufacturing facilities\",\n      \"extrait\": \"Supply and capacity – We have partnered with our extensive network to secure the necessary supply and critical components needed to meet demand for the next several years, increasing supply commitments from $119 billion last quarter to $279 billion as of July 26, 2026. These supply commitments are for our data center infrastructure systems, primarily memory and manufacturing facilities, to produce our products for long-term demand across current and future product architectures.\",\n      \"stade\": \"engagements contractés\",\n      \"dernier_jalon\": {\n        \"libelle\": \"engagements portés à 279 Mds USD\",\n        \"date\": \"2026-07-26\"\n      },\n      \"prochain_jalon\": null,\n      \"origine\": \"partenariat\",\n      \"pieces\": [\n        997,\n        1000\n      ]\n    }\n  ],\n  \"non_nommes\": {\n    \"nombre\": 1,\n    \"extrait\": \"Le 10-K mentionne également le début des expéditions des plateformes Blackwell Ultra (GB300) au deuxième trimestre de l'exercice fiscal 2026.\",\n    \"pieces\": [\n      1645\n    ]\n  }\n}"
+  }
+]

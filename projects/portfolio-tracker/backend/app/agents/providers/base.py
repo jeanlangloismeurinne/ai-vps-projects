@@ -24,6 +24,7 @@ MODEL_COSTS: dict[str, dict[str, float]] = {
     # model_id DeepInfra                          input   output
     "deepseek-ai/DeepSeek-V4-Flash-0731": {"input": 0.08, "output": 0.18},
     "deepseek-ai/DeepSeek-V4-Pro-0813":   {"input": 1.30, "output": 2.60},  # relevé DeepInfra 2026-10-23 (architecte)
+    "deepseek-ai/DeepSeek-V4.1-Flash-1017": {"input": 0.20, "output": 0.60},  # relevé DeepInfra 2026-10-24 (inventaire)
     "zai-org/GLM-4.7-Flash":              {"input": 0.06, "output": 0.40},
     "google/gemma-4-26B-A4B-it":          {"input": 0.07, "output": 0.34},
     "Qwen/Qwen3.6-35B-A3B":               {"input": 0.10, "output": 0.95},

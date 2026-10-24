@@ -253,6 +253,17 @@ l'interrupteur à trois positions `acces_au_dossier` (référentiel 1.3.0, défa
   sur `architectures_modele` (061, en place) ; signer/écarter/append-only sur
   `architectures_modele_decisions` (062) **non exécutés tant que 062 n'est pas appliquée** (nommé,
   jamais sauté). + `checks/negatif_062.sh` (la migration 062, sur une copie).
+- `checks/check_inventaire.py` (sans base) — maillon 1 du découpage (plan B4g, 2026-10-24) :
+  `inventaire.verifier_inventaire` (extrait littéral dans une pièce citée, nom ou alias au dossier, marché
+  non recopié retiré et signalé, identité nom × marché, fusion des doublons), le contrat
+  `contracts/inventaire_schema.py`, le prompt, le modèle figé. + `checks/negatif_inventaire.sh`.
+
+## Maillon 1 du découpage — l'inventaire (`inventaire.py`, plan B4g, 2026-10-24)
+
+Tâche SÉPARÉE de `me_7` (arbitrage de l'utilisateur) : relève une fiche par élément × marché, des faits
+recopiés, aucun classement ; DeepSeek-V4.1-Flash figé (`-1017`). Le modèle propose, le code vérifie contre
+les pièces. À blanc : `tools/inventaire.sh TICKER [--pieces-seules] [--lectures N] [--sortie F]`. Suivront
+le maillon 2 (classer selon l'arbre, un modèle) et le maillon 3 (construire l'architecture, du code).
 
 ## Pourquoi un paquet à part de `app/valorisation/`
 

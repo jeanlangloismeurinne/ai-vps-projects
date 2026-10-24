@@ -1,0 +1,88 @@
+dossier : 53 pièce(s) remise(s) sur 412 courante(s) · plafond 40
+  · 22 chemise(s) — un point instruit chacune
+  · 359 pièce(s) du titre non classée(s) dans ce framework, non remise(s) (#108)
+  · 0 lecture(s) de dépôt jointe(s) d'office : aucune
+  · 0 version(s) antérieure(s) gardée(s) en base, non remise(s) : aucune
+  ⚠️ PLAFOND INSUFFISANT — 53 pièce(s) remise(s) (en vigueur, sœurs et lectures jointes) pour un plafond de 40 : aucune n'a été coupée, le plafond est le problème.
+pièces rendues : 53 · 63231 caractères (~15807 jetons)
+modèle : deepseek-ai/DeepSeek-V4.1-Flash-1017 · 3 lecture(s) indépendante(s)
+
+── lecture 1 : 10 fiche(s) admise(s), 10 écartée(s) · 41047 in / 6536 out · 0.0121 $ · 2 tentative(s)
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé, visibilité de revenus ; dernier : — ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · Hugging Face × portée mondiale de la communauté open-source — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · IA souveraine × Japon — stade partenariat annoncé ; dernier : communiqué de presse (2026-07-16) ; prochain : — ; partenariat ; pièces [1012]
+  · IA souveraine × Corée — stade expansion annoncée ; dernier : annonce (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  · Inference × déploiements data center pour l'inférence IA — stade moteur de croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · AI Clouds, Industrial & Enterprise × entreprises et clouds IA — stade revenus en croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · NVIDIA AI Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · DGX Cloud × (aucun marché nommé) — stade offre d'abonnement cloud intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · Omniverse Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [990]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997, 999]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1644]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Groq 3 LPX × data center, inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ GB300 NVL72 × data center, inférence, entraînement et traitement de données — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Hugging Face × écosystème open-source des développeurs IA — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1651]
+  ✗ IA souveraine × déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ Robotique et physical AI × robotique et applications de physical AI — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  · non nommés : 1 (pièces [1647])
+
+── lecture 2 : 8 fiche(s) admise(s), 8 écartée(s) · 40484 in / 5410 out · 0.0113 $ · 2 tentative(s)
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé ; dernier : annonce (2026-05-20) ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · Hugging Face × portée mondiale de la communauté open-source — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · IA souveraine × Japon — stade partenariat annoncé ; dernier : annonce du partenariat (2026-07-16) ; prochain : — ; partenariat ; pièces [1012]
+  · IA souveraine × Corée — stade partenariat annoncé ; dernier : annonce de l'expansion (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  · NVIDIA AI Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · DGX Cloud × (aucun marché nommé) — stade offre d'abonnement cloud intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · Omniverse Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [990]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1644]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Groq 3 LPX × data center, inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ GB300 NVL72 × data center, inférence, entraînement et traitement de données — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Hugging Face × écosystème open-source des développeurs IA — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1651]
+  · non nommés : 1 (pièces [1647])
+
+── lecture 3 : 10 fiche(s) admise(s), 10 écartée(s) · 41053 in / 6548 out · 0.0121 $ · 2 tentative(s)
+  · Vera CPU × marché des CPUs de datacenter pour charges de travail IA agentique — stade annoncé ; dernier : — ; prochain : — ; interne ; pièces [1004]
+  · Hugging Face × plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'IA — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · Hugging Face × portée mondiale de la communauté open-source — stade accord définitif signé, non conclu ; dernier : accord définitif signé (2026-09-02) ; prochain : clôture (premier semestre 2027) ; acquisition ; pièces [1010]
+  · IA souveraine × Japon — stade partenariat annoncé ; dernier : communiqué de presse (2026-07-16) ; prochain : — ; partenariat ; pièces [1012]
+  · IA souveraine × Corée — stade partenariat annoncé ; dernier : communiqué de presse (2026-07-24) ; prochain : expansion à 200 MW (2028) ; partenariat ; pièces [1012]
+  · Inference × déploiements data center pour l'inférence IA — stade moteur de croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · AI Clouds, Industrial & Enterprise × entreprises et clouds IA — stade revenus en croissance ; dernier : — ; prochain : — ; interne ; pièces [1011]
+  · NVIDIA AI Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · DGX Cloud × (aucun marché nommé) — stade offre d'abonnement cloud intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [989]
+  · Omniverse Enterprise × (aucun marché nommé) — stade offre logicielle intégrée au segment ; dernier : — ; prochain : — ; interne ; pièces [990]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [997]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['nom', 'marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1644]
+  ✗ Vera Rubin × data center, charges de travail IA agentique et raisonnement — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Vera Rubin NVL72 × data center, rack-scale — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1648]
+  ✗ Groq 3 LPX × data center, inférence pour systèmes agentiques — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ GB300 NVL72 × data center, inférence, entraînement et traitement de données — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1646]
+  ✗ Hugging Face × écosystème open-source des développeurs IA — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1651]
+  ✗ IA souveraine × déploiements d'infrastructure IA à l'échelle nationale (Japon, Corée, et d'autres pays) — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  ✗ Robotique et physical AI × robotique et applications de physical AI — ['marche_vise'] absent(s) LITTÉRALEMENT des pièces citées [1011]
+  · non nommés : 1 (pièces [1647])
+
+── comparaison : union 10 · présentes dans TOUTES les lectures 8
+  ■□■  ai clouds, industrial & enterprise × entreprises et clouds ia
+  ■■■  dgx cloud × (aucun marché nommé)
+  ■■■  hugging face × plus de 200 000 entreprises utilisant la plateforme pour découvrir, évaluer, personnaliser et déployer l'ia
+  ■■■  hugging face × portée mondiale de la communauté open-source
+  ■■■  ia souveraine × corée
+  ■■■  ia souveraine × japon
+  ■□■  inference × déploiements data center pour l'inférence ia
+  ■■■  nvidia ai enterprise × (aucun marché nommé)
+  ■■■  omniverse enterprise × (aucun marché nommé)
+  ■■■  vera cpu × marché des cpus de datacenter pour charges de travail ia agentique
+
+BILAN inventaire NVDA : 3 lecture(s), fiches admises [10, 8, 10], écartées [10, 8, 10], coût 0.0356 $
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/inventaire-lectures-2/nvda.json
