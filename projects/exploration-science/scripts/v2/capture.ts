@@ -1,4 +1,4 @@
-// npm run capture [-- --out DIR] [-- --only global,...] [-- --formats ipad-landscape,...] [-- --video]
+// npm run capture [-- --system ID] [-- --out DIR] [-- --only global,...] [-- --formats ipad-landscape,...] [-- --video]
 // Starts the Vite dev server, opens v2.html in headless Chromium (software WebGL:
 // valid for composition and materials, NOT for frame rate) and saves one PNG per
 // view and screen format, plus render stats (draw calls, triangles) in captures.json.
@@ -27,9 +27,17 @@ export const FORMATS = {
   desktop: { width: 1920, height: 1080 },
 } as const;
 
+// The system captured (default starlink-home), its main objects, and the object the
+// transitions walk through: the one with an exploded view, else the first main object.
+const SYSTEM = arg("system") ?? "starlink-home";
+const content = (dir: string, suffix = ".json") => JSON.parse(readFileSync(join(root, "content/v2", dir, `${SYSTEM}${suffix}`), "utf8"));
+const objects = content("systems").objects as { id: string; role: string; representations?: string[] }[];
+const MAIN = objects.filter((o) => o.role === "main").map((o) => o.id);
+const DETAILED = objects.find((o) => o.role === "main" && o.representations?.includes("detail"))?.id ?? null;
+const FOCUS = DETAILED ?? MAIN[0]!;
+const TOUR_STEPS = (content("tours").steps as { id: string }[]).map((s) => s.id);
+const appUrl = (query = "") => `http://localhost:5199/v2.html?system=${SYSTEM}${query ? `&${query}` : ""}`;
 // View name → query string understood by the v2 app. Grows with the roadmap.
-const MAIN = ["house", "terminal", "satellite", "ground-station"];
-const TOUR_STEPS = (JSON.parse(readFileSync(join(root, "content/v2/tours/starlink-home.json"), "utf8")).steps as { id: string }[]).map((s) => s.id);
 // `t` pins the phase of the animated flows, so that captures are comparable.
 const T = "t=1.5";
 export const VIEWS: Record<string, string> = {
@@ -37,13 +45,13 @@ export const VIEWS: Record<string, string> = {
   ...Object.fromEntries(MAIN.map((id) => [`card-${id}`, `select=${id}&${T}`])),
   ...Object.fromEntries(MAIN.map((id) => [`object-${id}`, `shot=object:${id}&${T}`])),
   ...Object.fromEntries(MAIN.map((id) => [`silhouette-${id}`, `shot=object:${id}&silhouette`])),
-  "detail-terminal": `shot=detail:terminal&select=terminal&${T}`,
+  ...(DETAILED ? { [`detail-${DETAILED}`]: `shot=detail:${DETAILED}&select=${DETAILED}&${T}` } : {}),
   // Each step of the guided tour, held (roadmap §7).
   ...Object.fromEntries(TOUR_STEPS.map((id, i) => [`tour-${i}-${id}`, `tour=${i}&${T}`])),
 };
 
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
-const out = resolve(arg("out") ?? join(root, "captures/v2", stamp));
+const out = resolve(arg("out") ?? join(root, "captures/v2", SYSTEM === "starlink-home" ? stamp : `${SYSTEM}-${stamp}`));
 const only = arg("only")?.split(",");
 const formats = (arg("formats")?.split(",") ?? Object.keys(FORMATS)) as (keyof typeof FORMATS)[];
 mkdirSync(out, { recursive: true });
@@ -55,7 +63,7 @@ const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
 });
 
-const cards = JSON.parse(readFileSync(join(root, "content/v2/texts.fr.json"), "utf8")).cards as Record<string, { title: string }>;
+const cards = content("texts", ".fr.json").cards as Record<string, { title: string }>;
 const MAX_OVERLAP = 0.1;
 const ready = (page: Page) => page.waitForFunction(() => window.__xs?.ready === true, null, { timeout: 120_000 });
 
@@ -63,7 +71,7 @@ const ready = (page: Page) => page.waitForFunction(() => window.__xs?.ready === 
 async function checkSelection(page: Page, touch: boolean): Promise<{ checks: Record<string, unknown>; problems: string[] }> {
   const checks: Record<string, unknown> = {};
   const problems: string[] = [];
-  await page.goto(`http://localhost:5199/v2.html?${T}`, { timeout: 120_000 });
+  await page.goto(appUrl(T), { timeout: 120_000 });
   await ready(page);
   for (const id of MAIN) {
     console.log(`${new Date().toISOString().slice(11, 19)}   click ${id}`);
@@ -142,13 +150,14 @@ const emptyPoint = (page: Page) => {
   return { x: Math.round(v.width * 0.12), y: Math.round(v.height * 0.2) };
 };
 
-/** global → object → detail → back → back, twice, from a selected terminal in a view the user
+/** global → object → detail → back → back (no detail: global → object → back), twice, from the
+ * selected FOCUS object in a view the user
  * has turned and zoomed; gestures are checked against render.json limits on the way. */
 async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: Record<string, unknown>; problems: string[] }> {
   const checks: Record<string, unknown> = {};
   const problems: string[] = [];
-  const limits = JSON.parse(readFileSync(join(root, "content/v2/render.json"), "utf8")).limits;
-  await page.goto(`http://localhost:5199/v2.html?${T}`, { timeout: 120_000 });
+  const limits = content("render").limits;
+  await page.goto(appUrl(T), { timeout: 120_000 });
   await ready(page);
   const at = emptyPoint(page);
   const s0 = await state(page);
@@ -176,13 +185,13 @@ async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: R
   await drag(page, touch, at.x, at.y, 600, 200);
   await ready(page);
 
-  const point = await page.evaluate(() => window.__xs!.pickPoint("terminal"));
-  if (!point) return { checks, problems: [...problems, "terminal: no visible point to tap"] };
+  const point = await page.evaluate((id) => window.__xs!.pickPoint(id), FOCUS);
+  if (!point) return { checks, problems: [...problems, `${FOCUS}: no visible point to tap`] };
   if (touch) await page.touchscreen.tap(point.x, point.y);
   else await page.mouse.click(point.x, point.y);
   await ready(page);
   const start = await state(page);
-  if (start.selected !== "terminal") problems.push(`tap on terminal selected ${start.selected}`);
+  if (start.selected !== FOCUS) problems.push(`tap on ${FOCUS} selected ${start.selected}`);
   const press = async (selector: string) => {
     log(`press ${selector}`);
     const button = page.locator(selector);
@@ -194,18 +203,22 @@ async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: R
   for (let round = 1; round <= 2; round++) {
     log(`round ${round}`);
     const object = await press(".card__closer");
-    if (object.nav.shot !== "object:terminal" || object.selected !== "terminal") problems.push(`round ${round}: closer → ${object.nav.shot} / ${object.selected}`);
+    if (object.nav.shot !== `object:${FOCUS}` || object.selected !== FOCUS) problems.push(`round ${round}: closer → ${object.nav.shot} / ${object.selected}`);
     const near = await state(page);
     await drag(page, touch, at.x, at.y + 40, -80, 0); // turn the object view a little
     await ready(page);
     const turned = await state(page);
     if (poseDiff(turned.pose, near.pose) < 1e-3) problems.push(`round ${round}: drag did not turn the object view`);
-    const detail = await press(".card__closer");
-    if (detail.nav.shot !== "detail:terminal") problems.push(`round ${round}: closer → ${detail.nav.shot}`);
-    if (await page.locator(".card__closer").count()) problems.push(`round ${round}: a closer view is offered beyond the detail`);
-    const backToObject = await press(".card__back");
-    const objectGap = poseDiff(backToObject.pose, turned.pose);
-    if (backToObject.nav.shot !== "object:terminal" || objectGap > EPSILON) problems.push(`round ${round}: back to object view off by ${objectGap.toExponential(2)}`);
+    let detail = null;
+    let objectGap = 0;
+    if (DETAILED) {
+      detail = await press(".card__closer");
+      if (detail.nav.shot !== `detail:${FOCUS}`) problems.push(`round ${round}: closer → ${detail.nav.shot}`);
+      if (await page.locator(".card__closer").count()) problems.push(`round ${round}: a closer view is offered beyond the detail`);
+      const backToObject = await press(".card__back");
+      objectGap = poseDiff(backToObject.pose, turned.pose);
+      if (backToObject.nav.shot !== `object:${FOCUS}` || objectGap > EPSILON) problems.push(`round ${round}: back to object view off by ${objectGap.toExponential(2)}`);
+    } else if (await page.locator(".card__closer").count()) problems.push(`round ${round}: a closer view is offered without a detail`);
     // The second step back by the keyboard on a computer.
     let end;
     if (touch) end = await press(".card__back");
@@ -215,20 +228,20 @@ async function checkTransitions(page: Page, touch: boolean): Promise<{ checks: R
       end = await state(page);
     }
     const gap = poseDiff(end.pose, start.pose);
-    checks[`round-${round}`] = { object: object.nav, detail: detail.nav, objectGap, globalGap: gap, end: end.nav, selected: end.selected };
-    if (end.nav.depth !== 1 || end.selected !== "terminal" || gap > EPSILON) problems.push(`round ${round}: back to global off by ${gap.toExponential(2)}, depth ${end.nav.depth}, selected ${end.selected}`);
+    checks[`round-${round}`] = { object: object.nav, detail: detail?.nav ?? null, objectGap, globalGap: gap, end: end.nav, selected: end.selected };
+    if (end.nav.depth !== 1 || end.selected !== FOCUS || gap > EPSILON) problems.push(`round ${round}: back to global off by ${gap.toExponential(2)}, depth ${end.nav.depth}, selected ${end.selected}`);
   }
   return { checks, problems };
 }
 
-/** Global (terminal selected) → object view → detail view, frame by frame at 30 frames per
+/** Global (FOCUS selected) → object view → detail view, frame by frame at 30 frames per
  * second of the transition's own clock: PNG frames and a contact sheet; a WebM with `--video`. */
 /** Plays the tour from a bare URL, as on arrival: the first step is about the system with
  * nothing selected and no card; steps follow in order at their reading pace; a tap on the
  * scene hands over (roadmap §7). */
 async function checkTour(page: Page, touch: boolean): Promise<{ checks: Record<string, unknown>; problems: string[] }> {
   const problems: string[] = [];
-  await page.goto("http://localhost:5199/v2.html", { timeout: 120_000 });
+  await page.goto(appUrl(), { timeout: 120_000 });
   await page.waitForFunction(() => window.__xs?.tour != null, null, { timeout: 120_000 });
   const state = () => page.evaluate(() => ({ tour: window.__xs!.tour, selected: window.__xs!.selected, card: !!document.querySelector(".card"), text: document.querySelector(".tour__text")?.textContent ?? null, t: performance.now() }));
   const first = await state();
@@ -267,7 +280,7 @@ async function checkTour(page: Page, touch: boolean): Promise<{ checks: Record<s
 
 async function recordTransition(page: Page, dir: string) {
   mkdirSync(dir, { recursive: true });
-  await page.goto(`http://localhost:5199/v2.html?${T}&step&select=terminal`, { timeout: 120_000 });
+  await page.goto(appUrl(`${T}&step&select=${FOCUS}`), { timeout: 120_000 });
   const settle = async () => {
     for (let i = 0; i < 200 && !(await page.evaluate(() => window.__xs?.ready === true)); i++) await advance(page);
   };
@@ -277,7 +290,7 @@ async function recordTransition(page: Page, dir: string) {
   let n = 0;
   const shoot = () => page.screenshot({ path: join(dir, `frame-${String(n++).padStart(3, "0")}.png`), timeout: 180_000 });
   await shoot();
-  for (const selector of [".card__closer", ".card__closer", ".card__back", ".card__back"]) {
+  for (const selector of DETAILED ? [".card__closer", ".card__closer", ".card__back", ".card__back"] : [".card__closer", ".card__back"]) {
     console.log(`${new Date().toISOString().slice(11, 19)}   transition ${selector}`);
     await page.locator(selector).click({ timeout: 180_000 });
     for (let i = 0; i < 60 && !(await page.evaluate(() => window.__xs?.ready === true)); i++) {
@@ -316,7 +329,7 @@ try {
     page.on("response", (r) => r.status() >= 400 && errors.push(`HTTP ${r.status()} ${r.url()}`));
     for (const [view, query] of Object.entries(VIEWS)) {
       if (only && !only.includes(view)) continue;
-      await page.goto(`http://localhost:5199/v2.html${query ? `?${query}` : ""}`, { timeout: 120_000 });
+      await page.goto(appUrl(query), { timeout: 120_000 });
       await page.waitForFunction(() => window.__xs?.ready === true, null, { timeout: 120_000 });
       const file = `${view}-${format}.png`;
       console.log(`${new Date().toISOString().slice(11, 19)} ${view}/${format}`);

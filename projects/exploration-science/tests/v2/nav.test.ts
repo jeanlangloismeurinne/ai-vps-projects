@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import render from "../../content/v2/render.json";
+import render from "../../content/v2/render/starlink-home.json";
 import { back, closerShot, current, enter, initialNav, orbit, select, zoom, type NavRules } from "../../v2/src/nav";
 
 const rules = render as unknown as NavRules;

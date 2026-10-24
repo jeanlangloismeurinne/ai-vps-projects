@@ -78,13 +78,13 @@ def place(asset, placement: dict, assets: dict) -> str | None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--system", required=True)
-    parser.add_argument("--out", help="output directory (default: art/assets.json `out`)")
+    parser.add_argument("--out", help="output directory (default: art/assets.json `out`/<system id>)")
     args = parser.parse_args()
 
     project = ART.parent
     system = json.loads(Path(args.system).read_text())
     registry = json.loads((ART / "assets.json").read_text())
-    out = Path(args.out).resolve() if args.out else project / registry["out"]
+    out = Path(args.out).resolve() if args.out else project / registry["out"] / system["id"]
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     started = time.monotonic()

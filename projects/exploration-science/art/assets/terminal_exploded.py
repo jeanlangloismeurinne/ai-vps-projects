@@ -8,7 +8,7 @@ dish is opened into four layers lifted along its normal:
 - circuit: the board and the beamforming chips that phase each patch;
 - chassis: the back shell with its ribs, which stays on the mount.
 
-School representation, stated in content/v2/sources.json (`exploded-model`): the real
+School representation, stated in content/v2/sources/starlink-home.json (`exploded-model`): the real
 terminal has more than a thousand elements, round stacked patches and a different chip
 layout; here 24 × 15 patches and 6 × 4 chips. The patch pitch is the one the app's beam
 simulation uses (`array` anchor: centre of the patch plane, z along the normal, x along

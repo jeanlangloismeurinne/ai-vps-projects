@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { checkAssets, makeIO, sha256, type Budgets, type Manifest } from "../../scripts/v2/assetChecks";
 
 const root = resolve(import.meta.dirname, "../..");
-const models = join(root, "public/v2/models");
+const models = join(root, "public/v2/models/starlink-home");
 const palette = (() => {
   const p = JSON.parse(readFileSync(join(root, "art/palette.json"), "utf8"));
   return new Set([...Object.keys(p.neutrals), ...Object.keys(p.accents), ...Object.keys(p.special)]);

@@ -1,6 +1,6 @@
 """A Starlink V2 Mini satellite (Z up, root at the centre of the bus).
 
-Real proportions (content/v2/sources.json, `satellite-dimensions`): flat bus 4.1 × 2.7 m,
+Real proportions (content/v2/sources/starlink-home.json, `satellite-dimensions`): flat bus 4.1 × 2.7 m,
 two solar arrays 12.8 × 4.1 m, ≈ 30 m tip to tip. Here the bus is 0.9 × 0.6 units and each
 array keeps its 3.1:1 aspect at 1.25 × 0.4 units: the arrays are shortened against the bus
 so the satellite reads at a glance (diorama convention, stated in the sources). The phased

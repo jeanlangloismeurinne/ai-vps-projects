@@ -1,6 +1,6 @@
 """The Starlink Standard terminal on a roof-ridge pipe mount (Z up, root on the ridge cap).
 
-Real antenna: 594 × 383 × 39.7 mm (content/v2/sources.json, `dish-dimensions`). Here
+Real antenna: 594 × 383 × 39.7 mm (content/v2/sources/starlink-home.json, `dish-dimensions`). Here
 0.5 × 0.32 units: the same aspect ratio, enlarged ≈ ×2.8 against the house so it stays
 legible in the global view (diorama convention, stated in the sources). The face is tilted
 toward the satellite: `tiltDeg` from the vertical, toward the local heading `headingDeg`."""

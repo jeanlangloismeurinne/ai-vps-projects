@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import render from "../../content/v2/render.json";
-import texts from "../../content/v2/texts.fr.json";
+import render from "../../content/v2/render/starlink-home.json";
+import texts from "../../content/v2/texts/starlink-home.fr.json";
 import tour from "../../content/v2/tours/starlink-home.json";
 import { current, type NavRules } from "../../v2/src/nav";
 import { MIN_STEP_S, READING_CPS, readingTime, stepAt, stepNav, timeline, type StepLike } from "../../v2/src/tour";

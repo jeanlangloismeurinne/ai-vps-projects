@@ -2,7 +2,7 @@
 a fenced gravel pad, an equipment shelter and the fibre handhole (Z up, root at the centre
 of the pad, front = −y).
 
-Real hardware (content/v2/sources.json, `gateway-radome`): spherical radome 2.1 m across
+Real hardware (content/v2/sources/starlink-home.json, `gateway-radome`): spherical radome 2.1 m across
 over a ≈ 1.4 m Ka-band dish, concrete base 1.85 m; a Community Gateway has four antennas.
 Here the radome is 0.7 unit across (≈ 1:3, the house scale). One radome is cut open on the
 camera side so its dish shows (validated 2026-10-21); the anchor `dish` is at its feed, the

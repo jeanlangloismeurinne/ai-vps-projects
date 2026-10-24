@@ -1,8 +1,10 @@
-// npm run assets [-- --out DIR] : validates then builds every system listed in
-// art/assets.json `build` with Blender (art/build.py), compresses the GLBs (meshopt)
-// and writes DIR/manifest.json. Empty leaf nodes are kept: they are the anchors.
+// npm run assets [-- --out DIR] [-- --system ID] : validates then builds every system listed in
+// art/assets.json `build` (or only system ID) with Blender (art/build.py), compresses the GLBs
+// (meshopt) and writes DIR/<system id>/manifest.json. Each system gets its own models: the
+// scripts are a shared library, but placement and baked occlusion belong to one scene.
+// Empty leaf nodes are kept: they are the anchors.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { dedup, meshopt, prune, weld } from "@gltf-transform/functions";
 import { MeshoptEncoder } from "meshoptimizer";
@@ -12,7 +14,9 @@ import { makeIO, sha256, type Manifest } from "./assetChecks.ts";
 const root = resolve(import.meta.dirname, "../..");
 const python = join(root, "art/.venv/bin/python");
 const outArg = process.argv.indexOf("--out");
-const out = outArg > 0 ? resolve(process.argv[outArg + 1]!) : join(root, "public/v2/models");
+const outRoot = outArg > 0 ? resolve(process.argv[outArg + 1]!) : join(root, "public/v2/models");
+const systemArg = process.argv.indexOf("--system");
+const onlySystem = systemArg > 0 ? process.argv[systemArg + 1] : undefined;
 
 if (!existsSync(python)) {
   console.error("Blender venv missing: python3.13 -m venv art/.venv && art/.venv/bin/pip install -r art/requirements.txt");
@@ -20,7 +24,7 @@ if (!existsSync(python)) {
 }
 
 const registry = JSON.parse(readFileSync(join(root, "art/assets.json"), "utf8"));
-const manifest: Manifest = { version: 1, assets: {}, totals: { bytes: 0, triangles: 0 } };
+const built: string[] = [];
 const io = await makeIO();
 await MeshoptEncoder.ready;
 
@@ -34,6 +38,10 @@ for (const file of registry.build as string[]) {
     process.exit(1);
   }
   const id = system.id as string;
+  if (onlySystem && id !== onlySystem) continue;
+  const out = join(outRoot, id);
+  mkdirSync(out, { recursive: true });
+  const manifest: Manifest = { version: 1, assets: {}, totals: { bytes: 0, triangles: 0 } };
   try {
     execFileSync(python, [join(root, "art/build.py"), "--system", systemPath, "--out", out], { stdio: ["ignore", "ignore", "inherit"] });
   } catch {
@@ -64,7 +72,12 @@ for (const file of registry.build as string[]) {
     // The scene draws one representation at a time: the envelopes are its triangle count.
     manifest.totals.triangles += a.triangles;
   }
+  writeFileSync(join(out, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  built.push(`${id}: ${Object.keys(manifest.assets).length} assets, ${manifest.totals.bytes} bytes, ${manifest.totals.triangles} triangles`);
 }
 
-writeFileSync(join(out, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-console.log(`RESULT: success — ${Object.keys(manifest.assets).length} assets, ${manifest.totals.bytes} bytes, ${manifest.totals.triangles} triangles → ${out}`);
+if (!built.length) {
+  console.error(`RESULT: failure — no system built${onlySystem ? ` (is ${onlySystem} listed in art/assets.json build?)` : ""}`);
+  process.exit(1);
+}
+console.log(`RESULT: success — ${built.join(" ; ")} → ${outRoot}`);

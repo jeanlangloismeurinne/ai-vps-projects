@@ -1,4 +1,6 @@
-// Shape of public/v2/models/manifest.json, written by scripts/v2/assets.ts.
+// Shape of public/v2/models/<system id>/manifest.json, written by scripts/v2/assets.ts.
+import { systemId } from "./content/data";
+
 export interface Representation {
   file: string;
   bytes: number;
@@ -27,4 +29,5 @@ export interface Manifest {
   totals: { bytes: number; triangles: number };
 }
 
-export const MODELS_BASE = "./v2/models";
+/** Models of the system shown: each system has its own (placement and baked occlusion). */
+export const MODELS_BASE = `./v2/models/${systemId}`;

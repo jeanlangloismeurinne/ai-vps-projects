@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { directionCosines, lobeMesh, phaseSteps, planarFactor, steer, type Frame, type PlanarArray, type Vec3 } from "../../v2/src/beam";
 import { steeringDeg } from "../../engine/src/plugins/simulators/phasedArrayWave";
 
-const manifest = JSON.parse(readFileSync(new URL("../../public/v2/models/manifest.json", import.meta.url), "utf8"));
+const manifest = JSON.parse(readFileSync(new URL("../../public/v2/models/starlink-home/manifest.json", import.meta.url), "utf8"));
 const array: PlanarArray = manifest.assets.terminal.representations.detail.array;
 const DEG = Math.PI / 180;
 const flat: Frame = { e1: [1, 0, 0], e2: [0, 0, -1], n: [0, 1, 0] };

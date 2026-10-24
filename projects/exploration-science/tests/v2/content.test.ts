@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contentErrors, systemErrors, type V2Content } from "../../v2/src/content/validate";
-import { loadV2Content } from "../../scripts/v2/content";
+import { loadV2Content, systemIds } from "../../scripts/v2/content";
 
 const root = resolve(import.meta.dirname, "../..");
 const load = (): V2Content => loadV2Content(root, "starlink-home");
@@ -16,8 +16,8 @@ function errorsAfter(mutate: (c: V2Content) => void): string[] {
 const object = (c: V2Content, id: string) => c.system.objects.find((o: any) => o.id === id);
 
 describe("v2 content", () => {
-  it("accepts the committed starlink-home system", () => {
-    expect(contentErrors(load())).toEqual([]);
+  it.each(systemIds(root))("accepts the committed %s system", (id) => {
+    expect(contentErrors(loadV2Content(root, id))).toEqual([]);
   });
 
   it("accepts the Blender test systems", async () => {
