@@ -65,6 +65,14 @@
       "elevationDeg": 20,
       "margin": 0.15
     },
+    "detail:telecom-satellite": {
+      "fit": [
+        "telecom-satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 15,
+      "margin": 0.1
+    },
     "object:observation-satellite": {
       "fit": [
         "observation-satellite"

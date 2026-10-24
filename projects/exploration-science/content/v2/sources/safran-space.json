@@ -168,6 +168,35 @@
         "model:observation-satellite"
       ],
       "note": "Convention de représentation, comme pour la scène Starlink."
+    },
+    {
+      "id": "hall-ion-speed",
+      "claim": "Dans un propulseur à effet Hall, le circuit magnétique confine le plasma et crée à la sortie le champ qui accélère les ions jusqu'à environ 20 km/s.",
+      "value": 20,
+      "unit": "km/s",
+      "status": "verified",
+      "sources": [
+        "snecma-hall-patent",
+        "pps5000-datasheet"
+      ],
+      "usedBy": [
+        "tour.thruster-inside"
+      ],
+      "note": "Ordre de grandeur cohérent avec l'impulsion spécifique du PPS 5000 : 1 730 à 2 000 s × 9,81 m/s² ≈ 17 à 20 km/s de vitesse d'éjection."
+    },
+    {
+      "id": "pps-exploded-model",
+      "claim": "Vue éclatée du propulseur : circuit magnétique (culasse, noyau central, barreaux périphériques et leurs bobines), anode et tube d'arrivée du xénon, canal annulaire en céramique (BN-SiO2), pôles intérieur et extérieur, cathode creuse. Représentation d'école.",
+      "status": "unverified",
+      "sources": [
+        "snecma-hall-patent",
+        "sciencedirect-hall-thruster"
+      ],
+      "usedBy": [
+        "art/assets/spacecraft.py",
+        "detail:telecom-satellite"
+      ],
+      "note": "Pièces et rôles d'après un brevet Snecma (aujourd'hui Safran) sur le propulseur à effet Hall ; les proportions, le nombre de bobines (4) et la position de la cathode du PPS 5000 réel ne sont pas publiés et sont choisis pour la lisibilité. Les dimensions sont celles du diorama, pas celles du moteur réel."
     }
   ],
   "sources": [
@@ -248,6 +277,22 @@
       "title": "All engines for Ariane 6 complete qualification tests",
       "url": "https://www.esa.int/Enabling_Support/Space_Transportation/Ariane/All_engines_for_Ariane_6_complete_qualification_tests",
       "publisher": "ESA",
+      "accessed": "2026-10-24",
+      "access": "search-result"
+    },
+    {
+      "id": "snecma-hall-patent",
+      "title": "US 2012/0117938 A1 — Hall effect plasma thruster (S. Barral, S. J. Zurbach, priorité FR 0953370)",
+      "url": "https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20120117938",
+      "publisher": "USPTO",
+      "accessed": "2026-10-24",
+      "access": "opened"
+    },
+    {
+      "id": "sciencedirect-hall-thruster",
+      "title": "Hall Thruster — an overview (ScienceDirect Topics)",
+      "url": "https://www.sciencedirect.com/topics/engineering/hall-thruster",
+      "publisher": "Elsevier",
       "accessed": "2026-10-24",
       "access": "search-result"
     }

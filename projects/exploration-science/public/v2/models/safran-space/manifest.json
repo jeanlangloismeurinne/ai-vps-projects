@@ -111,10 +111,10 @@
       "representations": {
         "envelope": {
           "file": "telecom-satellite.envelope.glb",
-          "bytes": 86468,
-          "sha256": "be20d4a58926b3872ab69c44a11fdd0326056332cc305e58aee2754bbe8f73f9",
-          "parts": 26,
-          "triangles": 6188,
+          "bytes": 163516,
+          "sha256": "001be46a96beca0ca2490f9e4f5d81c75d3a089c0c1b8949653fe2cbe74625f2",
+          "parts": 48,
+          "triangles": 12252,
           "materials": [
             "emissive",
             "graphite",
@@ -128,6 +128,53 @@
             "antenna",
             "base"
           ]
+        },
+        "detail": {
+          "file": "telecom-satellite.detail.glb",
+          "bytes": 193496,
+          "sha256": "ecebbd2d94525cd8cf2a1e3416aa0c28560dc6ff332a415a2b64d3aee8e0022a",
+          "parts": 47,
+          "triangles": 12160,
+          "materials": [
+            "emissive",
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "warm",
+            "white"
+          ],
+          "anchors": [
+            "antenna",
+            "base"
+          ],
+          "layers": {
+            "anode": [
+              -0.022723,
+              0.064923,
+              0.012985
+            ],
+            "cathode": [
+              -0.07779,
+              0.257084,
+              0.034008
+            ],
+            "channel": [
+              -0.038954,
+              0.111297,
+              0.022259
+            ],
+            "magnets": [
+              0,
+              0,
+              0
+            ],
+            "poles": [
+              -0.058431,
+              0.166946,
+              0.033389
+            ]
+          }
         }
       }
     },
@@ -294,7 +341,7 @@
     }
   },
   "totals": {
-    "bytes": 462880,
-    "triangles": 44724
+    "bytes": 733424,
+    "triangles": 50788
   }
 }

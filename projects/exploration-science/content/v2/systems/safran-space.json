@@ -52,7 +52,11 @@
           1.8,
           7.2
         ]
-      }
+      },
+      "representations": [
+        "envelope",
+        "detail"
+      ]
     },
     {
       "id": "observation-satellite",

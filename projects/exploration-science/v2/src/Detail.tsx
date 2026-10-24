@@ -41,7 +41,11 @@ export function prepareDetail(id: string, root: Object3D, rep: Representation, t
     offset: new Vector3(...offset),
   }));
   for (const l of layers) for (const n of l.nodes) n.userData.openPosition ??= n.position.clone();
-  const box = new Box3().setFromObject(root);
+  // The shot frames the layers: an exploded part of a larger object (a satellite's
+  // thruster) fills the view while the rest of the object stays around it.
+  const box = new Box3();
+  for (const l of layers) for (const n of l.nodes) box.expandByObject(n);
+  if (box.isEmpty()) box.setFromObject(root);
   const fit = [box.min, box.max].flatMap((a) => [box.min, box.max].flatMap((b) => [box.min, box.max].map((c) => new Vector3(a.x, b.y, c.z))));
 
   // A label beside each moving layer, on the side that faces left in the detail shot.

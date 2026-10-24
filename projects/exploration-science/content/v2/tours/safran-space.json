@@ -47,6 +47,15 @@
       "textKey": "tour.telecom-satellite"
     },
     {
+      "id": "thruster-inside",
+      "shot": "detail:telecom-satellite",
+      "focus": {
+        "kind": "object",
+        "id": "telecom-satellite"
+      },
+      "textKey": "tour.thruster-inside"
+    },
+    {
       "id": "observation-satellite",
       "shot": "object:observation-satellite",
       "focus": {

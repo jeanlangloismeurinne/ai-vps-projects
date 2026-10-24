@@ -7,6 +7,11 @@
   their xenon plumes drawn as glowing tapered jets (a reading aid: the real beam widens,
   40° divergence, `pps5000-specs`).
   Anchors: `antenna` (telemetry and telecommand horn), `base` (Earth deck).
+  Its `detail` representation (`detail=True`) is the same satellite with the west thruster
+  exploded along its axis into five layers, after the parts a Safran (Snecma) Hall thruster
+  patent lists (`pps-exploded-model`): the magnetic circuit (yoke, central core, peripheral
+  bars and their coils), the anode and its xenon pipe, the ceramic channel, the poles, the
+  hollow cathode. No plume on the opened thruster.
 - `observation`: an Earth-observation satellite. Compact bus, one solar wing, the optical
   instrument beside the bus: a telescope tube cut open on the camera side so its primary
   mirror (Safran Reosc type) and secondary mirror show, and an X-band antenna that sends
@@ -27,9 +32,14 @@ CAMERA_SIDE_DEG = -125.0  # horizontal direction toward the default camera (azim
 WINDOW_DEG = 42.0  # half-width of the telescope's window, around CAMERA_SIDE_DEG
 
 
-def build(kind: str = "telecom", id: str | None = None) -> Asset:
+# Exploded thruster: offsets of its layers along its axis; the cathode also moves outward.
+PPS_LIFT = {"magnets": 0.0, "anode": 0.07, "channel": 0.12, "poles": 0.18, "cathode": 0.27}
+CATHODE_OUT = 0.02
+
+
+def build(kind: str = "telecom", id: str | None = None, detail: bool = False) -> Asset:
     if kind == "telecom":
-        return _telecom(id or "telecom-satellite")
+        return _telecom(id or "telecom-satellite", detail)
     if kind == "observation":
         return _observation(id or "observation-satellite")
     raise ValueError(f"unknown spacecraft kind: {kind}")
@@ -41,7 +51,7 @@ def _oriented(bm, centre, axis: Vector):
     return bm
 
 
-def _telecom(aid: str) -> Asset:
+def _telecom(aid: str, detail: bool = False) -> Asset:
     a = Asset(aid, airborne=True)
     bx, by, bz = 0.55, 0.55, 0.75
     a.add("bus", box(bx, by, bz, bevel=0.015), "warm")
@@ -72,16 +82,68 @@ def _telecom(aid: str) -> Asset:
     for side, s in (("east", 1), ("west", -1)):
         axis = Vector((s * 0.35, -0.2, 1.0)).normalized()
         base = Vector((s * 0.16, -0.12, zt))
-        a.add(f"pps-{side}-bracket", box(0.12, 0.12, 0.04, bevel=0.008), "mid", tuple(base + Vector((0, 0, 0.02))))
-        body = base + Vector((0, 0, 0.04)) + axis * 0.045
-        a.add(f"pps-{side}", _oriented(cylinder(0.06, 0.09, 24, bevel=0.008), body, axis), "graphite")
-        a.add(f"pps-{side}-channel", _oriented(lathe([(0.052, 0.0), (0.052, 0.012), (0.03, 0.012), (0.03, 0.0)], 32), body + axis * 0.045, axis), "white")
-        a.add(f"pps-{side}-plume", _oriented(cone(0.044, 0.008, 0.3, 24), body + axis * (0.057 + 0.15), axis), "emissive")
+        a.add(f"pps-{side}-bracket", box(0.17, 0.17, 0.04, bevel=0.008), "mid", tuple(base + Vector((0, 0, 0.02))))
+        origin = base + Vector((0, 0, 0.03))
+        opened = detail and side == "west"
+        _pps(a, f"pps-{side}", origin, axis, opened)
+        if not opened:
+            a.add(f"pps-{side}-plume", _oriented(cone(0.044, 0.008, 0.3, 24), origin + axis * (0.08 + 0.15), axis), "emissive")
 
-    a.add("omni", cylinder(0.008, 0.16, 8), "metal", (-0.18, 0.18, zt + 0.08))
+    a.add("omni", cylinder(0.008, 0.16, 8), "metal", (0.2, 0.2, zt + 0.08))
     a.anchor("antenna", (0, 0, zd - 0.06))
     a.anchor("base", (0, 0, -bz / 2 - 0.03))
     return a
+
+
+def _pps(a: Asset, name: str, origin: Vector, axis: Vector, opened: bool) -> None:
+    """A Hall-effect thruster built along +z from its back (z = 0) to its outlet (z ≈ 0.08),
+    then turned along `axis` at `origin`. Opened: its parts go in the exploded layers."""
+    turn = Vector((0, 0, 1)).rotation_difference(axis).to_matrix().to_4x4()
+    m = Matrix.Translation(origin) @ turn
+    # The cathode stands on the far side from the camera: opened, it rises above the poles.
+    back = radians(CAMERA_SIDE_DEG + 180)
+    u = Vector((cos(back), sin(back), 0))
+    u = (u - axis * u.dot(axis)).normalized()
+    if opened:
+        for layer, lift in PPS_LIFT.items():
+            a.layer(layer, tuple(axis * lift + (u * CATHODE_OUT if layer == "cathode" else Vector())))
+    local = turn.inverted().to_3x3() @ u
+
+    def put(part, bm, material, layer, loc=(0, 0, 0), **kw):
+        bm.transform(m @ Matrix.Translation(Vector(loc)))
+        a.add(f"{name}-{part}", bm, material, layer=layer if opened else None, **kw)
+
+    def ring(r0, r1, z0, z1, segments=40):
+        return lathe([(r1, z0), (r1, z1), (r0, z1), (r0, z0), (r1, z0)], segments)
+
+    R = 0.075
+    # Magnetic circuit: yoke, central core and inner coil, four peripheral bars and coils.
+    put("yoke", cylinder(R, 0.012, 40, bevel=0.003), "mid", "magnets", (0, 0, 0.006))
+    put("core", cylinder(0.011, 0.062, 16), "metal", "magnets", (0, 0, 0.043))
+    put("inner-coil", cylinder(0.019, 0.04, 24, bevel=0.003), "warm", "magnets", (0, 0, 0.032))
+    spots = [Vector((cos(radians(45 + 90 * k)), sin(radians(45 + 90 * k)), 0)) * 0.063 for k in range(4)]
+    put("bars", merged([(cylinder(0.006, 0.058, 10), (p.x, p.y, 0.041), (0, 0, 0)) for p in spots]), "metal", "magnets")
+    put("outer-coils", merged([(cylinder(0.012, 0.044, 16, bevel=0.003), (p.x, p.y, 0.038), (0, 0, 0)) for p in spots]), "warm", "magnets")
+    # Anode (gas distributor) at the bottom of the channel, its xenon pipe through the yoke.
+    put("anode", ring(0.031, 0.043, 0.036, 0.042), "metal", "anode")
+    put("xenon-pipe", cylinder(0.0035, 0.036, 8), "metal", "anode", (0.037 * local.x, 0.037 * local.y, 0.018))
+    # Ceramic discharge channel: an annular cup open toward the outlet.
+    put("channel", lathe([(0.05, 0.028), (0.05, 0.08), (0.046, 0.08), (0.046, 0.034), (0.028, 0.034), (0.028, 0.08), (0.024, 0.08), (0.024, 0.028), (0.05, 0.028)], 40), "white", "channel")
+    # Poles: the outer ring on the bars, the inner disc on the core.
+    put("outer-pole", ring(0.052, R, 0.07, 0.08), "mid", "poles")
+    put("inner-pole", cylinder(0.023, 0.008, 24, bevel=0.002), "mid", "poles", (0, 0, 0.078))
+    # Hollow cathode beside the outlet, on an arm from the outer pole, leaning to the jet.
+    c = local * 0.1 + Vector((0, 0, 0.1))
+    lean = Matrix.Rotation(radians(-25), 4, Vector((-local.y, local.x, 0)))
+    arm = box(0.04, 0.012, 0.01)
+    arm.transform(Matrix.Translation(local * 0.088 + Vector((0, 0, 0.075))) @ Matrix.Rotation(atan2(local.y, local.x), 4, "Z"))
+    put("cathode-arm", arm, "mid", "cathode")
+    bm = cylinder(0.011, 0.06, 16, bevel=0.003)
+    bm.transform(Matrix.Translation(c) @ lean)
+    put("cathode", bm, "graphite", "cathode")
+    tip = cone(0.011, 0.006, 0.012, 16)
+    tip.transform(Matrix.Translation(c) @ lean @ Matrix.Translation((0, 0, 0.036)))
+    put("cathode-tip", tip, "metal", "cathode")
 
 
 def _observation(aid: str) -> Asset:

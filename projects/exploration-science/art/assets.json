@@ -137,6 +137,13 @@
         "params": {
           "kind": "telecom"
         }
+      },
+      "detail": {
+        "script": "assets.spacecraft",
+        "params": {
+          "kind": "telecom",
+          "detail": true
+        }
       }
     },
     "observation-satellite": {
