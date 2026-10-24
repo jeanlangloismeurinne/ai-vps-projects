@@ -45,6 +45,12 @@ interrupteur `acces_au_dossier` (défaut `aucun`), `--acces-au-dossier` à blanc
 `en_developpement` et IA souveraine en extension alors que #1004/#1012 sont citées (CONSIGNE) ; RVMD refusé [S15] :
 une ligne par indication de daraxonrasib sous le même nom de molécule (granularité #143 ≠ `me_7`).
 Arbitrés (2026-10-23) : les corrections différées passent APRÈS B4f — donc maintenant ; `me_7` sur V4-Pro : à décider.
+**EN COURS (2026-10-24) — REFONTE DU PROCESSUS D'INSTRUCTION, à commenter par l'utilisateur** : le modèle de
+l'entreprise devient la colonne vertébrale (carte des sources de profit collectée pour elle → squelette par le code →
+recherche par ligne → jugements transverses → valorisation calculée → mémo). Proposition, écart avec l'existant, sort
+de chaque tâche du plan 07, contestations et questions : https://claude.ai/artifact/FrEvaCnM7py8ZTeJB8DRCn (doc,
+commentaires à lire). Rien n'est arbitré ; maillon 2 (classement) EN PAUSE d'ici là.
+
 **PROCHAIN PAS — plan « découpage » B4g** (arbitré le 2026-10-23 après revue de la page
 https://claude.ai/artifact/38FsoJwzzM1GEYYEobQi57, 28 commentaires ; détail : ligne B4g du plan) : un seul levier par
 étape, V4-Pro et `acces_au_dossier = aucun` FIXES jusqu'à l'étape 5, appels V4-Pro limités (un passage par titre
