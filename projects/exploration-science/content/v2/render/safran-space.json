@@ -1,0 +1,92 @@
+{
+  "formatVersion": "v2-0.1",
+  "systemId": "safran-space",
+  "lighting": {
+    "hemisphere": {
+      "sky": "white",
+      "ground": "light",
+      "intensity": 1.1
+    },
+    "sun": {
+      "azimuthDeg": 56,
+      "elevationDeg": 54,
+      "intensity": 1.6,
+      "shadowSoftness": 6
+    },
+    "environment": "room"
+  },
+  "linkStyles": {
+    "radio": {
+      "shape": "beam-dashed",
+      "color": "signal"
+    },
+    "fibre": {
+      "shape": "ground-line",
+      "color": "signal",
+      "width": 0.04
+    },
+    "trajectory": {
+      "shape": "beam-dashed",
+      "color": "warm"
+    }
+  },
+  "shots": {
+    "global": {
+      "fit": [
+        "island-spaceport",
+        "telecom-satellite",
+        "observation-satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 30,
+      "margin": 0.03
+    },
+    "object:launcher": {
+      "fit": [
+        "launcher"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 20,
+      "margin": 0.12
+    },
+    "object:tracking-station": {
+      "fit": [
+        "tracking-station"
+      ],
+      "azimuthDeg": -40,
+      "elevationDeg": 30,
+      "margin": 0.15
+    },
+    "object:telecom-satellite": {
+      "fit": [
+        "telecom-satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 20,
+      "margin": 0.15
+    },
+    "object:observation-satellite": {
+      "fit": [
+        "observation-satellite"
+      ],
+      "azimuthDeg": -35,
+      "elevationDeg": 18,
+      "margin": 0.2
+    }
+  },
+  "limits": {
+    "fovDeg": 20,
+    "azimuthRangeDeg": [
+      -40,
+      40
+    ],
+    "elevationRangeDeg": [
+      10,
+      70
+    ],
+    "zoomRange": [
+      0.6,
+      1.4
+    ]
+  }
+}

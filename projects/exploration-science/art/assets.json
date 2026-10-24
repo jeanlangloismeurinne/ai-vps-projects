@@ -6,7 +6,8 @@
     "distance": 0.8
   },
   "build": [
-    "content/v2/systems/starlink-home.json"
+    "content/v2/systems/starlink-home.json",
+    "content/v2/systems/safran-space.json"
   ],
   "assets": {
     "plinth": {
@@ -108,6 +109,41 @@
           "seed": 5,
           "id": "pine-05",
           "height": 1.4
+        }
+      }
+    },
+    "island-spaceport": {
+      "envelope": {
+        "script": "assets.island",
+        "params": {
+          "id": "island-spaceport",
+          "layout": "spaceport"
+        }
+      }
+    },
+    "launcher": {
+      "envelope": {
+        "script": "assets.launcher"
+      }
+    },
+    "tracking-station": {
+      "envelope": {
+        "script": "assets.tracking_station"
+      }
+    },
+    "telecom-satellite": {
+      "envelope": {
+        "script": "assets.spacecraft",
+        "params": {
+          "kind": "telecom"
+        }
+      }
+    },
+    "observation-satellite": {
+      "envelope": {
+        "script": "assets.spacecraft",
+        "params": {
+          "kind": "observation"
         }
       }
     }

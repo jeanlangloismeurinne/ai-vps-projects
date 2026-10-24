@@ -1,0 +1,80 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "safran-space",
+  "systemId": "safran-space",
+  "steps": [
+    {
+      "id": "overview",
+      "shot": "global",
+      "focus": {
+        "kind": "system"
+      },
+      "highlight": [
+        "launcher",
+        "telecom-satellite",
+        "observation-satellite",
+        "tracking-station"
+      ],
+      "textKey": "tour.overview"
+    },
+    {
+      "id": "launch",
+      "shot": "global",
+      "focus": {
+        "kind": "system"
+      },
+      "flows": [
+        "orbit-insertion"
+      ],
+      "textKey": "tour.launch"
+    },
+    {
+      "id": "launcher",
+      "shot": "object:launcher",
+      "focus": {
+        "kind": "object",
+        "id": "launcher"
+      },
+      "textKey": "tour.launcher"
+    },
+    {
+      "id": "telecom-satellite",
+      "shot": "object:telecom-satellite",
+      "focus": {
+        "kind": "object",
+        "id": "telecom-satellite"
+      },
+      "textKey": "tour.telecom-satellite"
+    },
+    {
+      "id": "observation-satellite",
+      "shot": "object:observation-satellite",
+      "focus": {
+        "kind": "object",
+        "id": "observation-satellite"
+      },
+      "textKey": "tour.observation-satellite"
+    },
+    {
+      "id": "data-path",
+      "shot": "global",
+      "focus": {
+        "kind": "system"
+      },
+      "flows": [
+        "images-down",
+        "commands-up"
+      ],
+      "textKey": "tour.data-path"
+    },
+    {
+      "id": "tracking-station",
+      "shot": "object:tracking-station",
+      "focus": {
+        "kind": "object",
+        "id": "tracking-station"
+      },
+      "textKey": "tour.tracking-station"
+    }
+  ]
+}

@@ -8,12 +8,13 @@ Here the radome is 0.7 unit across (≈ 1:3, the house scale). One radome is cut
 camera side so its dish shows (validated 2026-10-21); the anchor `dish` is at its feed, the
 anchor `fibre` on the handhole lid."""
 
-from math import atan2, cos, radians, sin
+from math import atan2, radians
 
 import bmesh
 from mathutils import Euler, Matrix, Vector
 
-from xs.geom import Asset, box, cylinder, extrude_xy, grid_slab, lathe, merged, rounded_rect, sphere
+from xs.geom import Asset, box, cylinder, grid_slab, merged, rounded_rect, sphere
+from xs.parts import dish, fibre_handhole, struts
 
 PAD_X, PAD_Y = 3.2, 2.6
 R_DOME = 0.35
@@ -47,21 +48,10 @@ def build(radomes: int = 4, open: int = 1, aimDeg: tuple = (146.0, 22.0)) -> Ass
 
     a.add("pedestal", cylinder(0.06, pivot.z - z0 - DOME_Z + 0.02, 16, bevel=0.01), "mid", (ox, oy, (pivot.z + z0 + DOME_Z) / 2 - 0.01))
     a.add("yoke", aimed(box(0.16, 0.08, 0.06, bevel=0.01)), "graphite")
-    f, r = 0.16, 0.24
+    f = 0.16
     focus = 0.04 + f
-    inner = [(0.02 + (r - 0.02) * i / 8, ((0.02 + (r - 0.02) * i / 8) ** 2) / (4 * f)) for i in range(9)]
-    profile = inner + [(r + 0.006, inner[-1][1] - 0.008)] + [(rr, z - 0.018) for rr, z in reversed(inner)]
-    a.add("dish", aimed(lathe(profile, 40), (0, 0, 0.04)), "white")
-    struts = []
-    for k in (0, 120, 240):
-        u = Vector((cos(radians(k)), sin(radians(k)), 0))
-        rim = u * 0.15 + Vector((0, 0, 0.04 + 0.15**2 / (4 * f)))
-        tip = Vector((0, 0, focus))
-        strut = cylinder(0.006, (tip - rim).length, 6)
-        lean = atan2(0.15, tip.z - rim.z)
-        strut.transform(Matrix.Translation((rim + tip) / 2) @ Matrix.Rotation(-lean, 4, Vector((-u.y, u.x, 0))))
-        struts.append((strut, (0, 0, 0), (0, 0, 0)))
-    a.add("feed-struts", aimed(merged(struts)), "metal", occluder=False)
+    a.add("dish", aimed(dish(f, 0.24), (0, 0, 0.04)), "white")
+    a.add("feed-struts", aimed(struts(f, 0.15, 0.04, focus)), "metal", occluder=False)
     a.add("feed-horn", aimed(cylinder(0.025, 0.05, 12, bevel=0.005), (0, 0, focus)), "graphite")
 
     # Equipment shelter on the east side.
@@ -96,13 +86,9 @@ def build(radomes: int = 4, open: int = 1, aimDeg: tuple = (146.0, 22.0)) -> Ass
     a.add("fence-rails", merged(rails), "metal", smooth=False, occluder=False)
 
     # Fibre handhole and its marker, outside the fence toward the road.
-    hx, hy = 1.3, -PAD_Y / 2 - 0.25
-    a.add("handhole", box(0.3, 0.22, 0.06, bevel=0.01), "mid", (hx, hy, 0.02))
-    a.add("handhole-lid", box(0.24, 0.16, 0.012), "graphite", (hx, hy, 0.056))
-    a.add("fibre-duct", box(0.06, 0.22, 0.035, bevel=0.006), "graphite", (hx, hy + 0.17, 0.0175))
-    a.add("fibre-marker", merged([(cylinder(0.02, 0.32, 10), (hx + 0.165, hy, 0.16), (0, 0, 0)), (box(0.06, 0.02, 0.08), (hx + 0.165, hy, 0.29), (0, 0, 0))]), "signal")
+    fibre = fibre_handhole(a, 1.3, -PAD_Y / 2 - 0.25)
     a.anchor("dish", tuple(m @ Vector((0, 0, focus))))
-    a.anchor("fibre", (hx, hy, 0.062))
+    a.anchor("fibre", fibre)
     return a
 
 

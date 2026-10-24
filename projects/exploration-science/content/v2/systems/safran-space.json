@@ -1,0 +1,188 @@
+{
+  "formatVersion": "v2-0.1",
+  "id": "safran-space",
+  "titleKey": "system.title",
+  "objects": [
+    {
+      "id": "island-spaceport",
+      "role": "setting",
+      "note": "Same plinth script as the Starlink island (art/assets/island.py), layout `spaceport`."
+    },
+    {
+      "id": "launcher",
+      "role": "main",
+      "anchors": [
+        "top"
+      ],
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          -3.6,
+          0.0
+        ]
+      }
+    },
+    {
+      "id": "tracking-station",
+      "role": "main",
+      "anchors": [
+        "dish",
+        "dish-small",
+        "fibre"
+      ],
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          3.5,
+          -0.4
+        ]
+      }
+    },
+    {
+      "id": "telecom-satellite",
+      "role": "main",
+      "anchors": [
+        "antenna",
+        "base"
+      ],
+      "placement": {
+        "airborne": true,
+        "position": [
+          -1.4,
+          1.8,
+          7.2
+        ]
+      }
+    },
+    {
+      "id": "observation-satellite",
+      "role": "main",
+      "anchors": [
+        "transmitter"
+      ],
+      "placement": {
+        "airborne": true,
+        "position": [
+          2.0,
+          1.6,
+          6.0
+        ]
+      }
+    },
+    {
+      "id": "pine-01",
+      "role": "decor",
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          -5.6,
+          3.3
+        ]
+      },
+      "note": "Reused from the Starlink scene (same model script and parameters)."
+    },
+    {
+      "id": "pine-02",
+      "role": "decor",
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          1.6,
+          3.7
+        ]
+      }
+    },
+    {
+      "id": "pine-03",
+      "role": "decor",
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          5.5,
+          3.2
+        ]
+      }
+    },
+    {
+      "id": "pine-04",
+      "role": "decor",
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          0.6,
+          -1.0
+        ]
+      }
+    },
+    {
+      "id": "pine-05",
+      "role": "decor",
+      "placement": {
+        "on": "island-spaceport",
+        "position": [
+          -5.9,
+          -2.9
+        ]
+      }
+    }
+  ],
+  "externals": [
+    {
+      "id": "control-centre",
+      "anchors": [
+        "pop"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "launch",
+      "from": "launcher#top",
+      "to": "telecom-satellite#base",
+      "kind": "trajectory"
+    },
+    {
+      "id": "telemetry",
+      "from": "telecom-satellite#antenna",
+      "to": "tracking-station#dish-small",
+      "kind": "radio"
+    },
+    {
+      "id": "downlink",
+      "from": "observation-satellite#transmitter",
+      "to": "tracking-station#dish",
+      "kind": "radio"
+    },
+    {
+      "id": "network",
+      "from": "tracking-station#fibre",
+      "to": "control-centre#pop",
+      "kind": "fibre"
+    }
+  ],
+  "flows": [
+    {
+      "id": "orbit-insertion",
+      "path": [
+        "launch"
+      ],
+      "direction": "forward"
+    },
+    {
+      "id": "images-down",
+      "path": [
+        "downlink",
+        "network"
+      ],
+      "direction": "forward"
+    },
+    {
+      "id": "commands-up",
+      "path": [
+        "network",
+        "telemetry"
+      ],
+      "direction": "reverse"
+    }
+  ]
+}

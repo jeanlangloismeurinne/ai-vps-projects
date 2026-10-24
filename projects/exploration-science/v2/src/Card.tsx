@@ -63,7 +63,7 @@ export function Card({ id, dock, depth, closer, onCloser, onBack, onFree }: Card
       <p className="card__summary">{card.summary}</p>
       <dl className="card__figures">
         {card.figures.map((f) => (
-          <div key={f.factId}>
+          <div key={f.label}>
             <dt>{f.label}</dt>
             <dd>{f.value}</dd>
           </div>

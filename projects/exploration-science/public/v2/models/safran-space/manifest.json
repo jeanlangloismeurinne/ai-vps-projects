@@ -1,0 +1,300 @@
+{
+  "version": 1,
+  "assets": {
+    "island-spaceport": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "island-spaceport.envelope.glb",
+          "bytes": 72908,
+          "sha256": "b596f061e486dfa1d2ca7307f9c7ce053de661ae428101d1be3a9299c3aa5cd3",
+          "parts": 11,
+          "triangles": 12920,
+          "materials": [
+            "foliage",
+            "graphite",
+            "ground",
+            "light",
+            "mid",
+            "warm",
+            "white"
+          ],
+          "anchors": []
+        }
+      }
+    },
+    "launcher": {
+      "main": true,
+      "airborne": false,
+      "transform": {
+        "position": [
+          -3.6,
+          0.005005,
+          0
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "launcher.envelope.glb",
+          "bytes": 84740,
+          "sha256": "aedd7adb210fde4b2c89dd0d301aee1e5e28f881891531ff3c231faa7144b111",
+          "parts": 26,
+          "triangles": 7818,
+          "materials": [
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "white"
+          ],
+          "anchors": [
+            "top"
+          ]
+        }
+      }
+    },
+    "tracking-station": {
+      "main": true,
+      "airborne": false,
+      "transform": {
+        "position": [
+          3.5,
+          0.004944,
+          0.4
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "tracking-station.envelope.glb",
+          "bytes": 114472,
+          "sha256": "2a947af8617df904768735dc50df636a4e99c211485835a5ad666718dd9b5395",
+          "parts": 32,
+          "triangles": 10630,
+          "materials": [
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "signal",
+            "white"
+          ],
+          "anchors": [
+            "dish",
+            "dish-small",
+            "fibre"
+          ]
+        }
+      }
+    },
+    "telecom-satellite": {
+      "main": true,
+      "airborne": true,
+      "transform": {
+        "position": [
+          -1.4,
+          7.2,
+          -1.8
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "telecom-satellite.envelope.glb",
+          "bytes": 86468,
+          "sha256": "be20d4a58926b3872ab69c44a11fdd0326056332cc305e58aee2754bbe8f73f9",
+          "parts": 26,
+          "triangles": 6188,
+          "materials": [
+            "emissive",
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "warm",
+            "white"
+          ],
+          "anchors": [
+            "antenna",
+            "base"
+          ]
+        }
+      }
+    },
+    "observation-satellite": {
+      "main": true,
+      "airborne": true,
+      "transform": {
+        "position": [
+          2,
+          6,
+          -1.6
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "observation-satellite.envelope.glb",
+          "bytes": 72708,
+          "sha256": "1ffe04ee9f92643d39914b73a0a6b3e74e6b04eae09c345174596b6c77a23ef1",
+          "parts": 18,
+          "triangles": 6208,
+          "materials": [
+            "graphite",
+            "light",
+            "metal",
+            "mid",
+            "white"
+          ],
+          "anchors": [
+            "transmitter"
+          ]
+        }
+      }
+    },
+    "pine-01": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          -5.6,
+          0,
+          -3.3
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "pine-01.envelope.glb",
+          "bytes": 6352,
+          "sha256": "3aef94d91c5fe8a428ec1ffb2d2b2a12db40d985ee9d7a13bf850cdebfde2c1f",
+          "parts": 2,
+          "triangles": 192,
+          "materials": [
+            "foliage",
+            "warm"
+          ],
+          "anchors": []
+        }
+      }
+    },
+    "pine-02": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          1.6,
+          0.006042,
+          -3.7
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "pine-02.envelope.glb",
+          "bytes": 6312,
+          "sha256": "53b52e79539fbe760ac56924f91c008a700e519047098e128b0e9d0ba6b17bbe",
+          "parts": 2,
+          "triangles": 192,
+          "materials": [
+            "foliage",
+            "warm"
+          ],
+          "anchors": []
+        }
+      }
+    },
+    "pine-03": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          5.5,
+          0,
+          -3.2
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "pine-03.envelope.glb",
+          "bytes": 6240,
+          "sha256": "f052fe579646faffe77481ef00d3cb047a7483b4bb2d8b575714edee7c837925",
+          "parts": 2,
+          "triangles": 192,
+          "materials": [
+            "foliage",
+            "warm"
+          ],
+          "anchors": []
+        }
+      }
+    },
+    "pine-04": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          0.6,
+          0.006104,
+          1
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "pine-04.envelope.glb",
+          "bytes": 6364,
+          "sha256": "ec92e53b771140cb476c804c6032478709b93028995c96ef45e55efe6b0eb360",
+          "parts": 2,
+          "triangles": 192,
+          "materials": [
+            "foliage",
+            "warm"
+          ],
+          "anchors": []
+        }
+      }
+    },
+    "pine-05": {
+      "main": false,
+      "airborne": false,
+      "transform": {
+        "position": [
+          -5.9,
+          0,
+          2.9
+        ],
+        "rotationYDeg": 0
+      },
+      "representations": {
+        "envelope": {
+          "file": "pine-05.envelope.glb",
+          "bytes": 6316,
+          "sha256": "2253ee2fa5a6d21ca439e5de36d71221332653155c8989424e8d61f48d4ae290",
+          "parts": 2,
+          "triangles": 192,
+          "materials": [
+            "foliage",
+            "warm"
+          ],
+          "anchors": []
+        }
+      }
+    }
+  },
+  "totals": {
+    "bytes": 462880,
+    "triangles": 44724
+  }
+}

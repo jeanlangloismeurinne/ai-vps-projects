@@ -1,0 +1,104 @@
+{
+  "formatVersion": "v2-0.1",
+  "systemId": "safran-space",
+  "lang": "fr",
+  "entries": {
+    "system.title": "Les produits de Safran dans l'espace",
+    "tour.overview": "Safran équipe toute la chaîne spatiale : le lanceur, les satellites et les stations au sol qui les pilotent.",
+    "tour.launch": "Ariane 6 place les satellites en orbite.",
+    "tour.launcher": "Safran construit Ariane 6 avec Airbus, à parts égales, au sein d'ArianeGroup.",
+    "tour.telecom-satellite": "Ce satellite de télécommunications se déplace grâce à des moteurs à plasma Safran.",
+    "tour.observation-satellite": "Ce satellite photographie la Terre à travers un télescope dont Safran polit les miroirs.",
+    "tour.data-path": "Les images descendent vers la station sol ; les ordres de pilotage montent vers les satellites.",
+    "tour.tracking-station": "Les antennes Safran suivent les satellites dans leur course et captent leurs signaux.",
+    "external.control-centre": "Centre de contrôle",
+    "ui.close": "Fermer la fiche",
+    "ui.tour-skip": "Passer la visite",
+    "ui.tour-replay": "Visite guidée",
+    "ui.back": "Retour",
+    "ui.zoom-object": "Voir de près",
+    "ui.zoom-detail": "Voir en détail",
+    "ui.sources": "Sources",
+    "ui.computed": "certaines valeurs calculées"
+  },
+  "cards": {
+    "launcher": {
+      "title": "Le lanceur Ariane 6",
+      "summary": "Le lanceur européen, conçu et produit par ArianeGroup, co-entreprise à parts égales de Safran et d'Airbus.",
+      "figures": [
+        {
+          "label": "Hauteur",
+          "value": "56 à 62 m",
+          "spoken": "de cinquante-six à soixante-deux mètres",
+          "factId": "ariane6-height"
+        },
+        {
+          "label": "Poussée du moteur principal",
+          "value": "1 371 kN (Vulcain 2.1)",
+          "spoken": "mille trois cent soixante et onze kilonewtons, pour le moteur Vulcain deux point un",
+          "factId": "vulcain-thrust"
+        }
+      ]
+    },
+    "telecom-satellite": {
+      "title": "Le satellite de télécommunications",
+      "summary": "Ses moteurs à plasma PPS 5000 éjectent du xénon à très grande vitesse : peu de poussée, mais très peu de carburant.",
+      "figures": [
+        {
+          "label": "Puissance électrique",
+          "value": "2,5 à 5 kW",
+          "spoken": "de deux kilowatts et demi à cinq kilowatts",
+          "factId": "pps5000-specs"
+        },
+        {
+          "label": "Poussée",
+          "value": "150 à 300 mN",
+          "spoken": "de cent cinquante à trois cents millinewtons",
+          "factId": "pps5000-specs"
+        },
+        {
+          "label": "Soit le poids de",
+          "value": "≈ 31 g",
+          "spoken": "environ trente et un grammes",
+          "factId": "pps5000-weight"
+        }
+      ]
+    },
+    "observation-satellite": {
+      "title": "Le satellite d'observation",
+      "summary": "Son télescope concentre la lumière sur des miroirs polis par Safran Reosc ; un émetteur envoie les images au sol.",
+      "figures": [
+        {
+          "label": "Miroirs",
+          "value": "verre, carbure de silicium, béryllium",
+          "spoken": "en verre, en carbure de silicium ou en béryllium",
+          "factId": "reosc-optics"
+        },
+        {
+          "label": "Taille des optiques",
+          "value": "jusqu'à 1,5 m",
+          "spoken": "jusqu'à un mètre cinquante",
+          "factId": "reosc-optics"
+        }
+      ]
+    },
+    "tracking-station": {
+      "title": "La station de poursuite",
+      "summary": "Des antennes Safran Data Systems qui suivent les satellites, reçoivent leurs données et leur envoient des ordres.",
+      "figures": [
+        {
+          "label": "Diamètre des antennes",
+          "value": "2,4 à 13,5 m",
+          "spoken": "de deux mètres quarante à treize mètres cinquante",
+          "factId": "sds-antenna-sizes"
+        },
+        {
+          "label": "Bandes de fréquences",
+          "value": "S, X et Ka",
+          "spoken": "les bandes S, X et Ka",
+          "factId": "sds-tri-band"
+        }
+      ]
+    }
+  }
+}
