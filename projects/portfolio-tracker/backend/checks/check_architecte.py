@@ -264,7 +264,8 @@ b.check(len(arch_exemple.inventaire_des_programmes) == 1 and
        f"exemple — inventaire des programmes porte `Programme X` : {arch_exemple.inventaire_des_programmes}")
 matiere_exemple = matiere_fictive(
     pieces_citables=frozenset({100, 101, 102, 103}),
-    me_7_verbatim="L'entreprise mentionne le Programme X et un portefeuille de recherche amont "
+    me_7_verbatim="L'entreprise mentionne le Programme X, visant la maladie Y en première ligne, et un "
+                 "portefeuille de recherche amont "
                  "non nommé individuellement.")
 tient, motif, signaux = juger_architecture(arch_exemple, REF, matiere_exemple)
 b.check(tient, f"exemple — valide contre le contrat, [P1]-[P5] et [S1]-[S15] (motif : {motif})")
@@ -360,9 +361,24 @@ def arch_nvda_10k(**over_cellules) -> Architecture:
     return Architecture.model_validate(d)
 
 
-def valide_ou_motif(arch: Architecture, matiere=MATIERE_NVDA) -> str:
+# Les fixtures écrites AVANT l'étape 3 du plan « découpage » (2026-10-24) n'ont pas d'inventaire à cases :
+# [S1]-[S17] s'y éprouvent interrupteurs `inventaire_a_cases` / `un_seul_decoupage_par_segment` ÉTEINTS
+# (l'état exact de l'étape 2) ; [S18]/[S19] ont leur section (§12), sur le référentiel réel.
+REF_ETAPE2 = REF.model_copy(update={"inventaire_a_cases": False, "un_seul_decoupage_par_segment": False})
+
+
+def signaux_ou_refus(arch: Architecture, ref, matiere) -> list[str]:
+    """Les signaux, ou `[motif du refus]` — jamais un plantage du script (un refus inattendu, sous une
+    mutation du test négatif, doit faire rougir l'assert qui le lit, pas tuer le bilan)."""
     try:
-        signaux = valider_structure(arch, REF, matiere)
+        return valider_structure(arch, ref, matiere)
+    except Exception as e:  # noqa: BLE001
+        return [f"REFUS {e}"]
+
+
+def valide_ou_motif(arch: Architecture, matiere=MATIERE_NVDA, ref=None) -> str:
+    try:
+        signaux = valider_structure(arch, ref or REF_ETAPE2, matiere)
         return f"OK signaux={signaux}"
     except Exception as e:  # noqa: BLE001
         return str(e)
@@ -870,7 +886,8 @@ async def _proposer_sans_db(reponses, *, hors_porte=True):
     async def _fake_matiere(conn, ticker_id, *, publier):
         # `_EXEMPLE_ARCHITECTURE` nomme « Programme X » ([S14]) — la matière factice doit le
         # porter dans son verbatim de `me_7` pour que la sortie VALIDE de ce test le reste.
-        return matiere_fictive(me_7_verbatim="`me_7` (test du renvoi) décrit le Programme X.")
+        return matiere_fictive(me_7_verbatim="`me_7` (test du renvoi) décrit le Programme X (maladie Y en "
+                                             "première ligne).")
 
     async def _fake_prochaine_version(conn, ticker_id):
         return 1
@@ -1246,7 +1263,7 @@ MATIERE_LABO_SOUS_CHIFFRE = matiere_fictive(
 r = valide_ou_motif(ARCH_LABO, MATIERE_LABO_SOUS_CHIFFRE)
 b.check(r.startswith("OK"),
         f"[S15] — 6 nommés, total 8, non nommés NON chiffrés : pas de refus (il pousserait à inventer) : {r[:300]}")
-_sig = valider_structure(ARCH_LABO, REF, MATIERE_LABO_SOUS_CHIFFRE)
+_sig = signaux_ou_refus(ARCH_LABO, REF_ETAPE2, MATIERE_LABO_SOUS_CHIFFRE)
 b.check(any("[S15] écart non expliqué" in x and "8" in x and "6" in x for x in _sig),
         f"[S15] — l'écart 8 comptés / 6 nommés est SIGNALÉ au comité : {_sig}")
 
@@ -1254,7 +1271,7 @@ _PLATEFORME_LABO = {**_bloc_molecule(9, "inutilisé"), "id": "plateforme_amont",
                     "programmes": [], "plateforme": True, "nombre_de_programmes_non_nommes": 2,
                     "motif": "Deux programmes comptés par le dossier, jamais nommés."}
 ARCH_LABO_PLATEFORME = Architecture.model_validate(_arch_labo(BLOCS_LABO + [_PLATEFORME_LABO], INVENTAIRE_LABO))
-_sig = valider_structure(ARCH_LABO_PLATEFORME, REF, MATIERE_LABO_SOUS_CHIFFRE)
+_sig = signaux_ou_refus(ARCH_LABO_PLATEFORME, REF_ETAPE2, MATIERE_LABO_SOUS_CHIFFRE)
 b.check(any("plateforme de 2" in x and "sans chiffre du dossier" in x for x in _sig),
         f"[S15] — plateforme sans chiffre des non nommés dans `me_7` : signalée, jamais muette : {_sig}")
 
@@ -1328,7 +1345,7 @@ except Exception as e:  # noqa: BLE001
 MATIERE_LABO_SANS_CHIFFRE = matiere_fictive(
     ticker_id="FICTIF2", ventilation_structure=None, pieces_citables=frozenset({1}),
     me_7_verbatim=MATIERE_LABO.me_7_verbatim, me_7_nombre_de_programmes=None)
-signaux_s15 = valider_structure(ARCH_LABO, REF, MATIERE_LABO_SANS_CHIFFRE)
+signaux_s15 = signaux_ou_refus(ARCH_LABO, REF_ETAPE2, MATIERE_LABO_SANS_CHIFFRE)
 b.check(any("[S15]" in s and "non chiffré" in s for s in signaux_s15),
         f"[S15] — chiffre clé non établi : signal « inventaire non chiffré », pas un refus : {signaux_s15}")
 
@@ -1603,7 +1620,7 @@ b.check(all(m in _p for m in ("PHARMACIE, BIOTECHNOLOGIE", "TECHNOLOGIE, SEMI-CO
         "groupe ; jeune entreprise)")
 b.check("SEULEMENT si les sous-lignes ne couvrent pas tout le segment" in _p,
         "B4g/2 — un « reste du segment » seulement si les sous-lignes ne couvrent pas le segment")
-b.check("recopie « Nom »" in _p,
+b.check("recopie « Nom »" in _p and "c'est `marche_vise` qui les distingue, jamais un nom allongé" in _p,
         "B4g/2 — le nom SEUL est recopié, pas sa description")
 _intro = _p[:_p.index("PRINCIPES :")]
 b.check(not any(w in _intro for w in ("classeur", "horloge", "archétype", "patron")) and "business plan" in _intro,
@@ -1731,5 +1748,165 @@ try:
     b.check(False, "[R7] — un axe inconnu dans `axes_du_premier_niveau` devait être refusé au chargement")
 except ReferentielRefuse as e:
     b.check("[R7]" in str(e), f"[R7] — un axe inconnu dans `axes_du_premier_niveau` est refusé : {e}")
+
+# ── §12 plan « découpage » B4g, étape 3 — inventaire à cases [S18], un seul découpage [S19] (2026-10-24) ──
+print("§12 B4g étape 3 — inventaire à cases ([S18]), un seul découpage par segment ([S19]), prompt, référentiel")
+from pydantic import ValidationError as _VE  # noqa: E402
+from app.contracts.modele_entreprise_schema import ReponsesArbre, traitement_de_l_arbre  # noqa: E402
+_F24 = Path(__file__).resolve().parent / "fixtures" / "architecte" / "2026-10-24"
+# Sortie RÉELLE de l'étape 2 (V4-Pro, `mesures/2026-10-24/b4g-etape2/nvda.json`, copiée) et verbatim RÉEL
+# de `me_7` NVDA (#2625, rendu du dossier le 2026-10-24, copié).
+_arch2 = Architecture.model_validate(json.loads((_F24 / "nvda_etape2_recouvrement.json").read_text(encoding="utf-8")))
+_ME7 = (_F24 / "nvda_me7_verbatim.txt").read_text(encoding="utf-8").strip()
+_M3 = matiere_fictive(ventilation_structure=STRUCT_NVDA, premier_niveau=_pn, me_7_verbatim=_ME7,
+                      pieces_citables=frozenset({867, 997, 1004, 1010, 1012, 1770}))
+_par2 = {x.id: x for x in _arch2.blocs}
+
+
+def _A(**kw) -> dict:
+    base = dict(type_de_clients=False, accord_non_conclu=False, deja_vendu=False, generation_suivante=False,
+                marche_vise=None, pieces=[997])
+    base.update(kw)
+    return base
+
+
+# Les réponses JUSTES aux questions de l'arbre pour les quatre éléments de `me_7` NVDA (lecture Opus du dossier).
+_ARBRES_NVDA = {
+    "Vera Rubin": _A(deja_vendu=True, meme_marche=True, generation_suivante=True),
+    "Vera CPU": _A(deja_vendu=True, meme_marche=False, pieces=[1004]),
+    "Hugging Face": _A(accord_non_conclu=True, pieces=[1010]),
+    "IA souveraine": _A(type_de_clients=True, pieces=[1012]),
+}
+
+
+def _avec_arbres(arch, arbres=_ARBRES_NVDA, maj_item=None):
+    maj_item = maj_item or {}
+    d = arch.model_dump(mode="json")
+    for it in d["inventaire_des_programmes"]:
+        if it["programme"] in arbres:
+            it["arbre"] = arbres[it["programme"]]
+        it.update(maj_item.get(it["programme"], {}))
+    return Architecture.model_validate(d)
+
+
+def _s18_sur(arch, ref=REF, matiere=_M3) -> str:
+    return _st17._s18(arch, ref, matiere, {x.id: x for x in arch.blocs}) or ""
+
+
+# L'ordre de l'arbre : la PREMIÈRE réponse oui décide.
+_R = lambda **kw: ReponsesArbre.model_validate(_A(**kw))  # noqa: E731
+b.check(traitement_de_l_arbre(_R(type_de_clients=True, accord_non_conclu=True)) == "rattache"
+        and traitement_de_l_arbre(_R(accord_non_conclu=True, deja_vendu=True, meme_marche=True)) == "extension"
+        and traitement_de_l_arbre(_R(deja_vendu=True, meme_marche=False)) == "rattache"
+        and traitement_de_l_arbre(_R(generation_suivante=True, marche_vise="marché X")) == "rattache"
+        and traitement_de_l_arbre(_R(marche_vise="marché X")) == "bloc"
+        and traitement_de_l_arbre(_R()) == "plateforme",
+        "arbre — la première réponse oui décide (client > accord > vendu > génération > marché visé > plateforme)")
+for _kw, _lib in ((dict(deja_vendu=True), "déjà vendu sans `meme_marche`"),
+                  (dict(meme_marche=True), "`meme_marche` sans déjà vendu"),
+                  (dict(pieces=[]), "aucune pièce")):
+    try:
+        ReponsesArbre.model_validate(_A(**_kw))
+        b.check(False, f"arbre (contrat) — {_lib} devait être refusé")
+    except _VE:
+        b.check(True, f"arbre (contrat) — {_lib} refusé")
+
+# [S18] sur la sortie réelle : sans cases → refusé ; avec les réponses justes → tient.
+_r = _s18_sur(_arch2)
+b.check(_r.startswith("[S18]") and "`Vera CPU` n'a pas ses réponses" in _r,
+        f"[S18] — inventaire réel de l'étape 2 SANS cases : refusé, chaque élément nommé : {_r[:300]}")
+_ok = _avec_arbres(_arch2)
+b.check(_s18_sur(_ok) == "", f"[S18] — NVDA réel avec les réponses justes : tient : {_s18_sur(_ok)[:400]}")
+_r = _s18_sur(_avec_arbres(_arch2, {**_ARBRES_NVDA, "Vera Rubin": _A(marche_vise="data center")}))
+b.check("`Vera Rubin` : tes réponses" in _r and "donnent le traitement `bloc`" in _r and "déclaré `rattache`" in _r,
+        f"[S18] — réponses incohérentes avec le traitement (dit : non vendu, marché nommé → `bloc`) : refusé : {_r[:400]}")
+_r = _s18_sur(_avec_arbres(_arch2, maj_item={"Vera CPU": {"bloc": "data_center"}}))
+b.check("déjà vendu sur un AUTRE marché" in _r and "pas `data_center`" in _r,
+        f"[S18] — déjà vendu sur un autre marché mais rattaché au segment lui-même : refusé : {_r[:400]}")
+_r = _s18_sur(_avec_arbres(_arch2, {**_ARBRES_NVDA, "Vera Rubin": _A(marche_vise="calcul quantique")},
+                           maj_item={"Vera Rubin": {"traitement": "bloc", "bloc": "vera_cpu"}}))
+b.check("« calcul quantique » ne figure pas LITTÉRALEMENT" in _r,
+        f"[S18] — marché visé absent du dossier (affirmé, pas recopié) : refusé : {_r[:400]}")
+_r = _s18_sur(_avec_arbres(_arch2, {**_ARBRES_NVDA, "Vera CPU": _A(deja_vendu=True, meme_marche=False, pieces=[4242])}))
+b.check("`arbre.pieces` cite [4242]" in _r, f"[S18] — pièce hors du dossier citée dans les cases : refusé : {_r[:300]}")
+_hm = _arch2.model_dump(mode="json")
+_hm["inventaire_des_programmes"] = [dict(i, traitement="hors_modele", bloc=None)
+                                    for i in _hm["inventaire_des_programmes"] if i["programme"] == "Hugging Face"]
+b.check(_s18_sur(Architecture.model_validate(_hm)) == "", "[S18] — `hors_modele` n'a pas de cases à remplir")
+b.check(_s18_sur(_arch2, ref=REF_ETAPE2) == "", "[S18] — interrupteur `inventaire_a_cases` éteint : inventaire libre")
+
+# [S19] sur la sortie réelle : clients publiés (Hyperscale, AI Clouds) ET produit estimé (Vera CPU) sous Data Center.
+def _s19_sur(blocs, ref=REF, matiere=_M3):
+    return _st17._s19(_NS(blocs=blocs, inventaire_des_programmes=_arch2.inventaire_des_programmes), ref, matiere,
+                      {x.id: x for x in blocs})
+
+
+_m, _sig = _s19_sur(_arch2.blocs)
+b.check((_m or "").startswith("[S19]") and "sous `data_center`" in _m and "vera_cpu" in _m
+        and "couvrent exactement le segment" in _m,
+        f"[S19] — NVDA réel, deux découpages superposés sous Data Center : refusé : {(_m or '')[:400]}")
+_sans_clients = [x for x in _arch2.blocs if x.id not in ("data_center_hyperscale", "data_center_ai_clouds")]
+b.check(_s19_sur(_sans_clients) == (None, []), "[S19] — le seul découpage par produit (Vera CPU) : tient")
+_sans_cpu = [x for x in _arch2.blocs if x.id != "vera_cpu"]
+b.check(_s19_sur(_sans_cpu) == (None, []), "[S19] — le seul découpage publié (clients) : tient")
+_reste = _par2["vera_cpu"].model_copy(update={"id": "data_center_reste"})
+_partiel = [x for x in _sans_cpu if x.id != "data_center_ai_clouds"] + [_reste]
+b.check(_s19_sur(_partiel) == (None, []),
+        "[S19] — un membre publié qui ne couvre PAS le segment + UN reste estimé : admis")
+_m, _ = _s19_sur(_partiel + [_par2["vera_cpu"]])
+b.check("un seul reste estimé" in (_m or ""), f"[S19] — membre publié partiel + DEUX estimés : refusé : {(_m or '')[:300]}")
+_m, _sig = _s19_sur(_arch2.blocs, matiere=matiere_fictive(ventilation_structure=None, me_7_verbatim=_ME7))
+b.check(_m is None, "[S19] — sans ventilation, rien à comparer : pas de refus")
+b.check(_s19_sur(_arch2.blocs, ref=REF_ETAPE2) == (None, []),
+        "[S19] — interrupteur `un_seul_decoupage_par_segment` éteint : mélange admis")
+
+# [S19] sur la sortie RÉELLE de l'étape 3 (V4-Pro, `mesures/2026-10-24/b4g-etape3/nvda.json`, copiée) :
+# Vera Rubin et l'IA souveraine rattachées à `data_center` dans l'inventaire MAIS dotées chacune d'une
+# sous-ligne que rien ne désigne ; produit (Vera CPU) et clients (IA souveraine) sous le même segment.
+_arch3 = Architecture.model_validate(json.loads((_F24 / "nvda_etape3_criteres_melanges.json").read_text(encoding="utf-8")))
+_m, _ = _st17._s19(_arch3, REF, _M3, {x.id: x for x in _arch3.blocs})
+b.check("ne sont le `bloc` d'AUCUNE entrée" in (_m or "") and "ia_souveraine" in _m and "vera_rubin" in _m,
+        f"[S19] — NVDA réel étape 3, sous-lignes orphelines (génération suivante, clients) : refusé : {(_m or '')[:400]}")
+_d3 = _arch3.model_dump(mode="json")
+for _it in _d3["inventaire_des_programmes"]:
+    if _it["programme"] in ("Vera Rubin", "IA souveraine"):
+        _it["bloc"] = {"Vera Rubin": "vera_rubin", "IA souveraine": "ia_souveraine"}[_it["programme"]]
+_arch3_lie = Architecture.model_validate(_d3)
+_m, _ = _st17._s19(_arch3_lie, REF, _M3, {x.id: x for x in _arch3_lie.blocs})
+b.check("par PRODUIT ['vera_cpu', 'vera_rubin'] et par TYPE DE CLIENTS ['ia_souveraine']" in (_m or "")
+        and "AUCUNE entrée" not in _m,
+        f"[S19] — sous-lignes liées, mais produit ET clients sous le même segment : refusé : {(_m or '')[:400]}")
+_d3b = _arch3.model_dump(mode="json")
+_d3b["blocs"] = [x for x in _d3b["blocs"] if x["id"] not in ("vera_rubin", "ia_souveraine")]
+_d3b["passage_a_l_agrege"] = _arch3.model_dump(mode="json")["passage_a_l_agrege"]
+_d3b["cellules_attendues"] = [c for c in _d3b["cellules_attendues"] if c["bloc"] not in ("vera_rubin", "ia_souveraine")]
+_arch3_ok = Architecture.model_validate(_d3b)
+b.check(_st17._s19(_arch3_ok, REF, _M3, {x.id: x for x in _arch3_ok.blocs}) == (None, []),
+        "[S19] — un seul critère (produit : Vera CPU + reste), Rubin et l'IA souveraine rattachées au segment : tient")
+
+# Branchement : la sortie réelle de l'étape 2, jugée sur le référentiel réel, est refusée par [S18] ET [S19].
+_r = valide_ou_motif(_arch2, _M3, ref=REF)
+b.check("[S18]" in _r and "[S19]" in _r, f"[S18]/[S19] — branchés dans valider_structure : {_r[:300]}")
+
+# [S14] — `plateforme` doit viser une plateforme ; [S15] — un élément nommé mis en plateforme n'est pas un non nommé.
+_pf = _avec_arbres(_arch2, {**_ARBRES_NVDA, "Vera Rubin": _A()},
+                   maj_item={"Vera Rubin": {"traitement": "plateforme", "bloc": "data_center"}})
+_r = valide_ou_motif(_pf, _M3)
+b.check("[S14]" in _r and "(traitement `plateforme`)" in _r and "n'est pas une plateforme" in _r,
+        f"[S14] — traitement `plateforme` vers un bloc qui n'en est pas une : refusé : {_r[:300]}")
+
+# Prompt et référentiel.
+_p3 = _arch_mod._ARCHITECTE_SYSTEM_PROMPT
+b.check("Sous un même segment, UN SEUL découpage" in _p3 and "ce sont ses sous-lignes estimées qui priment" in _p3
+        and "UN SEUL \"" not in _p3 and "critère (par produit OU par type de clients)" in _p3
+        and "est SON `bloc` dans l'inventaire" in _p3,
+        "B4g/3 — le prompt pose « un seul découpage par segment » (le produit à marché propre prime)")
+b.check("écris d'abord dans `arbre` TES RÉPONSES" in _p3 and "`plateforme` (question 5 sans marché visé" in _p3
+        and "recopie-le dans `marche_vise`" in _p3,
+        "B4g/3 — le prompt demande les cases de l'arbre, puis le traitement ; `plateforme` et `marche_vise` dits")
+b.check(_EXEMPLE_ARCHITECTURE["inventaire_des_programmes"][0].get("arbre", {}).get("marche_vise"),
+        "B4g/3 — l'exemple du prompt porte ses cases (marché visé recopié)")
+b.check(REF.inventaire_a_cases is True and REF.un_seul_decoupage_par_segment is True,
+        "référentiel — inventaire à cases et un seul découpage par segment ALLUMÉS")
 
 sys.exit(b.summary())

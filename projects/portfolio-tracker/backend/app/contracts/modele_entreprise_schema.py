@@ -50,7 +50,8 @@ __all__ = [
     # architecture
     "VariablePropre", "RattachementPublie", "RattachementParent", "RattachementAgrege", "Rattachement",
     "Jalon", "BlocPropose", "Bloc", "PassageAgrege", "AuteurQuestion", "AuteurDemande", "AuteurCellule",
-    "CelluleAttendue", "AxeUsage", "ManqueDuDossier", "InventaireProgramme", "Architecture",
+    "CelluleAttendue", "AxeUsage", "ManqueDuDossier", "ReponsesArbre", "traitement_de_l_arbre",
+    "InventaireProgramme", "Architecture",
     # cellule écrite
     "AuteurQuestionEcrite", "AuteurDemandeEcrite", "AuteurCelluleEcrite", "Cellule",
     # fourchette, scénario, déplacement
@@ -242,6 +243,14 @@ class ReferentielModele(Strict):
     # L'ordre de préférence des axes pour ce premier niveau — décision du fonds : « ce qu'on saura
     # projeter ». Chaque id doit être un axe du référentiel de la ventilation (contrôlé au chargement).
     axes_du_premier_niveau: Annotated[list[str], Field(min_length=1)]
+    # Plan « découpage » B4g, étape 3 (2026-10-24) — l'INVENTAIRE À CASES : chaque élément nommé porte
+    # ses réponses aux questions de l'arbre (`ReponsesArbre`) et [S18] vérifie que le traitement en
+    # découle. INTERRUPTEUR (principe n° 3) : `false` rend l'inventaire libre (étape 2). REQUIS.
+    inventaire_a_cases: bool
+    # Plan « découpage » B4g, étape 3 (arbitrage de l'utilisateur du 2026-10-24 : « pas de recouvrement
+    # avant la finesse ») — sous un même segment, UN SEUL découpage ([S19]) : ses membres publiés
+    # enfants, OU des sous-lignes estimées. INTERRUPTEUR : `false` admet le mélange (étape 2). REQUIS.
+    un_seul_decoupage_par_segment: bool
 
     @model_validator(mode="after")
     def _coherence_interne(self) -> "ReferentielModele":
@@ -525,6 +534,42 @@ class AxeUsage(Strict):
     usage: Annotated[str, Field(min_length=20)]
 
 
+class ReponsesArbre(Strict):
+    """Plan « découpage » B4g, étape 3 (2026-10-24) — les réponses de l'architecte aux questions de
+    l'arbre, DANS L'ORDRE du prompt (la première réponse oui décide) : la case qui force le jugement à
+    s'écrire (#feedback_garde_structure_pas_sens). [S18] (`structure.py`) en dérive le traitement
+    attendu (`traitement_de_l_arbre`) et le compare au traitement déclaré ; `marche_vise` est un
+    passage RECOPIÉ du dossier, jamais une affirmation. Mesuré avant : RVMD `b4g-etape2/` — deux
+    molécules précoces en lignes propres « dont la taille peut s'estimer » sans aucun marché nommé."""
+    type_de_clients: bool       # 1. un type de clients ou une zone, plutôt qu'un produit
+    accord_non_conclu: bool     # 2. acquisition, licence, partenariat annoncé, non finalisé
+    deja_vendu: bool            # 3. un chiffre d'affaires, même naissant, ou des livraisons commencées
+    # Requis SSI `deja_vendu` : mêmes acheteurs, mêmes concurrents que les autres produits du segment.
+    meme_marche: Optional[bool] = None
+    generation_suivante: bool   # 4. remplacera un produit vendu, mêmes acheteurs et concurrents
+    # 5. le marché visé, RECOPIÉ du dossier (passage continu) — `None` si le dossier n'en nomme aucun.
+    marche_vise: Optional[Annotated[str, Field(min_length=3)]] = None
+    pieces: Annotated[list[int], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def _meme_marche_ssi_deja_vendu(self) -> "ReponsesArbre":
+        if (self.meme_marche is not None) != self.deja_vendu:
+            raise ValueError("`meme_marche` est requis SSI `deja_vendu` est vrai (question 3 de l'arbre)")
+        return self
+
+
+def traitement_de_l_arbre(r: "ReponsesArbre") -> str:
+    """Le traitement que les réponses imposent — la PREMIÈRE réponse oui décide. Détenteur unique de
+    l'ordre de l'arbre (le prompt de l'architecte l'énonce, [S18] l'applique)."""
+    if r.type_de_clients:
+        return "rattache"
+    if r.accord_non_conclu:
+        return "extension"
+    if r.deja_vendu or r.generation_suivante:
+        return "rattache"
+    return "bloc" if r.marche_vise else "plateforme"
+
+
 class InventaireProgramme(Strict):
     """1.3.0 (lot M3 ter, §4) — pour CHAQUE programme que nomme la réponse de `me_7`, ce que
     l'architecte en fait : `bloc` (sa ligne propre), `rattache` (s'estime avec les hypothèses de
@@ -534,11 +579,15 @@ class InventaireProgramme(Strict):
     dans le verbatim de `me_7`, et que `bloc` désigne un bloc existant du statut attendu par
     `traitement` ; [S15] compare le NOMBRE d'entrées au chiffre clé `nombre_de_programmes`."""
     programme: Annotated[str, Field(min_length=1)]
-    traitement: Literal["bloc", "rattache", "extension", "hors_modele"]
+    # `plateforme` (B4g étape 3, question 5 sans marché nommé) : `bloc` désigne une plateforme.
+    traitement: Literal["bloc", "rattache", "extension", "plateforme", "hors_modele"]
     # Requis SSI `traitement != "hors_modele"` — un programme hors modèle n'a, par construction,
     # aucun bloc qui le porte.
     bloc: Optional[Identifiant] = None
     motif: Annotated[str, Field(min_length=20)]
+    # B4g étape 3 — optionnel au CONTRAT (les architectures d'avant restent lisibles) ; EXIGÉ par [S18]
+    # quand l'interrupteur `inventaire_a_cases` est allumé, sauf pour `hors_modele`.
+    arbre: Optional[ReponsesArbre] = None
 
     @model_validator(mode="after")
     def _bloc_ssi_pas_hors_modele(self) -> "InventaireProgramme":

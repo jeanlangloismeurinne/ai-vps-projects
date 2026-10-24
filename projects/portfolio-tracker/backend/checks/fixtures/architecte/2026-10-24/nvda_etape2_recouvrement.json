@@ -1,0 +1,479 @@
+{
+  "schema_version": "architecture-1.3.0",
+  "ticker_id": "NVDA",
+  "version": 1,
+  "archetype": "rentable",
+  "famille": "industrielle",
+  "version_referentiel": "1.2.0",
+  "blocs": [
+    {
+      "id": "data_center",
+      "libelle": "Data Center",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:DataCenterMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié du 10-K, premier niveau imposé de l'axe `activites`.",
+      "pieces": [],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "edge_computing",
+      "libelle": "Edge Computing",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:EdgeComputingMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche",
+        "volume",
+        "prix_moyen",
+        "part_recurrente",
+        "marge_contributive"
+      ],
+      "motif": "Segment publié du 10-K, premier niveau imposé de l'axe `activites`.",
+      "pieces": [],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "data_center_ai_clouds",
+      "libelle": "Data Center — AI Clouds, Industrial, & Enterprise",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:AICloudsIndustrialEnterpriseMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Sous-segment publié de Data Center dans le découpage le plus récent (10-Q du 2026-08-26), utile pour suivre la demande des clouds IA et entreprises.",
+      "pieces": [
+        1770
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "data_center_hyperscale",
+      "libelle": "Data Center — Hyperscale",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "publie",
+        "axe": "activites",
+        "membres": [
+          "nvda:HyperscaleMember"
+        ]
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc"
+      ],
+      "motif": "Sous-segment publié de Data Center dans le découpage le plus récent (10-Q du 2026-08-26), utile pour suivre la demande des grands clouds.",
+      "pieces": [
+        1770
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "publie"
+    },
+    {
+      "id": "vera_cpu",
+      "libelle": "Vera CPU",
+      "role": "activite",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "parent",
+        "bloc": "data_center"
+      },
+      "variables": [
+        "chiffre_affaires_du_bloc",
+        "taille_du_marche",
+        "croissance_du_marche",
+        "part_de_marche"
+      ],
+      "motif": "Premier CPU pour l'IA agentique, déjà vendu (visibilité de revenus CPU de près de 20 Md$ pour l'exercice en cours) mais adressant un marché distinct (TAM CPU data center de 200 Md$) : sous-ligne estimée de Data Center.",
+      "pieces": [
+        1004
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "extension_hugging_face",
+      "libelle": "Extension annoncée — Hugging Face",
+      "role": "activite",
+      "statut": "extension_annoncee",
+      "origine": "acquisition",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "recherche_developpement"
+      },
+      "variables": [
+        "taille_du_marche"
+      ],
+      "motif": "Acquisition annoncée le 2026-09-02, clôture attendue au S1 2027 : extension vers l'écosystème open-source, n'entre dans aucune formule de passage.",
+      "pieces": [
+        1010
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    },
+    {
+      "id": "commun",
+      "libelle": "Frais communs non affectés",
+      "role": "commun",
+      "statut": "metier_actuel",
+      "origine": "interne",
+      "jalon": null,
+      "rattachement": {
+        "type": "agrege",
+        "ligne": "autres_charges_exploitation"
+      },
+      "variables": [
+        "couts_communs",
+        "taux_d_impot",
+        "capital_par_point_de_croissance"
+      ],
+      "motif": "Charges de structure non rattachées à un bloc d'activité pris isolément.",
+      "pieces": [
+        867
+      ],
+      "programmes": [],
+      "plateforme": false,
+      "nombre_de_programmes_non_nommes": null,
+      "maille": "estime"
+    }
+  ],
+  "variables_propres": [],
+  "passage_a_l_agrege": [
+    {
+      "ligne": "chiffre_affaires",
+      "formule": "data_center__chiffre_affaires_du_bloc + edge_computing__chiffre_affaires_du_bloc"
+    },
+    {
+      "ligne": "autres_charges_exploitation",
+      "formule": "commun__couts_communs"
+    }
+  ],
+  "cellules_attendues": [
+    {
+      "bloc": "data_center",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "edge_computing",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "data_center_ai_clouds",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "data_center_hyperscale",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "chiffre_affaires_du_bloc",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "taille_du_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "vera_cpu",
+      "variable": "part_de_marche",
+      "periodes": [
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "me_5"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "couts_communs",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "demande_ciblee"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "taux_d_impot",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_1"
+      }
+    },
+    {
+      "bloc": "commun",
+      "variable": "capital_par_point_de_croissance",
+      "periodes": [
+        "FY2022",
+        "FY2023",
+        "FY2024",
+        "FY2025",
+        "FY2026",
+        "FY2027",
+        "FY2028",
+        "FY2029",
+        "FY2030",
+        "FY2031",
+        "FY2032",
+        "FY2033",
+        "FY2034",
+        "FY2035",
+        "FY2036"
+      ],
+      "auteur": {
+        "type": "question",
+        "question_id": "qf_3"
+      }
+    }
+  ],
+  "autres_axes": [
+    {
+      "axe": "geographie",
+      "usage": "Information de concentration géographique, hors de l'arbre (raccord des marges par zone)."
+    },
+    {
+      "axe": "secteurs",
+      "usage": "Information de marge opérationnelle par segment (Compute & Networking, Graphics), hors de l'arbre (raccord des marges)."
+    },
+    {
+      "axe": "clients",
+      "usage": "Information de concentration clients, hors de l'arbre (contrôle de concentration)."
+    }
+  ],
+  "manques_du_dossier": [
+    {
+      "sujet": "Dépense de R&D affectée par programme, non publiée séparément par l'émetteur.",
+      "blocs": [
+        "vera_cpu"
+      ],
+      "consequence": "`depense_de_developpement_du_bloc` du programme Vera CPU reste une demande ciblée, non une réponse de `me_7`."
+    }
+  ],
+  "inventaire_des_programmes": [
+    {
+      "programme": "Vera Rubin",
+      "traitement": "rattache",
+      "bloc": "data_center",
+      "motif": "Génération suivante d'une architecture data center déjà vendue (Blackwell) : elle porte la croissance future du segment Data Center, pas une ligne à part."
+    },
+    {
+      "programme": "Vera CPU",
+      "traitement": "rattache",
+      "bloc": "vera_cpu",
+      "motif": "Déjà vendu (visibilité de revenus CPU de près de 20 Md$ pour l'exercice en cours) mais adressant un marché distinct (TAM CPU data center de 200 Md$) : sous-ligne estimée de Data Center."
+    },
+    {
+      "programme": "Hugging Face",
+      "traitement": "extension",
+      "bloc": "extension_hugging_face",
+      "motif": "Accord définitif du 2026-09-02, clôture attendue au S1 2027 : acquisition annoncée mais non conclue, extension vers l'écosystème open-source."
+    },
+    {
+      "programme": "IA souveraine",
+      "traitement": "rattache",
+      "bloc": "data_center",
+      "motif": "Déploiements nationaux (Japon, Corée) de systèmes data center déjà vendus : s'estime avec les hypothèses de marché du segment Data Center."
+    }
+  ]
+}

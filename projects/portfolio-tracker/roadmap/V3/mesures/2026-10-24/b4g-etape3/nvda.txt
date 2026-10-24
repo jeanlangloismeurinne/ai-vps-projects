@@ -1,0 +1,78 @@
+Porte : ouverte
+  me_2 (modele_economique) — OUVRE — réponse #1367 qui tient
+  me_3 (modele_economique) — OUVRE — réponse #1368 qui tient
+  me_4 (modele_economique) — OUVRE — réponse #1369 qui tient
+  me_5 (modele_economique) — OUVRE — réponse #1370 qui tient
+  me_7 (modele_economique) — OUVRE — réponse #2625 qui tient
+  mo_4 (defendabilite) — OUVRE — non fondable : la source a été lue, la donnée n'y est pas publiée
+  mo_6 (defendabilite) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  qf_1 (qualite_financiere) — OUVRE — réponse #1209 qui tient
+  qf_3 (qualite_financiere) — OUVRE — réponse #1211 qui tient
+  qf_7 (qualite_financiere) — OUVRE — réponse #1214 qui tient
+  se_2 (secteur_concurrence) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  se_3 (secteur_concurrence) — OUVRE — réponse #1447 qui tient
+  se_4 (secteur_concurrence) — OUVRE — réponse #1448 qui tient
+
+Architecture NVDA v1 (archétype rentable, famille industrielle, référentiel 1.2.0)
+  · data_center [activite/metier_actuel/publie] — publié (axe=activites, membres=['nvda:DataCenterMember'])
+    motif : Segment publié du 10-K/10-Q, premier niveau imposé de l'axe `activites` (découpage le plus récent).
+    variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'part_de_marche', 'volume', 'prix_moyen', 'part_recurrente', 'marge_contributive']
+    · vera_rubin [activite/metier_actuel/estime] — estimé, enfant de `data_center`
+      motif : Génération suivante de l'architecture data center, déjà vendue (expéditions de production au T3 FY2027) : rattachée au segment Data Center, dont elle porte la croissance future.
+      pièces : [997, 1012]
+      variables : ['chiffre_affaires_du_bloc']
+    · vera_cpu [activite/metier_actuel/estime] — estimé, enfant de `data_center`
+      motif : Premier CPU pour l'IA agentique, déjà vendu (visibilité de revenus CPU ~20 Md$ pour FY2027) : sous-ligne estimée du segment Data Center, avec ses variables de marché propres (TAM 200 Md$).
+      pièces : [1004, 997]
+      variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'part_de_marche']
+    · data_center_reste [activite/metier_actuel/estime] — estimé, enfant de `data_center`
+      motif : Reste du segment Data Center une fois retirées les sous-lignes estimées Vera Rubin, Vera CPU et IA souveraine, pour couvrir l'intégralité du segment publié.
+      pièces : [997]
+      variables : ['chiffre_affaires_du_bloc']
+    · ia_souveraine [activite/metier_actuel/estime] — estimé, enfant de `data_center`
+      motif : Déploiements nationaux (Japon Noetra, Corée NAVER/Brookfield) déjà engagés : sous-ligne estimée du segment Data Center, avec un risque propre de concentration et de financement.
+      pièces : [1012]
+      variables : ['chiffre_affaires_du_bloc']
+  · edge_computing [activite/metier_actuel/publie] — publié (axe=activites, membres=['nvda:EdgeComputingMember'])
+    motif : Segment publié du 10-K/10-Q, premier niveau imposé de l'axe `activites` (découpage le plus récent).
+    variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'part_de_marche', 'volume', 'prix_moyen', 'part_recurrente', 'marge_contributive']
+  · hugging_face [activite/extension_annoncee/estime] — estimé, agrégé → `autres_charges_exploitation`
+    motif : Accord définitif du 2026-09-02, clôture attendue au S1 2027 : extension annoncée, n'entre dans aucune formule de passage.
+    pièces : [847, 1010]
+    variables : ['taille_du_marche']
+  · commun [commun/metier_actuel/estime] — estimé, agrégé → `autres_charges_exploitation`
+    motif : Charges de structure non rattachées à un bloc d'activité pris isolément, et variables transverses du titre.
+    pièces : [867]
+    variables : ['couts_communs', 'taux_d_impot', 'capital_par_point_de_croissance']
+Inventaire des programmes :
+  · Vera Rubin — rattache → `data_center` — Génération suivante de l'architecture data center, déjà vendue : rattachée au segment Data Center, dont elle porte la croissance future.
+  · Vera CPU — rattache → `vera_cpu` — Déjà vendu sur un autre marché (CPU IA agentique, TAM 200 Md$) : sous-ligne estimée du segment Data Center avec ses variables de marché propres.
+  · Hugging Face — extension → `hugging_face` — Accord définitif du 2026-09-02, clôture attendue au S1 2027 : extension annoncée, n'entre dans aucune formule de passage.
+  · IA souveraine — rattache → `data_center` — Type de clients (États, déploiements nationaux) portant un risque propre de concentration et de financement : sous-ligne estimée du segment Data Center.
+Passage à l'agrégé :
+  · chiffre_affaires = data_center__chiffre_affaires_du_bloc + edge_computing__chiffre_affaires_du_bloc
+  · autres_charges_exploitation = commun__couts_communs
+Cellules attendues :
+  · demande ciblée :
+      data_center.chiffre_affaires_du_bloc [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      edge_computing.chiffre_affaires_du_bloc [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      vera_rubin.chiffre_affaires_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      vera_cpu.chiffre_affaires_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      data_center_reste.chiffre_affaires_du_bloc [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      hugging_face.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      ia_souveraine.chiffre_affaires_du_bloc [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      commun.couts_communs [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question me_5 :
+      vera_cpu.taille_du_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+      vera_cpu.part_de_marche [FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question qf_1 :
+      commun.taux_d_impot [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+  · question qf_3 :
+      commun.capital_par_point_de_croissance [FY2024, FY2025, FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035, FY2036]
+
+Demandes de recherche (ce que le dossier ne contient pas) :
+  · Taille et concurrence du marché adressable par l'écosystème open-source de Hugging Face, non publiées par l'émetteur. — `taille_du_marche` du bloc Hugging Face ne peut pas s'estimer sans elles. (blocs ['hugging_face'])
+
+Coût :0.1650 $ (3 tentative(s))
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/b4g-etape3/nvda.json
+BILAN architecte NVDA : porte ouverte — proposée v1 — 8 blocs (2 publiés / 6 estimés), 12 cellules attendues, 0 signaux, 0.1650 $

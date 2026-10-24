@@ -77,6 +77,17 @@ premier_niveau_impose: true
 # autres axes vont dans `autres_axes` (information : marges par secteur, concentration, zones).
 axes_du_premier_niveau: [activites, secteurs]
 
+# L'INVENTAIRE À CASES (plan « découpage » B4g, étape 3, 2026-10-24). `true` : chaque élément nommé de
+# l'inventaire porte ses réponses aux questions de l'arbre (client, accord non conclu, déjà vendu et même
+# marché, génération suivante, marché visé recopié du dossier, pièces) ; [S18] refuse un traitement qui
+# n'en découle pas. `false` : inventaire libre (étape 2). Ne monte pas `version`, lu à la LECTURE.
+inventaire_a_cases: true
+
+# UN SEUL DÉCOUPAGE PAR SEGMENT (arbitrage de l'utilisateur du 2026-10-24 : pas de recouvrement avant la
+# finesse). `true` : sous un même bloc, les sous-lignes sont SOIT ses membres publiés enfants (plus un
+# seul « reste » s'ils ne le couvrent pas), SOIT des sous-lignes estimées — [S19]. `false` : mélange admis.
+un_seul_decoupage_par_segment: true
+
 version: "1.2.0"
 
 # Les UNITÉS du catalogue — DÉTENTEUR UNIQUE (lot M3 bis §5, cause ④ : les formules ne sont pas

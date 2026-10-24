@@ -234,8 +234,12 @@ _EXEMPLE_ARCHITECTURE: dict[str, Any] = {
     # 1.3.0 — pour CHAQUE programme que `me_7` NOMME individuellement, ce que l'architecte en fait.
     # Un programme de la plateforme (non nommé) n'a PAS d'entrée ici — par construction.
     "inventaire_des_programmes": [
-        {"programme": "Programme X", "traitement": "bloc", "bloc": "programme_x",
-         "motif": "Pas encore vendu, nouveau marché dont la taille s'estime (question 5) : sa propre ligne."},
+        {"programme": "Programme X",
+         "arbre": {"type_de_clients": False, "accord_non_conclu": False, "deja_vendu": False,
+                   "generation_suivante": False, "marche_vise": "maladie Y en première ligne",
+                   "pieces": [103]},
+         "traitement": "bloc", "bloc": "programme_x",
+         "motif": "Pas encore vendu, nouveau marché nommé par le dossier (question 5) : sa propre ligne."},
     ],
     # Lot B4f — ce que le dossier ne permet pas de construire (rendu dans les TROIS modes).
     "demandes_de_recherche": [
@@ -275,7 +279,11 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "membre publié enfant de ce segment, ou un bloc estimé rattaché (parent) à ce segment ; ajoute "
     "un bloc estimé « reste du segment », rattaché au même segment, SEULEMENT si les sous-lignes ne "
     "couvrent pas tout le segment (quand le segment est exactement la somme de ses membres publiés "
-    "enfants, ou qu'il n'a aucune sous-ligne, pas de reste) ; (b) une ligne hors des segments, SEULEMENT pour ce qui n'a "
+    "enfants, ou qu'il n'a aucune sous-ligne, pas de reste). Sous un même segment, UN SEUL découpage : "
+    "SOIT ses membres publiés enfants, SOIT des sous-lignes estimées (et leur reste), et UN SEUL "
+    "critère (par produit OU par type de clients) — jamais les deux, qui se recouvriraient (un produit vendu à un type de clients serait compté deux fois) ; "
+    "quand un produit du segment a son propre marché, ce sont ses sous-lignes estimées qui priment et "
+    "les membres publiés enfants restent une information, cités dans le motif du segment ; (b) une ligne hors des segments, SEULEMENT pour ce qui n'a "
     "encore aucun chiffre d'affaires (programme en développement, activité annoncée) ; (c) le bloc "
     "commun. Un produit DÉJÀ VENDU n'est jamais une ligne hors des segments : son chiffre d'affaires "
     "est déjà dans le segment qui le vend. Sans cette section, compose le premier niveau toi-même "
@@ -320,7 +328,7 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "      1. Est-ce un TYPE DE CLIENTS ou une ZONE (États, grands clients cloud, un pays…) plutôt "
     "qu'un produit ? → `rattache` au segment qui leur vend ; une sous-ligne de ce segment "
     "seulement si ces clients portent un risque propre (concentration, réglementation, "
-    "financement) ;\n"
+    "financement) ET que le segment n'est pas découpé par produit ;\n"
     "      2. Est-ce un ACCORD NON CONCLU (acquisition, licence, partenariat annoncé mais pas "
     "finalisé) ? → `extension` (un bloc `extension_annoncee`) ;\n"
     "      3. Est-il DÉJÀ VENDU (un chiffre d'affaires, même naissant, ou des livraisons "
@@ -333,8 +341,9 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "remplace : elle porte sa croissance future, pas une ligne à part ;\n"
     "      5. Sinon, c'est un NOUVEAU MARCHÉ pour l'entreprise, pas encore vendu : sa ligne propre "
     "(`bloc`, statut `en_developpement`, avec son `jalon`) si la taille de son marché peut "
-    "s'estimer (un marché visé est nommé) ; sinon il rejoint une `plateforme` (bloc "
-    "`plateforme: true`, `programmes` vide, `nombre_de_programmes_non_nommes` ≥ 1).\n"
+    "s'estimer (le dossier NOMME un marché visé — recopie-le dans `marche_vise`) ; sinon il rejoint "
+    "une `plateforme` (traitement `plateforme` ; bloc `plateforme: true`, `programmes` vide, "
+    "`nombre_de_programmes_non_nommes` ≥ 1).\n"
     "    La PROBABILITÉ DE SUCCÈS n'entre PAS dans ce choix : elle se chiffre ensuite, comme "
     "variable de la ligne. Jamais le nom ni la marque ne décident. Les éléments que le dossier ne "
     "nomme pas individuellement (recherche amont), et l'écart quand le dossier COMPTE plus "
@@ -355,16 +364,26 @@ _ARCHITECTE_SYSTEM_PROMPT = (
     "l'écrit — un passage CONTINU du texte de la réponse, mot pour mot, sans rien y ajouter (ni "
     "marque entre parenthèses, ni précision) ni en retirer (ni article) ; le nom SEUL, pas sa "
     "description : quand le dossier écrit « Nom, description » ou « Nom — description », recopie "
-    "« Nom » ;\n"
+    "« Nom » ; un même élément dans PLUSIEURS marchés (une molécule dans plusieurs indications, un "
+    "produit sur plusieurs marchés) : une entrée d'inventaire et une ligne PAR MARCHÉ, sous le MÊME "
+    "nom recopié — c'est `marche_vise` qui les distingue, jamais un nom allongé ;\n"
     "  · `inventaire_des_programmes` : pour CHAQUE élément que `me_7` NOMME (même ceux qu'une autre "
     "règle t'a fait omettre de l'arbre, même ceux que tu rattaches) — ni plus, ni moins : le système "
     "compare ton décompte aux chiffres clés `nombre_de_programmes` et `nombre_de_programmes_non_nommes` "
-    "de `me_7` —, dis ce que tu en fais — `bloc` (sa "
-    "ligne propre, `bloc` = cet id), `rattache` (s'estime avec les hypothèses de marché d'une "
-    "activité vendue — `bloc` = cette activité, ou le bloc estimé à lui qui en est l'enfant, de statut "
-    "`metier_actuel` — JAMAIS un bloc `en_developpement` ni une plateforme, motif ≥ 20 caractères), `extension` (devient une activité "
-    "annoncée, `bloc` = ce bloc `extension_annoncee`), `hors_modele` (abandonné, immatériel — motif "
-    "≥ 20 caractères, AUCUN `bloc`) ;\n"
+    "de `me_7` —, écris d'abord dans `arbre` TES RÉPONSES aux questions de l'arbre, dans l'ordre "
+    "(`type_de_clients`, `accord_non_conclu`, `deja_vendu`, `meme_marche` — seulement si "
+    "`deja_vendu` est vrai —, `generation_suivante`, `marche_vise` — le passage du dossier qui NOMME "
+    "le marché visé, recopié mot pour mot, ou `null` si le dossier n'en nomme aucun —, et `pieces`, "
+    "les numéros des pièces qui fondent ces réponses), PUIS le traitement qui en découle (le système "
+    "vérifie qu'il en découle) — `bloc` (question 5 avec un marché visé : sa ligne propre, `bloc` = "
+    "cet id), `rattache` (questions 1, 3 ou 4 : s'estime avec les hypothèses de marché d'une "
+    "activité vendue — `bloc` = cette activité, ou la sous-ligne estimée qui en est l'enfant, de "
+    "statut `metier_actuel` — JAMAIS un bloc `en_developpement` ni une plateforme ; déjà vendu sur un "
+    "AUTRE marché : `bloc` = sa sous-ligne estimée), `extension` (question 2 : `bloc` = ce bloc "
+    "`extension_annoncee`), `plateforme` (question 5 sans marché visé : `bloc` = la plateforme), "
+    "`hors_modele` (abandonné, immatériel — AUCUN `bloc`, pas d'`arbre`) ; motif ≥ 20 caractères ; "
+    "une sous-ligne que tu crées pour un élément est SON `bloc` dans l'inventaire, et un élément "
+    "rattaché au segment lui-même n'a PAS de sous-ligne ;\n"
     "  · chaque CELLULE ATTENDUE : si une question source de la variable instruit déjà cette cellule, "
     "son auteur est cette question (`{\"type\": \"question\", \"question_id\": \"...\"}`) ; sinon "
     "`{\"type\": \"demande_ciblee\"}` ; les périodes sont prises dans la liste fournie (jamais "

@@ -24,13 +24,14 @@ from typing import Optional
 
 from app.contracts.formule_grammaire import FormuleInexecutable, noms_de_la_formule
 from app.contracts.modele_entreprise_schema import (
-    Architecture, Bloc, RattachementAgrege, RattachementPublie,
+    Architecture, Bloc, RattachementAgrege, RattachementParent, RattachementPublie, ReponsesArbre,
+    traitement_de_l_arbre,
 )
 from app.modele_entreprise.dimensions import (
     DimensionIncoherente, UniteInfo, conversions_de, dimension_de, verifier_periode_ligne)
 from app.knowledge.perimetre import ordre_des_periodes, premier_niveau_de
 from app.modele_entreprise.faits_publies import (
-    axes_sans_bloc_publie, est_premier_niveau_publie, motif_regroupement_incoherent,
+    axes_sans_bloc_publie, est_premier_niveau_publie, motif_regroupement_incoherent, parent_publie_de,
 )
 from app.modele_entreprise.matiere import Matiere
 from app.modele_entreprise.referentiel import ReferentielModele, _fiche_ou_propre
@@ -423,6 +424,7 @@ def _s11(arch: Architecture, ref: ReferentielModele) -> Optional[str]:
 
 _STATUT_ATTENDU_TRAITEMENT = {
     "bloc": "en_developpement", "rattache": "metier_actuel", "extension": "extension_annoncee",
+    "plateforme": "en_developpement",
 }
 # Ce que le renvoi dit au modèle quand le statut du bloc désigné ne va pas avec le traitement : la
 # RÈGLE à appliquer, pas seulement le statut attendu — mesuré le 2026-10-23 (`mesures/2026-10-23/
@@ -438,6 +440,8 @@ _REGLE_DU_TRAITEMENT = {
                  "vendu sur un NOUVEAU MARCHÉ a SA ligne (traitement `bloc`) — une plateforme ne regroupe "
                  "que des éléments NON nommés (arbre de décision)"),
     "extension": "`extension` désigne le bloc `extension_annoncee` d'un accord non conclu ou d'une activité annoncée",
+    "plateforme": ("`plateforme` désigne un bloc `plateforme: true` : un élément pas encore vendu dont le "
+                   "dossier ne nomme aucun marché visé (question 5 de l'arbre de décision)"),
 }
 _CONSIGNE_NOM_LITTERAL = (
     "recopie pour chacun un passage CONTINU du verbatim, mot pour mot : sans précision ajoutée (marque "
@@ -521,6 +525,11 @@ def _s14(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
                           "`programmes` porte son nom ; une plateforme ne regroupe que des programmes NON "
                           "nommés")
             continue
+        if item.traitement == "plateforme" and not bloc.plateforme:
+            motifs.append(f"[S14] l'entrée `{item.programme}` (traitement `plateforme`) désigne le bloc "
+                          f"`{item.bloc}`, qui n'est pas une plateforme — "
+                          f"{_REGLE_DU_TRAITEMENT['plateforme']}")
+            continue
         attendu = _STATUT_ATTENDU_TRAITEMENT.get(item.traitement)
         if attendu is not None and bloc.statut != attendu:
             motifs.append(f"[S14] l'entrée `{item.programme}` (traitement `{item.traitement}`) "
@@ -559,7 +568,10 @@ def _s15(arch: Architecture, matiere: Matiere) -> tuple[Optional[str], list[str]
     ]
     nommes = len(arch.inventaire_des_programmes)
     nommes_dans_me7 = nommes - len(items_hors_me7)
-    en_plateforme = sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
+    # B4g étape 3 — un élément NOMMÉ mis en plateforme (traitement `plateforme`, question 5 sans marché
+    # visé) a son entrée à l'inventaire ; il n'est pas l'un des « non nommés » que la plateforme compte.
+    en_plateforme = (sum(b.nombre_de_programmes_non_nommes or 0 for b in arch.blocs if b.plateforme)
+                     - sum(1 for item in arch.inventaire_des_programmes if item.traitement == "plateforme"))
     signaux_hors_me7 = [
         f"[S15] « {item.programme} » absent de `me_7`, trouvé dans #"
         f"{_trouve_dans_pieces_ouvertes(_forme_comparable(item.programme), matiere.pieces_ouvertes_texte)} "
@@ -676,6 +688,154 @@ def _s17(arch: Architecture, matiere: Matiere, par_bloc: dict[str, Bloc]) -> Opt
             + f" — recopie TELS QUELS les blocs {imposes} (axe `{pn.axe}`)")
 
 
+# ── [S18] (plan « découpage » B4g, étape 3, 2026-10-24) ─────────────────────────────────────────
+
+def _resume_arbre(r: ReponsesArbre) -> str:
+    oui = lambda v: "oui" if v else "non"  # noqa: E731
+    vendu = oui(r.deja_vendu) + (f" (même marché : {oui(r.meme_marche)})" if r.deja_vendu else "")
+    marche = f"« {r.marche_vise} »" if r.marche_vise else "aucun nommé"
+    return (f"1 type de clients : {oui(r.type_de_clients)} ; 2 accord non conclu : {oui(r.accord_non_conclu)} ; "
+            f"3 déjà vendu : {vendu} ; 4 génération suivante : {oui(r.generation_suivante)} ; "
+            f"5 marché visé : {marche}")
+
+
+def _texte_factuel(matiere: Matiere) -> str:
+    """Ce dans quoi un `marche_vise` se recopie : les réponses de l'analyse, les actualités, le verbatim
+    de `me_7` et les pièces ouvertes — jamais le catalogue ni la structure suggérée (texte générique)."""
+    parts = [*matiere.questions_texte, matiere.notes_flash_texte, matiere.me_7_verbatim or "",
+             *matiere.pieces_ouvertes_texte.values()]
+    return _forme_comparable(" ".join(parts))
+
+
+def _s18(arch: Architecture, ref: ReferentielModele, matiere: Matiere,
+         par_bloc: dict[str, Bloc]) -> Optional[str]:
+    """L'INVENTAIRE À CASES : chaque entrée (sauf `hors_modele`) porte ses réponses à l'arbre, et son
+    traitement est celui qu'elles imposent (`traitement_de_l_arbre`, la première réponse oui décide) ;
+    déjà vendu sur un AUTRE marché → sa sous-ligne estimée ; `marche_vise` est RECOPIÉ du dossier ; les
+    pièces sont citables. Structure, pas sens (#68) : une réponse fausse mais cohérente passe — elle
+    est alors ÉCRITE, sous les yeux du comité. Mesuré avant : RVMD `b4g-etape2/`, deux molécules
+    précoces en lignes propres « dont la taille peut s'estimer » sans aucun marché nommé."""
+    if not ref.inventaire_a_cases:
+        return None
+    citables = set(matiere.pieces_citables) | set(matiere.pieces_ouvertes_texte)
+    texte = _texte_factuel(matiere)
+    motifs: list[str] = []
+    for item in arch.inventaire_des_programmes:
+        if item.traitement == "hors_modele":
+            continue
+        r = item.arbre
+        if r is None:
+            motifs.append(f"`{item.programme}` n'a pas ses réponses à l'arbre (`arbre`)")
+            continue
+        attendu = traitement_de_l_arbre(r)
+        if attendu != item.traitement:
+            motifs.append(f"`{item.programme}` : tes réponses ({_resume_arbre(r)}) donnent le traitement "
+                          f"`{attendu}`, tu as déclaré `{item.traitement}` — corrige la réponse fausse OU le "
+                          "traitement")
+        bloc = par_bloc.get(item.bloc) if item.bloc else None
+        if (attendu == "rattache" and not r.type_de_clients and r.deja_vendu and r.meme_marche is False
+                and bloc is not None and not isinstance(bloc.rattachement, RattachementParent)):
+            motifs.append(f"`{item.programme}` est déjà vendu sur un AUTRE marché que son segment : `bloc` "
+                          f"désigne sa sous-ligne ESTIMÉE (rattachée en parent à son segment), pas `{bloc.id}`")
+        if r.marche_vise and _forme_comparable(r.marche_vise) not in texte:
+            motifs.append(f"`{item.programme}` : le marché visé « {r.marche_vise} » ne figure pas LITTÉRALEMENT "
+                          "dans le dossier — recopie le passage qui le nomme, ou `null` si le dossier n'en "
+                          "nomme aucun (l'élément rejoint alors la plateforme)")
+        hors = sorted(p for p in r.pieces if p not in citables)
+        if hors:
+            motifs.append(f"`{item.programme}` : `arbre.pieces` cite {hors}, hors des pièces citables "
+                          f"{sorted(citables)}")
+    return ("[S18] inventaire à cases : " + " ; ".join(motifs)) if motifs else None
+
+
+# ── [S19] (plan « découpage » B4g, étape 3, arbitrage de l'utilisateur du 2026-10-24) ────────────
+
+_TOLERANCE_COUVERTURE = 0.005
+
+
+def _enfants_publies_couvrent(parent: Bloc, enfants: list[Bloc], matiere: Matiere) -> Optional[bool]:
+    """Les membres publiés `enfants` couvrent-ils EXACTEMENT `parent` (chiffre d'affaires, à la période
+    la plus récente où tous sont publiés) ? `None` si on ne peut pas le dire (parent non publié, ou
+    sans période commune)."""
+    if not isinstance(parent.rattachement, RattachementPublie):
+        return None
+    axe = parent.rattachement.axe
+    m_parent = set(parent.rattachement.membres)
+    m_enfants = {m for e in enfants if isinstance(e.rattachement, RattachementPublie) for m in e.rattachement.membres}
+    par_periode: dict[str, dict[str, float]] = {}
+    for c in _cellules_vent(matiere):
+        if c.get("axe") == axe and c.get("ligne") == "chiffre_affaires" and c.get("v") is not None:
+            par_periode.setdefault(c["periode"], {})[c["membre"]] = c["v"]
+    communes = [p for p, v in par_periode.items() if (m_parent | m_enfants) <= set(v)]
+    if not communes:
+        return None
+    v = par_periode[max(communes, key=_cle_tri_periode)]
+    total = sum(v[m] for m in m_parent)
+    somme = sum(v[m] for m in m_enfants)
+    return abs(total - somme) <= _TOLERANCE_COUVERTURE * abs(total)
+
+
+def _s19(arch: Architecture, ref: ReferentielModele, matiere: Matiere,
+         par_bloc: dict[str, Bloc]) -> tuple[Optional[str], list[str]]:
+    """UN SEUL DÉCOUPAGE PAR SEGMENT : sous un même bloc, soit ses membres publiés enfants, soit des
+    sous-lignes estimées — mélangés, ils se recouvrent. Admis : UN reste estimé quand les membres publiés
+    ne couvrent pas le segment. Mesuré avant : NVDA `b4g-etape2/` — Hyperscale / AI Clouds (clients,
+    publiés) ET Vera CPU (produit, estimé) sous `data_center`, un CPU vendu à un grand client cloud
+    compté dans les deux."""
+    if not ref.un_seul_decoupage_par_segment:
+        return None, []
+    vs = matiere.ventilation_structure
+    motifs: list[str] = []
+    signaux: list[str] = []
+    # Ce que l'inventaire dit de chaque bloc qu'il désigne : la sous-ligne d'un TYPE DE CLIENTS (question 1)
+    # ou d'un PRODUIT (questions 3 à 5) — deux critères de découpage différents.
+    designes = {item.bloc for item in arch.inventaire_des_programmes if item.bloc}
+    nature: dict[str, set[str]] = {}
+    for item in arch.inventaire_des_programmes:
+        if item.bloc and item.arbre is not None:
+            nature.setdefault(item.bloc, set()).add("clients" if item.arbre.type_de_clients else "produit")
+    for parent in arch.blocs:
+        enfants_estimes = [b for b in arch.blocs
+                           if isinstance(b.rattachement, RattachementParent) and b.rattachement.bloc == parent.id
+                           and b.role != "commun"]
+        # Mesuré le 2026-10-24 (`b4g-etape3/nvda`) : Vera Rubin et l'IA souveraine « rattachées à
+        # `data_center` » dans l'inventaire, MAIS chacune dotée d'une sous-ligne que rien ne désigne — et
+        # sous le même segment, des sous-lignes PRODUIT (Vera CPU) et CLIENTS (IA souveraine) qui se recouvrent.
+        orphelins = sorted(b.id for b in enfants_estimes if b.id not in designes)
+        if len(orphelins) > 1:
+            motifs.append(
+                f"sous `{parent.id}`, les sous-lignes estimées {orphelins} ne sont le `bloc` d'AUCUNE entrée de "
+                "l'inventaire (au plus UNE l'est : le reste du segment) — une sous-ligne créée pour un élément "
+                "nommé est SON `bloc` dans l'inventaire ; un élément rattaché au segment lui-même (génération "
+                "suivante, même marché, type de clients sans risque propre) n'a PAS de sous-ligne")
+        natures = {n for b in enfants_estimes for n in nature.get(b.id, ())}
+        if len(natures) > 1:
+            par_nature = {n: sorted(b.id for b in enfants_estimes if n in nature.get(b.id, ())) for n in sorted(natures)}
+            motifs.append(
+                f"sous `{parent.id}`, des sous-lignes par PRODUIT {par_nature['produit']} et par TYPE DE CLIENTS "
+                f"{par_nature['clients']} : deux critères de découpage qui se recouvrent (un produit vendu à ces "
+                "clients serait compté deux fois) — garde le découpage par produit, le type de clients devient une "
+                "information (rattaché au segment, risque cité dans son motif)")
+        publies = sorted(b.id for b in arch.blocs if parent_publie_de(b, par_bloc, vs) == parent.id)
+        estimes = sorted(b.id for b in arch.blocs
+                         if isinstance(b.rattachement, RattachementParent) and b.rattachement.bloc == parent.id)
+        if not (publies and estimes):
+            continue
+        couvre = _enfants_publies_couvrent(parent, [par_bloc[i] for i in publies], matiere)
+        if couvre is True or len(estimes) > 1:
+            pourquoi = ("ils couvrent exactement le segment" if couvre is True
+                        else "un seul reste estimé s'ajoute aux membres publiés qui ne couvrent pas le segment")
+            motifs.append(
+                f"sous `{parent.id}`, les membres publiés {publies} et les sous-lignes estimées {estimes} sont "
+                f"DEUX découpages superposés ({pourquoi}) — garde-en UN : soit les membres publiés, soit des "
+                "sous-lignes estimées et leur reste (les membres publiés deviennent alors une information, "
+                "citée dans le motif du segment)")
+        elif couvre is None:
+            signaux.append(f"[S19] sous `{parent.id}`, membres publiés {publies} et sous-ligne estimée {estimes} : "
+                           "couverture du segment non vérifiable — à lire au comité (reste ou second découpage ?)")
+    return (("[S19] un seul découpage par segment : " + " ; ".join(motifs)) if motifs else None), signaux
+
+
 def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matiere) -> list[str]:
     """[S1]-[S11]. Rend les SIGNAUX ; lève `ArchitectureRefusee` avec TOUS les motifs réunis."""
     par_bloc = {b.id: b for b in arch.blocs}
@@ -745,6 +905,15 @@ def valider_structure(arch: Architecture, ref: ReferentielModele, matiere: Matie
     m17 = _s17(arch, matiere, par_bloc)
     if m17:
         refus.append(m17)
+
+    m18 = _s18(arch, ref, matiere, par_bloc)
+    if m18:
+        refus.append(m18)
+
+    m19, sig19 = _s19(arch, ref, matiere, par_bloc)
+    if m19:
+        refus.append(m19)
+    signaux.extend(sig19)
 
     if refus:
         raise ArchitectureRefusee(" | ".join(refus))

@@ -58,8 +58,10 @@ déjà vendu → génération suivante → nouveau marché), probabilité de suc
 reste seulement si nécessaire ; NVDA C1-C6 ✅ (Vera Rubin et IA souveraine rattachées, Vera CPU sous-ligne
 `metier_actuel`, Hugging Face extension) ; RVMD molécule × indication ✅, noms longs ❌ (cause `me_7` : un nom
 pour trois indications → étape 4). Points ouverts : recouvrement clients × produit sous `data_center` (à
-trancher) ; RMC-5127 / RM-055 en lignes propres sans marché visé nommé (étape 3). **3 — À FAIRE** inventaire à
-cases (réponse à chaque question de l'arbre + pièce, puis traitement ; contrôle cases → traitement), puis 4
+trancher) ; RMC-5127 / RM-055 en lignes propres sans marché visé nommé (étape 3). **3 — EN COURS** (non déployé) inventaire à
+cases ([S18]) + un seul découpage par segment ([S19], produit OU clients) construits ; passage 2 refusé des deux côtés :
+question 3 de l'arbre mal posée (élément au lieu d'élément × marché) — correctif à valider avec l'utilisateur ; Rubin /
+IA souveraine instables sur V4-Pro. Puis 4
 (`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées). Jargon des TITRES du dossier
 (« Patron de départ de l'archétype », « Périodes du classeur ») : levier à part, non traité.
 Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la
