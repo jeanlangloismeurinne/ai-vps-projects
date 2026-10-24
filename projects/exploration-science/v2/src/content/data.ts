@@ -1,5 +1,6 @@
 // The v2 content the app reads, bundled at build time (validated by `npm test`). Every system
-// of content/v2/ is bundled; `?system=<id>` picks the one shown (default: starlink-home).
+// of content/v2/ is bundled; `?system=<id>` picks the one shown, else a page may pin its
+// scene with `<meta name="xs-system" content="<id>">` (previews), else starlink-home.
 import palette from "../../../art/palette.json";
 import type starlinkRender from "../../../content/v2/render/starlink-home.json";
 import type starlinkSources from "../../../content/v2/sources/starlink-home.json";
@@ -21,7 +22,10 @@ const textsFr = byId<typeof starlinkTexts>(import.meta.glob("../../../content/v2
 
 /** Ids of the bundled systems. */
 export const systemIds = Object.keys(systems);
-const requested = new URLSearchParams(window.location.search).get("system") ?? DEFAULT_SYSTEM;
+const requested =
+  new URLSearchParams(window.location.search).get("system") ??
+  document.querySelector<HTMLMetaElement>('meta[name="xs-system"]')?.content ??
+  DEFAULT_SYSTEM;
 if (!systems[requested]) throw new Error(`unknown system: ${requested} (known: ${systemIds.join(", ")})`);
 export const systemId = requested;
 
