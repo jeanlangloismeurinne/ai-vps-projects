@@ -1228,9 +1228,10 @@ ARCH_TECH_MAUVAIS_STATUT_dict["inventaire_des_programmes"][0]["bloc"] = "extensi
 r = valide_ou_motif(Architecture.model_validate(ARCH_TECH_MAUVAIS_STATUT_dict), MATIERE_TECH)
 b.check(r.startswith("[S14]") and "metier_actuel" in r,
         f"[S14] — `rattache` vers un bloc qui n'est pas `metier_actuel` refusé : {r[:300]}")
-b.check("HYPOTHÈSES DE MARCHÉ" in r and "SA ligne" in r and "#143" in r,
-        f"[S14] — le motif de `rattache` mal placé dit la RÈGLE #143 (hypothèses de marché ; programme nommé = "
-        f"sa ligne), pas seulement le statut attendu : {r[:500]}")
+b.check("HYPOTHÈSES DE MARCHÉ" in r and "SA ligne" in r and "arbre de décision" in r
+        and "NOUVEAU MARCHÉ" in r,
+        f"[S14] — le motif de `rattache` mal placé dit la RÈGLE de l'arbre (hypothèses de marché d'un segment "
+        f"vendu ; nouveau marché pas encore vendu = sa ligne), pas seulement le statut attendu : {r[:500]}")
 
 # ── [S15] ─────────────────────────────────────────────────────────────────────────────────────
 r = valide_ou_motif(ARCH_LABO, MATIERE_LABO)
@@ -1582,10 +1583,31 @@ b.check(_arch_mod.MODELE_ARCHITECTE == "deepseek-ai/DeepSeek-V4-Pro-0813",
 b.check(_arch_mod.MODELE_ARCHITECTE in MODEL_COSTS,
         "modèle — le coût de l'architecte est TABULÉ (sinon le repli prudent fausse le bilan)")
 _p = _arch_mod._ARCHITECTE_SYSTEM_PROMPT
-b.check("EXTENSION D'INDICATION" in _p and "NOUVEAU MARCHÉ" in _p and "données "
-        "de marché et de concurrence PROPRES" in _p,
-        "#143 — le prompt pose le critère unique (données de marché et de concurrence propres) et "
-        "nomme l'extension d'indication comme nouveau marché")
+# B4g étape 2 (2026-10-24) : le critère unique #143 (« données de marché propres ») est remplacé par un
+# ARBRE en cinq questions, ordonnées, la première réponse oui décide ; probabilité de succès HORS du choix.
+_q = [_p.find(m) for m in ("1. Est-ce un TYPE DE CLIENTS", "2. Est-ce un ACCORD NON CONCLU",
+                           "3. Est-il DÉJÀ VENDU", "4. Est-ce la GÉNÉRATION SUIVANTE", "5. Sinon, c'est un NOUVEAU MARCHÉ")]
+b.check(all(x >= 0 for x in _q) and _q == sorted(_q) and "PREMIÈRE réponse oui décide" in _p,
+        f"B4g/2 — le prompt pose l'arbre en cinq questions DANS L'ORDRE (client, accord, vendu, génération, "
+        f"nouveau marché) : positions {_q}")
+b.check("La PROBABILITÉ DE SUCCÈS n'entre PAS dans ce choix" in _p and "réussite est incertaine" not in _p
+        and "réussite incertaine" not in _p,
+        "B4g/2 — la probabilité de succès est HORS du critère de découpage (ancienne règle « réussite "
+        "incertaine → sa ligne » retirée, exemple compris)")
+b.check("données de marché et de concurrence PROPRES" not in _p and "(#143)" not in _p,
+        "B4g/2 — l'ancien critère #143 est RETIRÉ (une règle, un détenteur)")
+b.check(all(m in _p for m in ("PHARMACIE, BIOTECHNOLOGIE", "TECHNOLOGIE, SEMI-CONDUCTEURS",
+                              "GRAND GROUPE DIVERSIFIÉ", "JEUNE ENTREPRISE"))
+        and "nouvelle indication d'une molécule déjà vendue est un nouveau marché" in _p,
+        "B4g/2 — paragraphe sectoriel (pharmacie : molécule × indication ; technologie : générations ; grand "
+        "groupe ; jeune entreprise)")
+b.check("SEULEMENT si les sous-lignes ne couvrent pas tout le segment" in _p,
+        "B4g/2 — un « reste du segment » seulement si les sous-lignes ne couvrent pas le segment")
+b.check("recopie « Nom »" in _p,
+        "B4g/2 — le nom SEUL est recopié, pas sa description")
+_intro = _p[:_p.index("PRINCIPES :")]
+b.check(not any(w in _intro for w in ("classeur", "horloge", "archétype", "patron")) and "business plan" in _intro,
+        f"B4g/2 — le rôle est posé en vocabulaire standard (business plan), sans jargon maison : {_intro[:200]}")
 b.check("GÉNÉRATION SUIVANTE d'un produit déjà vendu n'est pas un programme à part" not in _p,
         "#143 — l'ancienne règle « génération suivante → rattachée » (en conflit sur les extensions "
         "d'indication) est RETIRÉE du prompt")

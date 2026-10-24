@@ -53,8 +53,15 @@ rejugé gratuitement sur les sorties gardées : RVMD `b4f` ACCEPTÉE (signal [S1
 **1 ✅** (non déployé) premier niveau imposé par le code (`axes_du_premier_niveau: [activites, secteurs]`, descente
 à l'axe suivant SEULEMENT s'il n'est pas publié), [S17], [R7] ; NVDA C1 ✅ C2 ❌ (sens : étapes 2-4), RVMD sans
 régression ; AAPL/MSFT/AMZN : rien d'imposé (axe produits à deux découpages superposés — dette périmètre).
-**2 — À FAIRE (à co-écrire)** puis 2 (règle en arbre, vocabulaire standard — À CO-ÉCRIRE avec l'utilisateur),
-3 (inventaire à cases), 4 (`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées).
+**2 ✅** (non déployé, formulation validée le 2026-10-24) arbre en cinq questions (client → accord non conclu →
+déjà vendu → génération suivante → nouveau marché), probabilité de succès hors du choix, paragraphe sectoriel,
+reste seulement si nécessaire ; NVDA C1-C6 ✅ (Vera Rubin et IA souveraine rattachées, Vera CPU sous-ligne
+`metier_actuel`, Hugging Face extension) ; RVMD molécule × indication ✅, noms longs ❌ (cause `me_7` : un nom
+pour trois indications → étape 4). Points ouverts : recouvrement clients × produit sous `data_center` (à
+trancher) ; RMC-5127 / RM-055 en lignes propres sans marché visé nommé (étape 3). **3 — À FAIRE** inventaire à
+cases (réponse à chaque question de l'arbre + pièce, puis traitement ; contrôle cases → traitement), puis 4
+(`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées). Jargon des TITRES du dossier
+(« Patron de départ de l'archétype », « Périodes du classeur ») : levier à part, non traité.
 Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la
 granularité ; finesse selon la maturité (grand groupe → grands métiers, startup → produit ou thèse adossée à un
 signal, santé → molécule × indication) ; probabilité de succès hors du découpage ; vocabulaire standard dans TOUS

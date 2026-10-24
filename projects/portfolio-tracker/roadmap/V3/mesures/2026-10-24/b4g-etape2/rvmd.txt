@@ -1,0 +1,123 @@
+Porte : fermée (1)
+  me_2 (modele_economique) — OUVRE — réponse #1335 : un fait important publié depuis rend les pièces caduques — l'historique « sensibilite_passee » n'est pas complété : sa pièce la plus récente est du 2026-06-30, avant le 2026-08-26 (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le chiffre courant « poids_des_premiers_clients » : sa pièce la plus récente, #961 du 2026-06-30, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  me_3 (modele_economique) — OUVRE — réponse #1336 qui tient
+  me_4 (modele_economique) — OUVRE — réponse #1337 qui tient
+  me_5 (modele_economique) — OUVRE — non fondable : toutes les pièces prévues ont été collectées, mais elles ne suffisent pas à fonder une réponse
+  me_7 (modele_economique) — OUVRE — réponse #2624 qui tient
+  mo_4 (defendabilite) — OUVRE — réponse #1420 : un fait important publié depuis rend les pièces caduques — la description annuelle « echeances_contractuelles_ou_legales » : sa pièce la plus récente, #1167 du 2025-12-31, précède le fait qui rouvre la question (8-K du 2026-08-05, items 2.02 (résultats financiers publiés), 9.01 (états financiers et pièces jointes) — rouvre au titre de : reglementaire_favorable (note flash du 2026-10-18 : « On August 5, 2026, Revolution Medicines, Inc. (the “Company”) announced its financial results for the quarter ended June 30, 2026. » · couvert(s) par les comptes : financement (survenu le 2026-04-01), financement (survenu le 2026-05-01), financement (survenu le 2026-06-30), reglementaire_favorable (survenu le 2026-06-30))). Elle reste EXACTE à sa date : périmé n'est pas faux. — fait(s) postérieur(s) lu(s) par l'analyste : 8-K du 2026-08-26 — effet : L'approbation FDA du 2026-08-26 fixe le point de départ des exclusivités NCE (5 ans, jusqu'au 2031-08-26) et Orphan Drug (7 ans, jusqu'au 2033-08-26), ce qui ancre la durée de la barrière réglementaire.
+  mo_6 (defendabilite) — OUVRE — réponse #1416 refusée par le contrôle : le contrôle du manager a refusé la réponse : completude ko — `mo_6` a été déclarée sans objet sous un classement antérieur ; l'émetteur a été reclassé et la question a désormais un objet — elle est à instruire
+  qf_1 (qualite_financiere) — OUVRE — réponse #1685 qui tient
+  qf_3 (qualite_financiere) — OUVRE — réponse #1712 qui tient
+  qf_7 (qualite_financiere) — OUVRE — réponse #1680 qui tient
+  se_2 (secteur_concurrence) — OUVRE — réponse #1441 : un fait important publié depuis rend les pièces caduques — le jugement « consequence_pour_l_entreprise » : sa pièce la plus récente, #1296 du 2024-12-31, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)) ; le jugement « nouveaux_modeles » : sa pièce la plus récente, #1292 du 2026-04-13, précède le fait qui rouvre la question (8-K du 2026-08-26, items 8.01 (autre événement important) — rouvre au titre de : changement_de_stade (note flash du 2026-10-18 : « On August 26, 2026, the U.S. Food and Drug Administration approved RASONQUE™ (daraxonrasib) for the treatment of adult patients with metastatic pancreatic adeno… »)). Elle reste EXACTE à sa date : périmé n'est pas faux.
+  se_3 (secteur_concurrence) — FERME — aucune réponse instruite
+  se_4 (secteur_concurrence) — OUVRE — réponse #1442 qui tient
+
+Architecture RVMD v1 (archétype rentable, famille industrielle, référentiel 1.2.0)
+  · rasonque_pdac_2l [activite/metier_actuel/estime] — estimé, agrégé → `chiffre_affaires`
+    motif : Premier produit approuvé par la FDA le 2026-08-26, commercialisé ; l'émetteur ne publie qu'un secteur, donc bloc estimé raccordé au chiffre d'affaires.
+    pièces : [944]
+    variables : ['chiffre_affaires_du_bloc', 'taille_du_marche', 'croissance_du_marche', 'part_de_marche', 'volume', 'prix_moyen', 'part_recurrente', 'marge_contributive', 'duree_d_exclusivite', 'ventes_au_pic']
+  · rasonque_pdac_1l [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Nouvelle indication d'une molécule déjà vendue, en développement clinique de phase 3 ; nouveau marché pour l'entreprise, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L']
+  · rasonque_pdac_adjuvant [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Nouvelle indication adjuvante d'une molécule déjà vendue, en développement clinique de phase 3 ; nouveau marché, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026) et le PDAC adjuvant (RASolute 304, Phase 3, ouvert depuis décembre 2025)']
+  · zoldonrasib [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Programme en développement de phase 3, nommé par me_7 ; nouveau marché potentiel, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['zoldonrasib']
+  · elironrasib [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Programme en développement de phase 3, nommé par me_7 ; nouveau marché potentiel, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['elironrasib']
+  · rmc_5127 [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Programme en développement de phase 1, nommé par me_7 ; nouveau marché potentiel, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['RMC-5127']
+  · rm_055 [programme/en_developpement/estime] — estimé, agrégé → `recherche_developpement`
+    motif : Programme en développement précoce, nommé par me_7 ; nouveau marché potentiel, pas encore vendu.
+    pièces : [944, 1546]
+    variables : ['probabilite_de_succes', 'cout_restant_de_developpement', 'depense_de_developpement_du_bloc', 'annee_de_lancement', 'ventes_au_pic']
+    programme : ['RM-055']
+  · commun [commun/metier_actuel/estime] — estimé, agrégé → `autres_charges_exploitation`
+    motif : Charges de structure non rattachées à un bloc d'activité pris isolément.
+    pièces : [876]
+    variables : ['couts_communs', 'taux_d_impot', 'capital_par_point_de_croissance']
+Inventaire des programmes :
+  · daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L — bloc → `rasonque_pdac_1l` — Nouvelle indication d'une molécule déjà vendue, pas encore commercialisée dans cette indication ; nouveau marché dont la taille peut s'estimer.
+  · daraxonrasib (RASONQUE) — déjà approuvé pour le PDAC 2L, en développement pour le PDAC 1L (RASolute 303, Phase 3, recrutement actif depuis avril 2026) et le PDAC adjuvant (RASolute 304, Phase 3, ouvert depuis décembre 2025) — bloc → `rasonque_pdac_adjuvant` — Nouvelle indication adjuvante d'une molécule déjà vendue, pas encore commercialisée ; nouveau marché dont la taille peut s'estimer.
+  · zoldonrasib — bloc → `zoldonrasib` — Programme en développement de phase 3, pas encore vendu ; nouveau marché dont la taille peut s'estimer.
+  · elironrasib — bloc → `elironrasib` — Programme en développement de phase 3, pas encore vendu ; nouveau marché dont la taille peut s'estimer.
+  · RMC-5127 — bloc → `rmc_5127` — Programme en développement de phase 1, pas encore vendu ; nouveau marché dont la taille peut s'estimer.
+  · RM-055 — bloc → `rm_055` — Programme en développement précoce, pas encore vendu ; nouveau marché dont la taille peut s'estimer.
+Passage à l'agrégé :
+  · chiffre_affaires = rasonque_pdac_2l__chiffre_affaires_du_bloc
+  · recherche_developpement = rasonque_pdac_1l__depense_de_developpement_du_bloc + rasonque_pdac_adjuvant__depense_de_developpement_du_bloc + zoldonrasib__depense_de_developpement_du_bloc + elironrasib__depense_de_developpement_du_bloc + rmc_5127__depense_de_developpement_du_bloc + rm_055__depense_de_developpement_du_bloc + commun__couts_communs
+Cellules attendues :
+  · demande ciblée :
+      rasonque_pdac_2l.chiffre_affaires_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.taille_du_marche [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.croissance_du_marche [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.part_de_marche [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.volume [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.prix_moyen [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.part_recurrente [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.marge_contributive [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_2l.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_1l.probabilite_de_succes [sans_periode]
+      rasonque_pdac_1l.cout_restant_de_developpement [sans_periode]
+      rasonque_pdac_1l.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_1l.annee_de_lancement [sans_periode]
+      rasonque_pdac_1l.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_adjuvant.probabilite_de_succes [sans_periode]
+      rasonque_pdac_adjuvant.cout_restant_de_developpement [sans_periode]
+      rasonque_pdac_adjuvant.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rasonque_pdac_adjuvant.annee_de_lancement [sans_periode]
+      rasonque_pdac_adjuvant.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      zoldonrasib.probabilite_de_succes [sans_periode]
+      zoldonrasib.cout_restant_de_developpement [sans_periode]
+      zoldonrasib.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      zoldonrasib.annee_de_lancement [sans_periode]
+      zoldonrasib.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      elironrasib.probabilite_de_succes [sans_periode]
+      elironrasib.cout_restant_de_developpement [sans_periode]
+      elironrasib.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      elironrasib.annee_de_lancement [sans_periode]
+      elironrasib.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rmc_5127.probabilite_de_succes [sans_periode]
+      rmc_5127.cout_restant_de_developpement [sans_periode]
+      rmc_5127.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rmc_5127.annee_de_lancement [sans_periode]
+      rmc_5127.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rm_055.probabilite_de_succes [sans_periode]
+      rm_055.cout_restant_de_developpement [sans_periode]
+      rm_055.depense_de_developpement_du_bloc [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      rm_055.annee_de_lancement [sans_periode]
+      rm_055.ventes_au_pic [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+      commun.couts_communs [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+  · question mo_4 :
+      rasonque_pdac_2l.duree_d_exclusivite [sans_periode]
+  · question qf_1 :
+      commun.taux_d_impot [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+  · question qf_3 :
+      commun.capital_par_point_de_croissance [FY2026, FY2027, FY2028, FY2029, FY2030, FY2031, FY2032, FY2033, FY2034, FY2035]
+
+Signaux :
+  · [S15] décompte à lire au comité : l'inventaire nomme 6 élément(s) PRÉSENT(S) DANS `me_7`, `me_7` en NOMME 5 (`nombre_de_programmes` = 5, dont `nombre_de_programmes_non_nommes` = 0) — chaque élément nommé par `me_7` a SON entrée, sous son nom, même celui que tu rattaches ou mets hors modèle
+
+Demandes de recherche (ce que le dossier ne contient pas) :
+  · Taille et concurrence du marché PDAC 2L pour RASONQUE, non publiées par l'émetteur. — `taille_du_marche` et `part_de_marche` du bloc ne peuvent pas s'estimer sans elles. (blocs ['rasonque_pdac_2l'])
+  · Taille et concurrence des marchés PDAC 1L, PDAC adjuvant, NSCLC 1L G12C, et des autres indications visées par les programmes en développement. — `taille_du_marche`, `part_de_marche` et `ventes_au_pic` des blocs ne peuvent pas s'estimer sans elles. (blocs ['rasonque_pdac_1l', 'rasonque_pdac_adjuvant', 'zoldonrasib', 'elironrasib', 'rmc_5127', 'rm_055'])
+
+Coût :0.1092 $ (2 tentative(s))
+JSON écrit dans /root/ai-vps-projects/projects/portfolio-tracker/roadmap/V3/mesures/2026-10-24/b4g-etape2/rvmd.json
+BILAN architecte RVMD : porte fermée (1) — proposée v1 — 8 blocs (0 publiés / 8 estimés), 43 cellules attendues, 1 signaux, 0.1092 $

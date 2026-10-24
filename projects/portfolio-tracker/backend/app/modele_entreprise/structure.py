@@ -429,14 +429,15 @@ _STATUT_ATTENDU_TRAITEMENT = {
 # b4d-apres/`) : « attendu `metier_actuel` » seul a fait rattacher des programmes nommés à une
 # plateforme, deux fois de suite, au lieu de leur donner leur ligne.
 _REGLE_DU_TRAITEMENT = {
-    "bloc": ("`bloc` = la ligne PROPRE d'un programme à réussite incertaine (un bloc `en_developpement` "
-             "à lui) ; un produit déjà vendu n'est pas un programme : `rattache` vers son activité"),
-    "rattache": ("`rattache` ne vaut que pour ce qui s'estime avec les HYPOTHÈSES DE MARCHÉ d'une activité "
-                 "déjà vendue (génération suivante, nouveau segment de clients), vers le bloc `metier_actuel` "
-                 "qui la porte ; ce qui demande ses propres données de marché et de concurrence (programme "
-                 "nommé, extension d'indication) a SA ligne (traitement `bloc`) — une plateforme ne regroupe "
-                 "que des programmes NON nommés (#143)"),
-    "extension": "`extension` désigne le bloc `extension_annoncee` de l'activité annoncée",
+    "bloc": ("`bloc` = la ligne PROPRE d'un élément PAS ENCORE VENDU sur un NOUVEAU MARCHÉ dont la taille "
+             "s'estime (question 5 de l'arbre ; un bloc `en_developpement` à lui) ; un produit déjà vendu, "
+             "ou la génération suivante d'un produit vendu, n'en a pas : `rattache` vers son segment"),
+    "rattache": ("`rattache` vaut pour ce qui s'estime avec les HYPOTHÈSES DE MARCHÉ d'un segment déjà vendu "
+                 "(type de clients, produit déjà vendu, génération suivante — questions 1, 3, 4 de l'arbre), "
+                 "vers le bloc `metier_actuel` qui le porte ou sa sous-ligne estimée ; ce qui n'est pas encore "
+                 "vendu sur un NOUVEAU MARCHÉ a SA ligne (traitement `bloc`) — une plateforme ne regroupe "
+                 "que des éléments NON nommés (arbre de décision)"),
+    "extension": "`extension` désigne le bloc `extension_annoncee` d'un accord non conclu ou d'une activité annoncée",
 }
 _CONSIGNE_NOM_LITTERAL = (
     "recopie pour chacun un passage CONTINU du verbatim, mot pour mot : sans précision ajoutée (marque "

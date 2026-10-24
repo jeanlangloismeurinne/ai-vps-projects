@@ -137,7 +137,15 @@ mutations=(
   "$A¦PREMIER NIVEAU IMPOSÉ : quand le dossier contient¦PREMIER NIVEAU : si le dossier contient¦la consigne dit de recopier le premier niveau"
   "$R¦    if inconnus:¦    if False:¦un axe inconnu dans"
   "$A¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Pro-0813\"¦MODELE_ARCHITECTE = \"deepseek-ai/DeepSeek-V4-Flash-0731\"¦tourne sur V4-Pro"
-  "$A¦NOUVEAU MARCHÉ, donc un bloc à elle¦marché, donc un bloc à elle¦nomme l'extension d'indication"
+  # Plan « découpage » B4g, étape 2 (2026-10-24) — l'arbre de décision remplace le critère #143.
+  "$A¦      3. Est-il DÉJÀ VENDU (un chiffre¦      3. Est-il vendu (un chiffre¦DANS L'ORDRE"
+  "$A¦    La PROBABILITÉ DE SUCCÈS n'entre PAS dans ce choix¦    La probabilité de succès compte¦HORS du critère"
+  "$A¦(question 5) : sa propre ligne.¦réussite incertaine : sa propre ligne.¦HORS du critère"
+  "$A¦autre marché (question 3 ou 5). GRAND GROUPE DIVERSIFIÉ¦autre marché (question 3 ou 5). GRAND GROUPE¦paragraphe sectoriel"
+  "$A¦rattaché au même segment, SEULEMENT si¦rattaché au même segment, si¦reste du segment"
+  "$A¦    \"« Nom » ;¦    \"« son nom » ;¦le nom SEUL"
+  "$A¦Tu es l'analyste d'un fonds d'investissement qui dessine¦Tu es l'architecte du classeur qui dessine¦vocabulaire standard"
+  "$S¦que des éléments NON nommés (arbre de décision)¦que des éléments NON nommés¦RÈGLE de l'arbre"
   "$A¦    except AgentOutputInvalid as e:¦    except ZeroDivisionError as e:¦sortie hors contrat : PLANTAGE"
 )
 
