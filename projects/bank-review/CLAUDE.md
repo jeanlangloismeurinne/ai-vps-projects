@@ -2,18 +2,16 @@
 
 ## Déploiement
 
-- Plateforme : Coolify (http://jlmvpscode.duckdns.org:8000)
-- Projet Coolify : `bank-review` (uuid `xfomht7ul2kd3iljq9xphpii`)
-- App uuid : `ji9jg7ngkva7j4d2uic05d3v`
-- Base Directory Coolify : `/projects/bank-review`
-- Domaine production : https://bank.jlmvpscode.duckdns.org
-- Réseau Docker : `coolify` (shared-postgres et shared-redis y sont connectés)
+- Plateforme : **docker compose** (`docker-compose.yml` du projet) — Coolify n'est plus le plan de
+  contrôle du VPS depuis la migration du 2026-09-03.
+- Domaine production : https://bank.jlmvpscode.duckdns.org (TLS par `coolify-proxy`, Traefik)
+- Conteneur : `bank-review` (port interne 8000)
+- Réseau Docker : `coolify` (le nom est resté ; shared-postgres et shared-redis y sont connectés)
 
-Variables d'environnement requises (configurées dans Coolify) :
-- `DATABASE_URL` → `postgresql://bank:bank_secure_pwd@shared-postgres:5432/db_bank`
-- `ANTHROPIC_API_KEY`
-- `SECRET_KEY` (token hex 32 bytes)
-- `APP_PASSWORD`
+Variables d'environnement : fichier `projects/bank-review/.env` (mode 600, non versionné) —
+`DATABASE_URL`, `ANTHROPIC_API_KEY`, `SECRET_KEY`, `APP_PASSWORD`, `INTERNAL_API_KEY`,
+`POSTGRES_ADMIN_URL`, `DEEPINFRA_API_KEY`. Les modifier via `compose-deploy.sh -e KEY=VALUE`
+(la valeur n'est jamais affichée), pas à la main.
 
 ## Développement local
 
@@ -241,34 +239,21 @@ Le `.replace(" ", "").replace("\u00a0", "")` doit précéder le `.replace(",", "
 
 ## Workflow de déploiement production
 
-Le repo source Coolify est **GitHub** (`jeanlangloismeurinne/ai-vps-projects`, branche `main`).
-Un rebuild Coolify sans push GitHub préalable redéploie l'ancienne version.
-
-Ordre obligatoire :
-1. `git push origin main`
-2. Déclencher le rebuild via l'API Coolify :
+Un seul appel, depuis la racine du repo :
 
 ```bash
-curl -s -X POST "http://localhost:8000/api/v1/applications/ji9jg7ngkva7j4d2uic05d3v/start" \
-  -H "Authorization: Bearer {id}|{token}"
+# commit des fichiers listés → push → build → up → vérification
+infrastructure/compose-deploy.sh bank-review -m "<message>" -f "projects/bank-review/…"
+# ou, si le commit est déjà poussé :
+infrastructure/compose-deploy.sh bank-review --rebuild-only
 ```
 
-Attendre `status: finished` avant de valider en prod.
+Le build est synchrone et le script ne conclut au succès que si le domaine répond 200 **et** n'est
+servi que par un seul conteneur (pas de double routage ancien/nouveau code). Seule la ligne
+`RESULT:` finale compte. Codes de sortie et détails : en-tête de `infrastructure/compose-deploy.sh`.
 
-## API Coolify
-
-Le token stocké en DB (`personal_access_tokens.token`) est un hash SHA-256 — inutilisable directement.
-Pour créer un token utilisable :
-
-```bash
-NEW_TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
-NEW_HASH=$(python3 -c "import hashlib; print(hashlib.sha256('$NEW_TOKEN'.encode()).hexdigest())")
-docker exec coolify-db sh -c "psql -U coolify coolify -c \"INSERT INTO personal_access_tokens (tokenable_type, tokenable_id, name, token, abilities, team_id, created_at, updated_at) SELECT 'App\\\\Models\\\\User', tokenable_id, 'script', '$NEW_HASH', '[\\\"*\\\"]', 0, NOW(), NOW() FROM personal_access_tokens WHERE id=1;\""
-NEW_ID=$(docker exec coolify-db sh -c "psql -U coolify coolify -t -c \"SELECT id FROM personal_access_tokens ORDER BY id DESC LIMIT 1;\"" | tr -d ' ')
-echo "Bearer ${NEW_ID}|${NEW_TOKEN}"
-```
-
-Utilisation : `curl -H "Authorization: Bearer {id}|{token}" http://localhost:8000/api/v1/...`
+Après un correctif, vérifier dans le conteneur que le nouveau code tourne :
+`docker exec bank-review grep -c "<motif>" app/…`.
 
 ## Dépendances sensibles
 
