@@ -27,6 +27,29 @@ from app.services.budget import (
 
 router = APIRouter()
 
+
+def _year_id_for_date(years: list[dict], d) -> int | None:
+    if not d:
+        return None
+    ds = str(d)
+    return next((y["id"] for y in years if str(y["start_date"]) <= ds <= str(y["end_date"])), None)
+
+
+async def _resolve_session_year(date_max) -> tuple[int | None, dict | None]:
+    """Auto-create the next budget year if date_max overflows the latest one, then return
+    (year_id covering date_max, newly created year or None)."""
+    years = await get_budget_years()
+    new_year = None
+    if date_max and years:
+        latest_end = years[0]["end_date"]
+        if isinstance(latest_end, str):
+            latest_end = date.fromisoformat(latest_end)
+        if date_max > latest_end:
+            new_year = await create_next_budget_year()
+            if new_year:
+                years = await get_budget_years()
+    return _year_id_for_date(years, date_max), new_year
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -317,29 +340,15 @@ async def import_confirm(request: Request, payload: ConfirmPayload):
         date_min = min(dates) if dates else None
         date_max = max(dates) if dates else None
 
-        years = await get_budget_years()
-        year_id_for_session = None
-        if date_max and years:
-            max_str = str(date_max)
-            year_id_for_session = next(
-                (y["id"] for y in years if str(y["start_date"]) <= max_str <= str(y["end_date"])),
-                None,
-            )
+        # Create the next budget year BEFORE resolving the session's year: the first import
+        # of a new fiscal year otherwise gets year_id NULL (empty category list in history).
+        year_id_for_session, new_year = await _resolve_session_year(date_max)
 
         session_id = await create_import_session(
             payload.filename, nb, date_min, date_max, year_id_for_session
         )
         dedup_keys = [r["dedup_key"] for r in db_rows if r.get("dedup_key")]
         await link_transactions_to_session(dedup_keys, session_id)
-
-        # Auto-create next budget year if needed
-        new_year = None
-        if date_max and years:
-            latest_end = years[0]["end_date"]
-            if isinstance(latest_end, str):
-                latest_end = date.fromisoformat(latest_end)
-            if date_max > latest_end:
-                new_year = await create_next_budget_year()
 
         return {"added": nb, "new_year": new_year, "session_id": session_id}
     except Exception as e:
@@ -356,9 +365,12 @@ async def import_history(request: Request, session_id: int):
         return HTMLResponse("Import introuvable.", status_code=404)
 
     # Fetch categories for this session's year
+    # Fallback on date_max: sessions created as the first import of a new fiscal year
+    # were stored with year_id NULL, which left the category <select> empty.
+    year_id = session.get("year_id") or _year_id_for_date(await get_budget_years(), session.get("date_max"))
     categories = []
-    if session.get("year_id"):
-        lines = await get_all_categories_for_year(session["year_id"])
+    if year_id:
+        lines = await get_all_categories_for_year(year_id)
         categories = sorted([l["category"] for l in lines])
 
     rules = await get_classifier_rules_all()
@@ -498,28 +510,15 @@ async def import_direct(
         date_min = min(dates) if dates else None
         date_max = max(dates) if dates else None
 
-        years = await get_budget_years()
-        year_id_for_session = None
-        if date_max and years:
-            max_str = str(date_max)
-            year_id_for_session = next(
-                (y["id"] for y in years if str(y["start_date"]) <= max_str <= str(y["end_date"])),
-                None,
-            )
+        # Create the next budget year BEFORE resolving the session's year: the first import
+        # of a new fiscal year otherwise gets year_id NULL (empty category list in history).
+        year_id_for_session, new_year = await _resolve_session_year(date_max)
 
         session_id = await create_import_session(
             file.filename, nb, date_min, date_max, year_id_for_session
         )
         dedup_keys = [r["dedup_key"] for r in db_rows if r.get("dedup_key")]
         await link_transactions_to_session(dedup_keys, session_id)
-
-        new_year = None
-        if date_max and years:
-            latest_end = years[0]["end_date"]
-            if isinstance(latest_end, str):
-                latest_end = date.fromisoformat(latest_end)
-            if date_max > latest_end:
-                new_year = await create_next_budget_year()
 
         return {
             "session_id": session_id,
