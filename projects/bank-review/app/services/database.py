@@ -557,7 +557,13 @@ async def migrate_classifier_tables() -> None:
 async def migrate_budget_line_notes(db_url: str | None = None) -> None:
     """Idempotent startup migration: add budget_lines.notes (sous-jacents du chiffrage, par exercice)."""
     pool = await get_pool(db_url)
-    await pool.execute("ALTER TABLE budget_lines ADD COLUMN IF NOT EXISTS notes TEXT")
+    # Check first: ALTER requires table ownership even when the column exists, and on db_bank
+    # budget_lines belongs to `admin`, not to the app role — the column is added there by hand.
+    exists = await pool.fetchval(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'budget_lines' AND column_name = 'notes'"
+    )
+    if not exists:
+        await pool.execute("ALTER TABLE budget_lines ADD COLUMN notes TEXT")
 
 
 async def get_classifier_rules_all() -> list[dict]:
