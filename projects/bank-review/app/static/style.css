@@ -617,6 +617,9 @@ tr.edited .cat-select { border-color:var(--accent); }
 /* Clickable budget cell */
 .cell-link { cursor: pointer; }
 .cell-link:hover { text-decoration: underline; opacity: 0.85; }
+.cat-notes-link { cursor: pointer; }
+.cat-notes-link:hover { text-decoration: underline dotted; }
+.notes-mark { font-size: 11px; }
 
 /* Category management */
 .cats-input {

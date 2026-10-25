@@ -108,7 +108,9 @@
 
       {% for cat in group.categories %}
       <tr class="cat-row" data-group="{{ gidx }}">
-        <td class="col-cat cat-name">{{ cat.category }}</td>
+        <td class="col-cat cat-name cat-notes-link" data-cat="{{ cat.category|e }}"
+            onclick="openNotes(this.dataset.cat)"
+            title="Sous-jacents du chiffrage — {{ cat.category }}">{{ cat.category }}<span class="notes-mark" {% if not cat.has_notes %}hidden{% endif %}> 📝</span></td>
         <td class="col-budget">
           <input type="number" class="budget-input"
                  value="{{ cat.monthly_budget|int }}"
@@ -172,6 +174,30 @@
       <div class="modal-ft">
         <span id="drillMsg" class="modal-msg"></span>
         <button class="btn-confirm" id="drillSaveBtn" onclick="saveDrillChanges()">Enregistrer les modifications</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Budget notes modal (sous-jacents du chiffrage, par exercice) -->
+  <div id="notesModal" class="modal-overlay hidden" onclick="closeNotesOutside(event)">
+    <div class="modal-box" style="max-width:620px">
+      <div class="modal-hd">
+        <strong id="notesTitle"></strong>
+        <button class="modal-close" onclick="closeNotes()">✕</button>
+      </div>
+      <div class="modal-bd" style="padding:20px">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px">
+          Valable pour cet exercice uniquement. Reconduit à la création de l'exercice suivant, où il peut être modifié sans toucher celui-ci.
+        </p>
+        <textarea id="notesText" class="cats-input" rows="10" style="width:100%;resize:vertical;font-family:inherit"
+                  placeholder="Hypothèses, détail du montant, échéances…"></textarea>
+        <div id="notesPrev" style="display:none;margin-top:10px;font-size:13px">
+          <button type="button" class="btn-secondary" onclick="reuseNotesPrev()">Reprendre le texte de <span id="notesPrevLabel"></span></button>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <span id="notesMsg" class="modal-msg"></span>
+        <button class="btn-confirm" id="notesSaveBtn" onclick="saveNotes()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -456,6 +482,63 @@
       if (banner) banner.remove();
     }
   }
+
+  // ── Budget notes ───────────────────────────────────────────────────────────
+
+  let _notesCat = null;
+  let _notesPrev = '';
+
+  async function openNotes(category) {
+    _notesCat = category;
+    _notesPrev = '';
+    const text = document.getElementById('notesText');
+    document.getElementById('notesTitle').textContent = `${category} — sous-jacents du chiffrage`;
+    document.getElementById('notesMsg').textContent = '';
+    document.getElementById('notesPrev').style.display = 'none';
+    text.value = '';
+    text.disabled = true;
+    document.getElementById('notesModal').classList.remove('hidden');
+    const res = await fetch(`/api/budget/notes?year_id=${YEAR_ID}&category=${encodeURIComponent(category)}`);
+    if (!res.ok) {
+      document.getElementById('notesMsg').textContent = `Chargement impossible (erreur ${res.status}).`;
+      return;
+    }
+    const data = await res.json();
+    text.value = data.notes;
+    text.disabled = false;
+    _notesPrev = data.prev_notes;
+    if (!data.notes && data.prev_notes) {
+      document.getElementById('notesPrevLabel').textContent = data.prev_year_label;
+      document.getElementById('notesPrev').style.display = 'block';
+    }
+    text.focus();
+  }
+
+  function reuseNotesPrev() {
+    document.getElementById('notesText').value = _notesPrev;
+    document.getElementById('notesPrev').style.display = 'none';
+  }
+
+  async function saveNotes() {
+    const notes = document.getElementById('notesText').value;
+    const msg = document.getElementById('notesMsg');
+    const res = await fetch('/api/budget/notes', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({year_id: YEAR_ID, category: _notesCat, notes}),
+    });
+    if (!res.ok) {
+      msg.textContent = `Enregistrement impossible (erreur ${res.status}).`;
+      return;
+    }
+    document.querySelectorAll('.cat-notes-link').forEach(td => {
+      if (td.dataset.cat === _notesCat) td.querySelector('.notes-mark').hidden = !notes.trim();
+    });
+    closeNotes();
+  }
+
+  function closeNotes() { document.getElementById('notesModal').classList.add('hidden'); }
+  function closeNotesOutside(e) { if (e.target.id === 'notesModal') closeNotes(); }
 
   // ── Rule modal ─────────────────────────────────────────────────────────────
 

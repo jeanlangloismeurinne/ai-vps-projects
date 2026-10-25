@@ -57,8 +57,8 @@ async def create_next_budget_year() -> dict | None:
             )
             await conn.execute(
                 """
-                INSERT INTO budget_lines (year_id, category, monthly_budget, group_name, sort_order, is_income)
-                SELECT $1, category, monthly_budget, group_name, sort_order, is_income
+                INSERT INTO budget_lines (year_id, category, monthly_budget, group_name, sort_order, is_income, notes)
+                SELECT $1, category, monthly_budget, group_name, sort_order, is_income, notes
                 FROM budget_lines
                 WHERE year_id = $2
                 ON CONFLICT (year_id, category) DO NOTHING
@@ -73,7 +73,8 @@ async def get_budget_lines(year_id: int) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
         """
-        SELECT category, monthly_budget, group_name, sort_order, is_income
+        SELECT category, monthly_budget, group_name, sort_order, is_income,
+               COALESCE(notes, '') <> '' AS has_notes
         FROM budget_lines
         WHERE year_id = $1
         ORDER BY sort_order
@@ -81,6 +82,45 @@ async def get_budget_lines(year_id: int) -> list[dict]:
         year_id,
     )
     return [dict(r) for r in rows]
+
+
+async def get_budget_line_notes(year_id: int, category: str) -> dict | None:
+    """
+    Notes of one category for one fiscal year, plus the previous year's notes
+    for the same category (offered for reprise when this year's are empty).
+    """
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """
+        SELECT bl.notes, prev.notes AS prev_notes, py.year_label AS prev_year_label
+        FROM budget_lines bl
+        JOIN budget_years y ON y.id = bl.year_id
+        LEFT JOIN LATERAL (
+            SELECT id, year_label FROM budget_years
+            WHERE end_date < y.start_date ORDER BY end_date DESC LIMIT 1
+        ) py ON TRUE
+        LEFT JOIN budget_lines prev ON prev.year_id = py.id AND prev.category = bl.category
+        WHERE bl.year_id = $1 AND bl.category = $2
+        """,
+        year_id, category,
+    )
+    if not row:
+        return None
+    return {
+        "notes": row["notes"] or "",
+        "prev_notes": row["prev_notes"] or "",
+        "prev_year_label": row["prev_year_label"],
+    }
+
+
+async def update_budget_line_notes(year_id: int, category: str, notes: str) -> bool:
+    """Write notes on this year's line only — other years keep their own copy."""
+    pool = await get_pool()
+    result = await pool.execute(
+        "UPDATE budget_lines SET notes = $3 WHERE year_id = $1 AND category = $2",
+        year_id, category, notes.strip() or None,
+    )
+    return result != "UPDATE 0"
 
 
 async def update_budget_line(year_id: int, category: str, monthly_budget: float):
@@ -188,6 +228,7 @@ def build_budget_view(
             "category":      cat,
             "monthly_budget": budget,
             "is_income":     line["is_income"],
+            "has_notes":     line.get("has_notes", False),
             "monthly":       monthly,
             "ytd_actual":    round(ytd_actual, 2),
             "ytd_budget":    round(ytd_budget, 2),

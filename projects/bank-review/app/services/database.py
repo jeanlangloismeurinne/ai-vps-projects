@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS budget_lines (
     group_name     VARCHAR(60) NOT NULL,
     sort_order     INTEGER NOT NULL DEFAULT 0,
     is_income      BOOLEAN DEFAULT FALSE,
+    notes          TEXT,
     UNIQUE(year_id, category)
 );
 
@@ -551,6 +552,12 @@ async def migrate_classifier_tables() -> None:
                 "INSERT INTO classifier_rules (stage, sort_order, keywords, match_mode, category, source) VALUES ($1,$2,$3,$4,$5,$6)",
                 r["stage"], r["sort_order"], r["keywords"], r["match_mode"], r["category"], r["source"],
             )
+
+
+async def migrate_budget_line_notes(db_url: str | None = None) -> None:
+    """Idempotent startup migration: add budget_lines.notes (sous-jacents du chiffrage, par exercice)."""
+    pool = await get_pool(db_url)
+    await pool.execute("ALTER TABLE budget_lines ADD COLUMN IF NOT EXISTS notes TEXT")
 
 
 async def get_classifier_rules_all() -> list[dict]:

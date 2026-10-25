@@ -107,6 +107,14 @@ et aux `transactions` dont `date_op` est dans la plage de cette année.
 Les autres années et leurs transactions sont intactes.
 Ne jamais faire un UPDATE direct sur `budget_lines.category` sans passer par cette fonction.
 
+### Sous-jacents du chiffrage — `budget_lines.notes`, un texte par exercice
+
+Clic sur le nom d'une catégorie (page budget) → pop-up de texte libre (`GET/PUT /api/budget/notes`).
+Le texte vit sur la ligne `budget_lines` de l'exercice : `create_next_budget_year()` le **recopie**
+dans le nouvel exercice, puis chaque copie évolue seule (modifier N+1 ne touche jamais N).
+Pour un exercice déjà créé avant la saisie, la pop-up propose « Reprendre le texte de N-1 » si le champ est vide.
+Colonne ajoutée au démarrage sur **toutes** les bases utilisateurs (`migrate_budget_line_notes`, boucle sur `users`).
+
 ### Classifieur — pipeline à étages (depuis mai 2026)
 
 Les règles sont stockées en DB dans `classifier_rules` (plus rien de hardcodé dans `classifier.py`).

@@ -12,6 +12,7 @@ from app.services.budget import (
     update_budget_category, rename_budget_category, delete_budget_category,
     dismiss_budget_update_flag, get_uncovered_count, get_month_transactions,
     get_uncovered_transactions, get_category_year_transactions,
+    get_budget_line_notes, update_budget_line_notes,
 )
 from app.services.database import (
     get_classification_rules, create_classification_rule,
@@ -240,6 +241,31 @@ async def budget_update(request: Request, payload: BudgetUpdate):
     if not is_authenticated(request):
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     await update_budget_line(payload.year_id, payload.category, payload.monthly_budget)
+    return {"ok": True}
+
+
+class NotesPayload(BaseModel):
+    year_id: int
+    category: str
+    notes: str
+
+
+@router.get("/api/budget/notes")
+async def budget_notes_get(request: Request, year_id: int, category: str):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    data = await get_budget_line_notes(year_id, category)
+    if data is None:
+        return JSONResponse({"error": "Catégorie introuvable pour cet exercice."}, status_code=404)
+    return data
+
+
+@router.put("/api/budget/notes")
+async def budget_notes_put(request: Request, payload: NotesPayload):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    if not await update_budget_line_notes(payload.year_id, payload.category, payload.notes):
+        return JSONResponse({"error": "Catégorie introuvable pour cet exercice."}, status_code=404)
     return {"ok": True}
 
 
