@@ -285,8 +285,8 @@
           </select></td>
           <td>${r.confidence != null ? r.confidence + '%' : '—'}</td>
           <td><span class="method-badge ${esc(r.classification_method)}" title="${esc(r.precision_note)}">${esc(r.classification_method) || '—'}</span></td>
-          <td><button class="btn-rule-add" title="Toujours classifier ainsi"
-            onclick="openRuleModalInline(${JSON.stringify(lbl)}, document.querySelector('.cat-select[data-id=\\'${r.id}\\']'))">⚡</button></td>
+          <td><button class="btn-rule-add" title="Toujours classifier ainsi" data-label-clean="${esc(lbl)}"
+            onclick="openRuleModalInline(this.dataset.labelClean, this.closest('tr').querySelector('.cat-select'))">⚡</button></td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
     document.getElementById('drillContent').innerHTML = html;
@@ -354,7 +354,7 @@
         <td><input class="cats-input cats-num" type="number" value="${c.sort_order}" min="0" id="cat-sort-${c.id}"></td>
         <td class="cats-actions">
           <button class="btn-secondary small" onclick="saveCatRow(${c.id})">Sauver</button>
-          <button class="btn-remove" onclick="deleteCatRow(${c.id}, ${JSON.stringify(c.category)})">✕</button>
+          <button class="btn-remove" data-name="${esc(c.category)}" onclick="deleteCatRow(${c.id}, this.dataset.name)">✕</button>
         </td>
       </tr>`).join('');
 
@@ -441,6 +441,8 @@
     if (res.ok) {
       _allCats = null;
       renderCatsTable(await loadCats());
+    } else {
+      alert(`Suppression de "${catName}" impossible (erreur ${res.status}).`);
     }
   }
 
