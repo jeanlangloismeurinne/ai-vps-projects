@@ -115,6 +115,16 @@ dans le nouvel exercice, puis chaque copie évolue seule (modifier N+1 ne touche
 Pour un exercice déjà créé avant la saisie, la pop-up propose « Reprendre le texte de N-1 » si le champ est vide.
 Colonne ajoutée au démarrage sur **toutes** les bases utilisateurs (`migrate_budget_line_notes`, boucle sur `users`).
 
+### Re-datation d'une ligne — `transactions.date_op_original`
+
+Bouton ✎ sur la date (vue mois, historique d'import, drill-down budget) → `POST /api/transactions/{id}/redate`.
+Sert aux virements de compensation rattachés à un autre mois/exercice : `date_op` (qui pilote l'agrégation
+budget) est déplacée, la date banque est gardée dans `date_op_original` au **premier** déplacement et
+remise à NULL si l'on revient à cette date. **`dedup_key` n'est jamais recalculée** : elle encode la
+date banque, ce qui garde la ligne dédoublonnée au ré-import. JS partagé : `static/tx-redate.js`
+(toute `<td class="tx-date" data-txid data-date data-orig>`). Colonne ajoutée par
+`migrate_transaction_date_original` (check-first ; sur `db_bank` ajoutée à la main en `admin`).
+
 ### Classifieur — pipeline à étages (depuis mai 2026)
 
 Les règles sont stockées en DB dans `classifier_rules` (plus rien de hardcodé dans `classifier.py`).

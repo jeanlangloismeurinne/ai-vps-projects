@@ -308,7 +308,7 @@ async def get_transactions_by_cell(category: str, month: str) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
         """
-        SELECT id, date_op, real_date, label, label_clean, amount,
+        SELECT id, date_op, date_op_original, real_date, label, label_clean, amount,
                bank_category, category, confidence, classification_method, precision_note
         FROM transactions
         WHERE category = $1 AND TO_CHAR(date_op, 'YYYY-MM') = $2
@@ -320,6 +320,7 @@ async def get_transactions_by_cell(category: str, month: str) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["date_op"] = str(d["date_op"])
+        d["date_op_original"] = str(d["date_op_original"]) if d["date_op_original"] else None
         d["real_date"] = str(d["real_date"]) if d["real_date"] else None
         d["amount"] = float(d["amount"])
         result.append(d)
@@ -332,6 +333,35 @@ async def recategorize_transaction(tx_id: int, new_category: str):
         "UPDATE transactions SET category = $1 WHERE id = $2",
         new_category, tx_id,
     )
+
+
+async def redate_transaction(tx_id: int, new_date: date) -> dict | None:
+    """Move a transaction to another date (compensation booked in another month/year).
+
+    The bank date is kept in date_op_original on the first move and cleared when the line
+    returns to it. dedup_key is left untouched: it encodes the bank date, so a later
+    re-import of the same bank line still deduplicates against this one.
+    """
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """
+        UPDATE transactions
+        SET date_op_original = CASE
+                WHEN COALESCE(date_op_original, date_op) = $2 THEN NULL
+                ELSE COALESCE(date_op_original, date_op)
+            END,
+            date_op = $2
+        WHERE id = $1
+        RETURNING date_op, date_op_original
+        """,
+        tx_id, new_date,
+    )
+    if not row:
+        return None
+    return {
+        "date_op": str(row["date_op"]),
+        "date_op_original": str(row["date_op_original"]) if row["date_op_original"] else None,
+    }
 
 
 # ── Category management ───────────────────────────────────────────────────────
@@ -459,7 +489,7 @@ async def get_uncovered_transactions(year_id: int) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
         """
-        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+        SELECT t.id, t.date_op, t.date_op_original, t.real_date, t.label, t.label_clean, t.amount,
                t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
@@ -476,6 +506,7 @@ async def get_uncovered_transactions(year_id: int) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["date_op"] = str(d["date_op"])
+        d["date_op_original"] = str(d["date_op_original"]) if d["date_op_original"] else None
         d["real_date"] = str(d["real_date"]) if d["real_date"] else None
         d["amount"] = float(d["amount"])
         result.append(d)
@@ -487,7 +518,7 @@ async def get_category_year_transactions(year_id: int, category: str) -> list[di
     pool = await get_pool()
     rows = await pool.fetch(
         """
-        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+        SELECT t.id, t.date_op, t.date_op_original, t.real_date, t.label, t.label_clean, t.amount,
                t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
@@ -500,6 +531,7 @@ async def get_category_year_transactions(year_id: int, category: str) -> list[di
     for r in rows:
         d = dict(r)
         d["date_op"] = str(d["date_op"])
+        d["date_op_original"] = str(d["date_op_original"]) if d["date_op_original"] else None
         d["real_date"] = str(d["real_date"]) if d["real_date"] else None
         d["amount"] = float(d["amount"])
         result.append(d)
@@ -519,7 +551,7 @@ async def get_month_transactions(year_id: int, month: str) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
         """
-        SELECT t.id, t.date_op, t.real_date, t.label, t.label_clean, t.amount,
+        SELECT t.id, t.date_op, t.date_op_original, t.real_date, t.label, t.label_clean, t.amount,
                t.bank_category, t.category, t.confidence, t.classification_method, t.precision_note
         FROM transactions t
         JOIN budget_years y ON t.date_op BETWEEN y.start_date AND y.end_date
@@ -532,6 +564,7 @@ async def get_month_transactions(year_id: int, month: str) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["date_op"] = str(d["date_op"])
+        d["date_op_original"] = str(d["date_op_original"]) if d["date_op_original"] else None
         d["real_date"] = str(d["real_date"]) if d["real_date"] else None
         d["amount"] = float(d["amount"])
         result.append(d)

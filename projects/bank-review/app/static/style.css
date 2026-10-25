@@ -708,3 +708,19 @@ tr.edited .cat-select { border-color:var(--accent); }
 
 /* ── Subtotal row in month view ── */
 .subtotal-row td { background: var(--surface2) !important; border-top: 2px solid var(--border); }
+
+/* ── Re-datation d'une transaction ─────────────────────────────────────────── */
+td.tx-date { white-space: nowrap; }
+.tx-date-moved { font-weight: 600; }
+.tx-date-orig { font-size: 0.75em; opacity: 0.7; }
+.btn-redate {
+  background: none; border: none; cursor: pointer; opacity: 0.35;
+  padding: 0 2px; margin-left: 4px; font-size: 0.85em; color: inherit;
+}
+tr:hover .btn-redate, .btn-redate:focus { opacity: 1; }
+.tx-date-input { font-size: 0.85em; }
+.tx-date-actions { display: flex; gap: 4px; margin-top: 3px; }
+.tx-date-actions button {
+  cursor: pointer; font-size: 0.8em; padding: 1px 6px;
+  border: 1px solid var(--border, #888); border-radius: 4px; background: none; color: inherit;
+}

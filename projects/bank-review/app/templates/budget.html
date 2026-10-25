@@ -301,7 +301,7 @@
       <tbody>${rows.map(r => {
         const lbl = r.label_clean || r.label || '';
         return `<tr>
-          <td>${r.date_op}</td>
+          <td class="tx-date" data-txid="${r.id}" data-date="${r.date_op}" data-orig="${r.date_op_original || ''}">${r.date_op}</td>
           <td>${r.real_date || '—'}</td>
           <td class="label-cell" title="${esc(r.label)}">${esc(lbl.substring(0,52))}${lbl.length > 52 ? '…' : ''}</td>
           <td class="${r.amount < 0 ? 'amount-neg' : 'amount-pos'}">${formatNum(r.amount, 2)} €</td>
@@ -316,6 +316,7 @@
         </tr>`;
       }).join('')}</tbody></table></div>`;
     document.getElementById('drillContent').innerHTML = html;
+    enhanceTxDates(document.getElementById('drillContent'));
   }
 
   function markDrillChange(sel) {

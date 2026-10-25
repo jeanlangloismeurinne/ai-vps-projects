@@ -48,7 +48,7 @@
         {% for row in rows %}
         {% set conf_class = "high" if (row.confidence or 0) >= 80 else ("medium" if (row.confidence or 0) >= 50 else "low") %}
         <tr data-conf="{{ conf_class }}" data-txid="{{ row.id }}">
-          <td>{{ row.date_op }}</td>
+          <td class="tx-date" data-txid="{{ row.id }}" data-date="{{ row.date_op }}" data-orig="{{ row.date_op_original or '' }}">{{ row.date_op }}</td>
           <td>{{ row.real_date or "—" }}</td>
           <td class="label-cell" title="{{ row.label }}">{{ (row.label_clean or row.label or "")[:55] }}{% if (row.label_clean or row.label or "")|length > 55 %}…{% endif %}</td>
           <td class="{{ 'amount-neg' if row.amount < 0 else 'amount-pos' }}">{{ "%.2f"|format(row.amount) }} €</td>

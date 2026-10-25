@@ -2,12 +2,13 @@ from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from app.templates_env import templates
 from pydantic import BaseModel
+from datetime import date
 
 from app.routes.auth import is_authenticated
 from app.services.budget import (
     get_budget_years, get_budget_lines, get_monthly_actuals,
     build_budget_view, update_budget_line,
-    get_transactions_by_cell, recategorize_transaction,
+    get_transactions_by_cell, recategorize_transaction, redate_transaction,
     get_all_categories_for_year, add_budget_category,
     update_budget_category, rename_budget_category, delete_budget_category,
     dismiss_budget_update_flag, get_uncovered_count, get_month_transactions,
@@ -314,6 +315,20 @@ async def api_recategorize(request: Request, tx_id: int, payload: RecategorizePa
         return JSONResponse({"error": "Non authentifié."}, status_code=401)
     await recategorize_transaction(tx_id, payload.category)
     return {"ok": True}
+
+
+class RedatePayload(BaseModel):
+    date_op: date
+
+
+@router.post("/api/transactions/{tx_id}/redate")
+async def api_redate(request: Request, tx_id: int, payload: RedatePayload):
+    if not is_authenticated(request):
+        return JSONResponse({"error": "Non authentifié."}, status_code=401)
+    result = await redate_transaction(tx_id, payload.date_op)
+    if result is None:
+        return JSONResponse({"error": "Transaction introuvable."}, status_code=404)
+    return {"ok": True, **result}
 
 
 class AppSettingPayload(BaseModel):

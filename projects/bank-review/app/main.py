@@ -46,7 +46,7 @@ async def startup():
     from app.services.database import (
         migrate_classifier_tables, create_users_table,
         user_exists, create_user_record, db_url_for_user,
-        get_all_users, migrate_budget_line_notes,
+        get_all_users, migrate_budget_line_notes, migrate_transaction_date_original,
     )
 
     # Ensure users table exists (central DB)
@@ -69,6 +69,7 @@ async def startup():
     # Schema additions on every user DB (central DB included via its users row)
     for u in await get_all_users():
         await migrate_budget_line_notes(db_url_for_user(u["db_name"]))
+        await migrate_transaction_date_original(db_url_for_user(u["db_name"]))
 
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

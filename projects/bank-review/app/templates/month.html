@@ -51,7 +51,7 @@
       <tbody id="monthBody">
         {% for tx in txs %}
         <tr data-date="{{ tx.date_op }}" data-cat="{{ tx.category or '' }}" data-txid="{{ tx.id }}">
-          <td>{{ tx.date_op }}</td>
+          <td class="tx-date" data-txid="{{ tx.id }}" data-date="{{ tx.date_op }}" data-orig="{{ tx.date_op_original or '' }}">{{ tx.date_op }}</td>
           <td>{{ tx.real_date or "—" }}</td>
           <td class="label-cell" title="{{ tx.label }}">{{ (tx.label_clean or tx.label or "")[:55] }}{% if (tx.label_clean or tx.label or "")|length > 55 %}…{% endif %}</td>
           <td class="{{ 'amount-neg' if tx.amount < 0 else 'amount-pos' }}">{{ tx.amount|fmtnum(2) }} €</td>

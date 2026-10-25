@@ -446,7 +446,7 @@ async def get_session_with_transactions(session_id: int) -> tuple[dict | None, l
 
     rows = await pool.fetch(
         """
-        SELECT id, date_op, real_date, label, label_clean, amount,
+        SELECT id, date_op, date_op_original, real_date, label, label_clean, amount,
                bank_category, category, confidence, classification_method, precision_note
         FROM transactions
         WHERE import_session_id = $1
@@ -458,6 +458,7 @@ async def get_session_with_transactions(session_id: int) -> tuple[dict | None, l
     for r in rows:
         d = dict(r)
         d["date_op"] = str(d["date_op"])
+        d["date_op_original"] = str(d["date_op_original"]) if d["date_op_original"] else None
         d["real_date"] = str(d["real_date"]) if d["real_date"] else None
         d["amount"] = float(d["amount"])
         txs.append(d)
@@ -564,6 +565,17 @@ async def migrate_budget_line_notes(db_url: str | None = None) -> None:
     )
     if not exists:
         await pool.execute("ALTER TABLE budget_lines ADD COLUMN notes TEXT")
+
+
+async def migrate_transaction_date_original(db_url: str | None = None) -> None:
+    """Idempotent startup migration: add transactions.date_op_original (date banque d'une ligne re-datée)."""
+    pool = await get_pool(db_url)
+    # Same ownership caveat as budget_lines.notes: on db_bank the column is added by hand as `admin`.
+    exists = await pool.fetchval(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'transactions' AND column_name = 'date_op_original'"
+    )
+    if not exists:
+        await pool.execute("ALTER TABLE transactions ADD COLUMN date_op_original DATE")
 
 
 async def get_classifier_rules_all() -> list[dict]:
