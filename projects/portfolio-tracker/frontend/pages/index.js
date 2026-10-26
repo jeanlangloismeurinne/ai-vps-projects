@@ -1,11 +1,11 @@
 import Link from 'next/link'
 
-function SpaceCard({ href, badge, badgeClass, title, desc, points, cta, accent }) {
+function SpaceCard({ href, badge, badgeClass, title, desc, points, cta, accent, icon = '📈' }) {
   return (
     <Link href={href}
       className={`group flex flex-col rounded-2xl border ${accent} bg-gray-900/60 p-7 transition-colors hover:bg-gray-900`}>
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-2xl">📈</span>
+        <span className="text-2xl">{icon}</span>
         <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${badgeClass}`}>{badge}</span>
       </div>
       <h2 className="text-xl font-bold text-white mb-2">{title}</h2>
@@ -31,7 +31,7 @@ export default function Home() {
         <p className="text-sm text-gray-500 mt-1">Choisis l'espace de travail</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 w-full max-w-3xl">
+      <div className="grid md:grid-cols-3 gap-6 w-full max-w-5xl">
         <SpaceCard
           href="/portfolio"
           badge="V1 — en production"
@@ -60,11 +60,26 @@ export default function Home() {
           ]}
           cta="Ouvrir la V2"
         />
+        <SpaceCard
+          href="/nasdaq"
+          icon="🫧"
+          badge="NASDAQ — en construction"
+          badgeClass="bg-sky-800/60 text-sky-200"
+          accent="border-sky-900/60 hover:border-sky-700"
+          title="Suivi NASDAQ"
+          desc="Spécification indépendante : positionner chaque action du NASDAQ par ancienneté du cours et multiple sur 10 ans."
+          points={[
+            'Ancienneté du cours (mois) + alertes à 12 mois',
+            'Multiple sur 10 ans, graphique à bulles',
+            'Recalcul quotidien après clôture US',
+          ]}
+          cta="Ouvrir le suivi NASDAQ"
+        />
       </div>
 
       <p className="text-xs text-gray-600 mt-10 max-w-xl text-center">
-        Les deux espaces partagent l'univers de tickers mais restent disjoints : expérimenter en V2 ne
-        touche pas aux données V1.
+        V1 et V2 partagent l'univers de tickers mais restent disjoints : expérimenter en V2 ne touche pas
+        aux données V1. Le suivi NASDAQ est indépendant des deux.
       </p>
     </div>
   )

@@ -55,6 +55,7 @@ graph LR
 | `app/valorisation/` | Atelier de valorisation : gabarits maison + bac à calcul où s'exécute le modèle propre à chaque entreprise (#96) | **Ajouter un gabarit maison** | `app/valorisation/ARCHITECTURE.md` |
 | `app/modele_entreprise/` | Le classeur de l'entreprise : catalogue de variables, patrons, architecture, cellule, fourchette/scénario/déplacement (lot M1, #140) | **Ajouter une variable au catalogue** | `app/modele_entreprise/ARCHITECTURE.md` |
 | `app/data_collection/` | ⚠️ **LEGACY V0/V1** — DataService marché | (pas d'extension V3) | `app/data_collection/ARCHITECTURE.md` |
+| `app/nasdaq/` | Suivi NASDAQ indépendant du reste (ancienneté du cours × multiple 10 ans, job quotidien 17h30 ET) | (aucune, module autonome) | `app/nasdaq/ARCHITECTURE.md` |
 
 ## Les trois garde-fous (constitution — `principe-directeur.md`)
 

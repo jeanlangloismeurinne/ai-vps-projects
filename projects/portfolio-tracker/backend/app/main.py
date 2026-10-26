@@ -8,6 +8,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.db.database import init_pool, close_pool
 from app.data_collection.data_cache import init_redis, close_redis
 from app.config import settings
+from app.nasdaq import job as nasdaq_job
 from app.api import positions, calendar, portfolio, watchlist, analysts, trigger, feedback
 from app.api import (
     tickers as tickers_v1,
@@ -57,12 +58,13 @@ app.include_router(portfolio_v2.router)
 app.include_router(calendar_v2.router)
 
 # V2 routers (flow_version='v2', espace disjoint — chaîne d'analyse curator→research→bull/bear→synthèse)
-from app.api import analysis_v2, knowledge_v2, modele_entreprise_v2, parcours_v2, valorisation_v2
+from app.api import analysis_v2, knowledge_v2, modele_entreprise_v2, parcours_v2, valorisation_v2, nasdaq as nasdaq_api
 app.include_router(analysis_v2.router)
 app.include_router(knowledge_v2.router)
 app.include_router(parcours_v2.router)
 app.include_router(valorisation_v2.router)
 app.include_router(modele_entreprise_v2.router)
+app.include_router(nasdaq_api.router)
 
 
 @app.on_event("startup")
@@ -126,6 +128,13 @@ async def startup():
         _check_price_alerts_v1,
         CronTrigger(minute="*/5", hour="9-17", day_of_week="mon-fri", timezone="Europe/Paris"),
         id="price_alerts_v1", replace_existing=True,
+    )
+    # Suivi NASDAQ (spec 2026-10-26) : 17h30 à New York, heure d'été gérée par le fuseau — une demi-heure
+    # après la clôture. Les jours fériés US relancent le calcul sans effet (même séance de référence).
+    scheduler.add_job(
+        nasdaq_job.run_daily,
+        CronTrigger(day_of_week="mon-fri", hour=17, minute=30, timezone="America/New_York"),
+        id="nasdaq_daily", replace_existing=True,
     )
     scheduler.start()
     logger.info("Portfolio Tracker démarré")
