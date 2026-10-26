@@ -4,6 +4,7 @@
   GET  /nasdaq/status          job en cours, derniers passages (journal)
   POST /nasdaq/run             lance le job maintenant (en tâche de fond)
   GET  /nasdaq/history/{t}     historique quotidien des deux indicateurs d'un titre
+  GET  /nasdaq/series/{t}      idem pour un titre sur 1y / 5y / max (fiche)
   GET  /nasdaq/series          ancienneté et multiple de chaque titre aux ~260 dernières séances (reconstitués des cours)
 """
 from __future__ import annotations
@@ -124,3 +125,27 @@ async def series() -> dict:
     payload = {"run_date": run_date.isoformat(), "series": out}
     _series_cache.update(run_date=run_date, payload=payload)
     return payload
+
+
+RANGES = {"1y": 260, "5y": 1300, "max": 10**6}
+
+
+@router.get("/series/{ticker}")
+async def series_one(ticker: str, range: str = "1y") -> dict:
+    """Fiche d'un titre : cours et ancienneté sur 1 an, 5 ans ou tout l'historique (sans multiple, inutile ici)."""
+    if range not in RANGES:
+        raise HTTPException(status_code=422, detail="range ∈ 1y, 5y, max")
+    async with get_db_session() as conn:
+        run_date = await conn.fetchval(
+            "SELECT run_date FROM nasdaq_runs WHERE status='ok' ORDER BY run_date DESC, id DESC LIMIT 1")
+        row = await conn.fetchrow("SELECT day_nums, closes FROM nasdaq_prices WHERE ticker = $1",
+                                  yf_symbol(ticker.upper())) if run_date else None
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Titre `{ticker}` absent du suivi.")
+    d = np.array(row["day_nums"], dtype=np.int64)
+    c = np.array(row["closes"], dtype=np.float64)
+    keep = d <= to_daynum(run_date)
+    s = series_tail(d[keep], c[keep], RANGES[range], with_mult=False)
+    if not s:
+        raise HTTPException(status_code=404, detail=f"Historique insuffisant pour `{ticker}`.")
+    return s

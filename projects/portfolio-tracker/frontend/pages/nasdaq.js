@@ -320,7 +320,7 @@ export default function Nasdaq() {
 
       {selected && (
         <section className="mb-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <TickerSheet row={rows.find(r => r.ticker === selected)} s={series?.series?.[selected]} hot={jumpHot}
+          <TickerSheet key={selected} row={rows.find(r => r.ticker === selected)} ticker={selected} hot={jumpHot}
             onClose={() => setSelected(null)} />
         </section>
       )}

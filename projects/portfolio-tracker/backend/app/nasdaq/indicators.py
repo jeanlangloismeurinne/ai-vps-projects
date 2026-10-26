@@ -101,7 +101,7 @@ def multiple_at(days: list[int], closes: np.ndarray, i: int) -> tuple[float | No
     return (float(closes[i]) / base if base > 0 else None), lt10
 
 
-def series_tail(day_nums: np.ndarray, closes: np.ndarray, k: int) -> dict | None:
+def series_tail(day_nums: np.ndarray, closes: np.ndarray, k: int, with_mult: bool = True) -> dict | None:
     """Les k dernières séances, chacune avec l'ancienneté et le multiple qu'elle aurait eus CE JOUR-LÀ.
 
     Même définition qu'`age_in_days`, vectorisée : la première date où le cours a touché le niveau de la séance t
@@ -124,7 +124,7 @@ def series_tail(day_nums: np.ndarray, closes: np.ndarray, k: int) -> dict | None
     atl = (p < first) & (idx >= t)
     ages = np.where(ath, 0, np.where(atl, day_nums[t] - day_nums[0], day_nums[t] - day_nums[np.minimum(idx, t)]))
     days = day_nums.tolist()
-    mult = [multiple_at(days, closes, int(i))[0] for i in t]
+    mult = [multiple_at(days, closes, int(i))[0] for i in t] if with_mult else [None] * len(t)
     return {
         "d": day_nums[t].tolist(),
         "p": [round(float(x), 2) for x in p],
