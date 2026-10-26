@@ -30,6 +30,9 @@ export default function Nasdaq() {
   const [err, setErr] = useState(null)
   const [status, setStatus] = useState(null)
   const [minCap, setMinCap] = useState(5e10)
+  const [base, setBase] = useState(2)
+  const [minMult, setMinMult] = useState('')
+  const [minAge, setMinAge] = useState('')
   const [query, setQuery] = useState('')
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const [sort, setSort] = useState({ k: 'cap', dir: -1 })
@@ -61,7 +64,11 @@ export default function Nasdaq() {
     return rows.filter(r => (minCap === 0 || (r.market_cap ?? 0) >= minCap)
       && (!q || r.ticker.includes(q) || r.name.toUpperCase().includes(q)))
   }, [rows, minCap, query])
-  const shown = useMemo(() => (onlyAlerts ? filtered.filter(r => r.alert) : filtered), [filtered, onlyAlerts])
+  const shown = useMemo(() => {
+    const m = parseFloat(String(minMult).replace(',', '.')), a = parseFloat(String(minAge).replace(',', '.'))
+    return filtered.filter(r => (!onlyAlerts || r.alert)
+      && (isNaN(m) || (r.multiple_10y ?? 0) >= m) && (isNaN(a) || r.is_atl || (r.age_months ?? 0) >= a))
+  }, [filtered, onlyAlerts, minMult, minAge])
 
   const groups = useMemo(() => {
     const cats = snap?.categories ?? []
@@ -190,7 +197,7 @@ export default function Nasdaq() {
           <span><i className="inline-block w-3 h-3 rounded-full align-[-2px] mr-1" style={{ background: 'rgba(156,163,175,.4)' }} />autres</span>
           <span>Surface ∝ capitalisation · molette = zoom · glisser = déplacer · pointillé = 1×</span>
         </div>
-        <BubbleChart allRows={shown} />
+        <BubbleChart rows={shown} base={base} setBase={setBase} minMult={minMult} setMinMult={setMinMult} minAge={minAge} setMinAge={setMinAge} />
       </section>
 
       <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">

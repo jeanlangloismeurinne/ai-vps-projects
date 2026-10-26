@@ -21,14 +21,7 @@ const BASES = [
   { v: 3, l: 'Log base 3' }, { v: 10, l: 'Log base 10' },
 ]
 
-export default function BubbleChart({ allRows }) {
-  const [base, setBase] = useState(2)
-  const [minMult, setMinMult] = useState('')
-  const [minAge, setMinAge] = useState('')
-  const rows = useMemo(() => {
-    const m = parseFloat(String(minMult).replace(',', '.')), a = parseFloat(String(minAge).replace(',', '.'))
-    return allRows.filter(r => (isNaN(m) || (r.multiple_10y ?? 0) >= m) && (isNaN(a) || r.is_atl || (r.age_months ?? 0) >= a))
-  }, [allRows, minMult, minAge])
+export default function BubbleChart({ rows, base, setBase, minMult, setMinMult, minAge, setMinAge }) {
   const tx = (age) => (base === 'lin' ? age : Math.log(1 + age) / Math.log(base))
   const wrap = useRef(null)
   const canvas = useRef(null)
