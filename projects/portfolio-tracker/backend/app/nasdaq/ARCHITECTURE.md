@@ -6,7 +6,7 @@ page `/nasdaq`). Aucune dépendance vers les agents, la KB ou les tickers V1/V2.
 | Fichier | Rôle |
 |---|---|
 | `universe.py` | univers = `nasdaqlisted.txt` (hors ETF/test) + screener Nasdaq (capitalisation) ; filtre warrants/droits/préférentielles ; une ligne par entreprise (la plus liquide) |
-| `indicators.py` | fonctions pures : ancienneté du cours (dernier franchissement), multiple 10 ans, nettoyage des aberrations |
+| `indicators.py` | fonctions pures : ancienneté du cours (première date où le cours a touché le niveau du jour), multiple 10 ans, nettoyage des aberrations |
 | `job.py` | job quotidien (17h30 New York, lun-ven) : cours yfinance ajustés `period=max` par lots → `nasdaq_prices` → instantané `nasdaq_indicators` ; dégradé ⟹ aucun instantané écrit, la veille reste servie + avertissement |
 | `../api/nasdaq.py` | `GET /nasdaq/snapshot`, `/status`, `/history/{ticker}`, `POST /nasdaq/run` |
 

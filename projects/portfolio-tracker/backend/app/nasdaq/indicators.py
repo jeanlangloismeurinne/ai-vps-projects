@@ -51,27 +51,27 @@ class Indicators:
 def age_in_days(day_nums: np.ndarray, closes: np.ndarray) -> tuple[int | None, bool, bool]:
     """(âge en jours, plus bas historique, plus haut historique) du dernier cours.
 
-    On part de la veille : si elle est au-dessus de P, on remonte jusqu'à la dernière clôture ≤ P ;
-    si elle est en dessous, jusqu'à la dernière clôture ≥ P. Veille égale à P : D = veille.
+    Âge = temps écoulé depuis la PREMIÈRE date de l'histoire où le cours a touché le niveau P
+    d'aujourd'hui (première clôture de l'autre côté de P, ou égale à P, par rapport au début de série).
     """
     n = len(closes)
     if n < 2:
         return 0, False, True
     p = closes[-1]
     prev = closes[:-1]
-    side = prev[-1] - p
-    if side == 0:
-        idx = n - 2
-    elif side > 0:
-        hits = np.flatnonzero(prev <= p)
-        if hits.size == 0:
-            return None, True, False
-        idx = int(hits[-1])
-    else:
+    first = prev[0]
+    if first == p:
+        idx = 0
+    elif first < p:
         hits = np.flatnonzero(prev >= p)
         if hits.size == 0:
             return 0, False, True
-        idx = int(hits[-1])
+        idx = int(hits[0])
+    else:
+        hits = np.flatnonzero(prev <= p)
+        if hits.size == 0:
+            return None, True, False
+        idx = int(hits[0])
     return int(day_nums[-1] - day_nums[idx]), False, False
 
 
