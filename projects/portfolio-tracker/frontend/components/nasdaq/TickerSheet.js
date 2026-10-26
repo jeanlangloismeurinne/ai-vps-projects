@@ -62,7 +62,7 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
             className={`px-2.5 py-1 text-xs ${range === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>
         ))}
       </div>
-      {full && <span className="text-xs text-gray-500">{full.d.length} séances · sauts ≥ {hot} mois sur 5 séances repérés en rouge</span>}
+      {full && <span className="text-xs text-gray-500">{full.d.length} séances · sauts ≥ {hot} mois sur 5 séances en rouge{range !== '1y' ? ' (les 6 plus forts)' : ''}</span>}
       <button onClick={onClose} className="ml-auto text-xs px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white">Fermer</button>
     </div>
   )
@@ -100,7 +100,7 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
   return (
     <div>
       {head}
-      <svg viewBox={`0 0 ${W} ${total}`} className="w-full max-w-[900px]" role="img" aria-label={`Ancienneté et cours de ${row.ticker}`}>
+      <svg viewBox={`0 0 ${W} ${total}`} className="w-full" role="img" aria-label={`Ancienneté et cours de ${row.ticker}`}>
         {yTicksA.map(v => (
           <g key={v}>
             <line x1={ML} x2={W - MR} y1={ya(v)} y2={ya(v)} stroke={v === 12 ? '#7f1d1d' : '#1f2937'} strokeDasharray={v === 12 ? '4 3' : undefined} />
@@ -108,7 +108,7 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
           </g>
         ))}
         <text x={4} y={12} fontSize="10" fill="#9ca3af">mois</text>
-        {ev.map(e => (
+        {ev.filter(e => range === '1y' || labelled.has(e.dn)).map(e => (
           <g key={e.dn}>
             <line x1={xd(e.dn)} x2={xd(e.dn)} y1={0} y2={total - 22} stroke="#ef4444" strokeOpacity="0.5" strokeDasharray="3 3" />
             {labelled.has(e.dn) && <text x={Math.min(xd(e.dn) + 3, W - 150)} y={12} fontSize="10" fill="#fca5a5">+{e.j.toFixed(0)} m · {fmtDay(e.dn)}</text>}
