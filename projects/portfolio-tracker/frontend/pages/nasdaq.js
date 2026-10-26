@@ -1,12 +1,17 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import BubbleChart, { fmtAge, fmtCap, fmtMult } from '../components/nasdaq/BubbleChart'
+import BubbleChart, { BASES_LIST, fmtAge, fmtCap, fmtJump, fmtMult } from '../components/nasdaq/BubbleChart'
+import TickerSheet from '../components/nasdaq/TickerSheet'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
-const CAP_OPTIONS = [
-  { v: 5e10, l: '≥ 50 Md$ (seuil de l’analyse)' }, { v: 1e11, l: '≥ 100 Md$' }, { v: 2e11, l: '≥ 200 Md$' },
-  { v: 5e11, l: '≥ 500 Md$' }, { v: 1e12, l: '≥ 1 000 Md$' },
+const DPM = 30.4375
+const SPLITS = [{ v: 'none', l: 'Un seul graphique' }, { v: 'mult', l: 'Par multiple sur 10 ans' }, { v: 'cap', l: 'Par capitalisation' }]
+const TRAILS = [{ v: 0, l: 'Aucune' }, { v: 5, l: '1 semaine' }, { v: 20, l: '1 mois' }, { v: 60, l: '3 mois' }]
+const CAP_BANDS = [
+  { key: 'c500', label: '≥ 500 Md$', min: 5e11 }, { key: 'c200', label: '200 à 500 Md$', min: 2e11 },
+  { key: 'c100', label: '100 à 200 Md$', min: 1e11 }, { key: 'c0', label: '< 100 Md$', min: 0 },
 ]
+const num = (v) => parseFloat(String(v).replace(',', '.'))
 const ATL_AGE = 1e6 // tri : un plus bas historique passe avant toute ancienneté chiffrée
 const ageKey = (r) => (r.is_atl ? ATL_AGE : r.age_months ?? -1)
 
@@ -16,6 +21,8 @@ const COLS = [
   { k: 'price', l: 'Cours ($)', get: r => r.price, num: true },
   { k: 'age', l: 'Ancienneté (mois)', get: ageKey, num: true },
   { k: 'mult', l: 'Multiple 10 ans', get: r => r.multiple_10y ?? -1, num: true },
+  { k: 'jump5', l: 'Saut 5 j (mois)', get: r => r.jump5 ?? -999, num: true },
+  { k: 'jump20', l: 'Saut 20 j (mois)', get: r => r.jump20 ?? -999, num: true },
   { k: 'cap', l: 'Capitalisation', get: r => r.market_cap ?? -1, num: true },
   { k: 'alert', l: 'Alerte', get: r => (r.alert_new ? 2 : r.alert ? 1 : 0), num: true },
 ]
@@ -29,7 +36,14 @@ export default function Nasdaq() {
   const [snap, setSnap] = useState(null)
   const [err, setErr] = useState(null)
   const [status, setStatus] = useState(null)
-  const [minCap, setMinCap] = useState(5e10)
+  const [minCap, setMinCap] = useState('')
+  const [maxCap, setMaxCap] = useState('')
+  const [series, setSeries] = useState(null)
+  const [jumpWin, setJumpWin] = useState(20)
+  const [minJump, setMinJump] = useState('')
+  const [trailWin, setTrailWin] = useState(20)
+  const [split, setSplit] = useState('none')
+  const [selected, setSelected] = useState(null)
   const [base, setBase] = useState(2)
   const [minMult, setMinMult] = useState('')
   const [minAge, setMinAge] = useState('')
@@ -47,6 +61,10 @@ export default function Nasdaq() {
   }, [])
   useEffect(() => { load(); loadStatus() }, [load, loadStatus])
   useEffect(() => {
+    if (!snap?.run_date) return
+    fetch(`${API}/nasdaq/series`).then(r => r.json()).then(setSeries).catch(() => setSeries(null))
+  }, [snap?.run_date])
+  useEffect(() => {
     if (!status?.running) return
     const t = setInterval(() => { loadStatus() }, 4000)
     return () => clearInterval(t)
@@ -58,17 +76,50 @@ export default function Nasdaq() {
     if (r.ok || r.status === 409) loadStatus()
   }
 
-  const rows = snap?.rows ?? []
+  const rawRows = snap?.rows ?? []
+  const rows = useMemo(() => {
+    const S = series?.series ?? {}
+    return rawRows.map(r => {
+      const q = S[r.ticker]
+      if (!q) return r
+      const L = q.d.length - 1
+      const at = (N) => (L - N >= 0 ? L - N : null)
+      const jump = (N) => { const i = at(N); return i == null ? null : ((q.a[L] - q.a[i]) - (q.d[L] - q.d[i])) / DPM }
+      const pi = trailWin ? at(trailWin) : null
+      return {
+        ...r, jump5: jump(5), jump20: jump(20),
+        fact20: at(20) == null ? null : (1 + q.a[L] / DPM) / (1 + (q.a[at(20)] + q.d[L] - q.d[at(20)]) / DPM),
+        prev: pi == null ? null : { age: Math.round(q.a[pi] / DPM), atl: !!q.l[pi], mult: q.m[pi] },
+      }
+    })
+  }, [rawRows, series, trailWin])
   const filtered = useMemo(() => {
     const q = query.trim().toUpperCase()
-    return rows.filter(r => (minCap === 0 || (r.market_cap ?? 0) >= minCap)
+    const lo = num(minCap) * 1e9, hi = num(maxCap) * 1e9
+    return rows.filter(r => (isNaN(lo) || (r.market_cap ?? 0) >= lo) && (isNaN(hi) || (r.market_cap ?? 0) <= hi)
       && (!q || r.ticker.includes(q) || r.name.toUpperCase().includes(q)))
-  }, [rows, minCap, query])
+  }, [rows, minCap, maxCap, query])
   const shown = useMemo(() => {
-    const m = parseFloat(String(minMult).replace(',', '.')), a = parseFloat(String(minAge).replace(',', '.'))
+    const m = num(minMult), a = num(minAge), j = num(minJump)
     return filtered.filter(r => (!onlyAlerts || r.alert)
-      && (isNaN(m) || (r.multiple_10y ?? 0) >= m) && (isNaN(a) || r.is_atl || (r.age_months ?? 0) >= a))
-  }, [filtered, onlyAlerts, minMult, minAge])
+      && (isNaN(m) || (r.multiple_10y ?? 0) >= m) && (isNaN(a) || r.is_atl || (r.age_months ?? 0) >= a)
+      && (isNaN(j) || (r['jump' + jumpWin] ?? -Infinity) >= j))
+  }, [filtered, onlyAlerts, minMult, minAge, minJump, jumpWin])
+  const ranking = useMemo(() => filtered.filter(r => (r['jump' + jumpWin] ?? 0) > 0)
+    .sort((a, b) => b['jump' + jumpWin] - a['jump' + jumpWin]).slice(0, 10), [filtered, jumpWin])
+  const jumpHot = isNaN(num(minJump)) ? 6 : num(minJump)
+  const maxCapShown = Math.max(1, ...shown.map(r => r.market_cap || 0))
+  const panels = useMemo(() => {
+    if (split === 'none') return [{ key: 'all', label: null, rows: shown }]
+    const defs = split === 'mult' ? (snap?.categories ?? []) : CAP_BANDS
+    const out = defs.map(d => ({ key: d.key, label: d.label, rows: [] }))
+    for (const r of shown) {
+      const v = split === 'mult' ? (r.multiple_10y ?? 0) : (r.market_cap ?? 0)
+      const i = defs.findIndex(d => v >= d.min)
+      out[i < 0 ? out.length - 1 : i].rows.push(r)
+    }
+    return out.filter(p => p.rows.length)
+  }, [shown, split, snap])
 
   const groups = useMemo(() => {
     const cats = snap?.categories ?? []
@@ -95,10 +146,10 @@ export default function Nasdaq() {
   }, [shown, sort])
 
   const exportCsv = () => {
-    const head = ['ticker', 'nom', 'cours', 'anciennete_mois', 'plus_bas_historique', 'multiple_10_ans', 'moins_de_10_ans', 'capitalisation', 'alerte', 'nouvelle_alerte']
+    const head = ['ticker', 'nom', 'cours', 'anciennete_mois', 'plus_bas_historique', 'multiple_10_ans', 'moins_de_10_ans', 'saut_5j_mois', 'saut_20j_mois', 'capitalisation', 'alerte', 'nouvelle_alerte']
     const lines = [head.join(';')].concat(sorted.map(r => [
       r.ticker, r.name, r.price, r.is_atl ? '' : r.age_months, r.is_atl ? 'oui' : '', r.multiple_10y?.toFixed(3) ?? '',
-      r.lt_10y ? 'oui' : '', r.market_cap ?? '', r.alert ? 'oui' : '', r.alert_new ? 'oui' : ''].map(csvCell).join(';')))
+      r.lt_10y ? 'oui' : '', r.jump5?.toFixed(1) ?? '', r.jump20?.toFixed(1) ?? '', r.market_cap ?? '', r.alert ? 'oui' : '', r.alert_new ? 'oui' : ''].map(csvCell).join(';')))
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -116,7 +167,7 @@ export default function Nasdaq() {
         <span className="text-3xl">🫧</span>
         <h1 className="text-2xl font-bold text-white">Suivi NASDAQ</h1>
         <span className="text-sm text-gray-400">
-          {dateFr ? `Clôture du ${dateFr} · ${rows.length} entreprises` : 'Aucune donnée publiée'}
+          {dateFr ? `Clôture du ${dateFr} · ${rawRows.length} entreprises` : 'Aucune donnée publiée'}
         </span>
         <div className="ml-auto flex items-center gap-2">
           {status?.running && (
@@ -140,11 +191,13 @@ export default function Nasdaq() {
       )}
 
       <section className="mb-4 flex flex-wrap items-end gap-4 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-        <label className="text-xs text-gray-400">Capitalisation minimale
-          <select value={minCap} onChange={e => { setMinCap(Number(e.target.value)); setLimit(100) }}
-            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
-            {CAP_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-          </select>
+        <label className="text-xs text-gray-400">Capitalisation ≥ (Md$)
+          <input value={minCap} onChange={e => { setMinCap(e.target.value); setLimit(100) }} placeholder="ex. 200" inputMode="decimal"
+            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-28" />
+        </label>
+        <label className="text-xs text-gray-400">Capitalisation ≤ (Md$)
+          <input value={maxCap} onChange={e => { setMaxCap(e.target.value); setLimit(100) }} placeholder="ex. 500" inputMode="decimal"
+            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-28" />
         </label>
         <label className="text-xs text-gray-400">Recherche (ticker ou nom)
           <input value={query} onChange={e => { setQuery(e.target.value); setLimit(100) }} placeholder="ex. NVDA"
@@ -154,7 +207,7 @@ export default function Nasdaq() {
           <input type="checkbox" checked={onlyAlerts} onChange={e => setOnlyAlerts(e.target.checked)} />
           Alertes uniquement
         </label>
-        <span className="ml-auto text-xs text-gray-500 pb-2">{shown.length} titres affichés sur {rows.length}</span>
+        <span className="ml-auto text-xs text-gray-500 pb-2">{shown.length} titres affichés sur {rawRows.length} · filtres d'affichage seulement (l'analyse porte toujours sur ≥ 50 Md$)</span>
       </section>
 
       <section className="mb-6 rounded-xl border border-red-900/60 bg-gray-900/50 p-4">
@@ -190,15 +243,87 @@ export default function Nasdaq() {
         })}
       </section>
 
+      <section className="mb-6 rounded-xl border border-amber-900/60 bg-gray-900/50 p-4">
+        <div className="flex flex-wrap items-center gap-3 mb-1">
+          <h2 className="text-sm font-semibold text-white">Plus fortes hausses d'ancienneté</h2>
+          <select value={jumpWin} onChange={e => setJumpWin(Number(e.target.value))}
+            className="rounded bg-gray-800 border border-gray-700 px-2 py-1 text-xs text-white">
+            <option value={5}>sur 5 séances</option><option value={20}>sur 20 séances</option>
+          </select>
+        </div>
+        <p className="text-xs text-gray-500 mb-3">Saut = ancienneté d'aujourd'hui moins celle d'il y a N séances, temps écoulé retiré : un titre stable fait 0, un titre qui retombe à un niveau absent depuis longtemps fait un grand saut. Le facteur ×N compare la durée avant/après (3 → 20 mois = ×4).</p>
+        {!series && <p className="text-sm text-gray-500">Chargement des séries…</p>}
+        {series && ranking.length === 0 && <p className="text-sm text-gray-500">Aucune hausse avec ces filtres.</p>}
+        <div className="flex flex-wrap gap-1.5">
+          {ranking.map(r => (
+            <button key={r.ticker} onClick={() => setSelected(r.ticker)}
+              title={`${r.name} — ancienneté ${fmtAge(r)} · multiple ${fmtMult(r)} · ${fmtCap(r.market_cap)}`}
+              className={`rounded border px-2 py-1 text-xs ${r['jump' + jumpWin] >= jumpHot ? 'border-red-500 bg-red-950/60 text-red-200' : 'border-gray-700 bg-gray-800/60 text-gray-300'} hover:text-white`}>
+              <b>{r.ticker}</b> <span className="text-gray-400">{fmtJump(r['jump' + jumpWin])} m{jumpWin === 20 && r.fact20 ? ` · ×${r.fact20.toFixed(1)}` : ''} · {r.is_atl ? 'ATL' : `${r.age_months} m`}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="mb-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
         <div className="flex flex-wrap items-center gap-4 mb-2 text-xs text-gray-400">
           <span className="text-sm font-semibold text-white">Ancienneté du cours × multiple 10 ans</span>
           <span><i className="inline-block w-3 h-3 rounded-full align-[-2px] mr-1" style={{ background: 'rgba(239,68,68,.5)' }} />alerte (≥ 12 mois ou ATL)</span>
           <span><i className="inline-block w-3 h-3 rounded-full align-[-2px] mr-1" style={{ background: 'rgba(156,163,175,.4)' }} />autres</span>
-          <span>Surface ∝ capitalisation · molette = zoom · glisser = déplacer · pointillé = 1×</span>
+          <span>Surface ∝ capitalisation · molette = zoom · glisser = déplacer · clic = fiche du titre · pointillé = 1×</span>
+          {trailWin > 0 && <span><i className="inline-block w-4 h-0.5 align-middle mr-1" style={{ background: 'rgba(125,211,252,.8)' }} />traînée = position d'il y a {TRAILS.find(t => t.v === trailWin)?.l}, <i className="inline-block w-4 h-0.5 align-middle mx-1" style={{ background: 'rgb(248,113,113)' }} />rouge = saut ≥ {jumpHot} mois</span>}
         </div>
-        <BubbleChart rows={shown} base={base} setBase={setBase} minMult={minMult} setMinMult={setMinMult} minAge={minAge} setMinAge={setMinAge} />
+        <div className="mb-3 flex flex-wrap items-end gap-4 text-xs text-gray-400">
+          <label>Échelle horizontale
+            <select value={base} onChange={e => setBase(e.target.value === 'lin' ? 'lin' : Number(e.target.value))}
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
+              {BASES_LIST.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </label>
+          <label>Multiple 10 ans ≥
+            <input value={minMult} onChange={e => setMinMult(e.target.value)} placeholder="ex. 2" inputMode="decimal"
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
+          </label>
+          <label>Ancienneté ≥ (mois)
+            <input value={minAge} onChange={e => setMinAge(e.target.value)} placeholder="ex. 12" inputMode="decimal"
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
+          </label>
+          <label>Saut ≥ (mois, sur {jumpWin} séances)
+            <input value={minJump} onChange={e => setMinJump(e.target.value)} placeholder="ex. 6" inputMode="decimal"
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
+          </label>
+          <label>Traînée
+            <select value={trailWin} onChange={e => setTrailWin(Number(e.target.value))}
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
+              {TRAILS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </label>
+          <label>Découpage
+            <select value={split} onChange={e => setSplit(e.target.value)}
+              className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
+              {SPLITS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </label>
+          <span className="pb-2 text-gray-500">{shown.length} titres · échelles recalculées automatiquement par graphique (plus bas historiques toujours inclus)</span>
+        </div>
+        <div className={split === 'none' ? '' : 'grid grid-cols-1 xl:grid-cols-2 gap-4'}>
+          {panels.map(p => (
+            <div key={p.key} className={split === 'none' ? '' : 'rounded-lg border border-gray-800 p-2'}>
+              {p.label && <div className="text-xs font-semibold text-gray-300 mb-1">{p.label} <span className="font-normal text-gray-500">· {p.rows.length} titres</span></div>}
+              <BubbleChart rows={p.rows} base={base} trail={trailWin > 0} maxCap={maxCapShown} selected={selected}
+                onSelect={setSelected} jumpWin={jumpWin} jumpHot={jumpHot} compact={split !== 'none'} />
+            </div>
+          ))}
+          {panels.length === 0 && <p className="text-sm text-gray-500">Aucun titre avec ces filtres.</p>}
+        </div>
       </section>
+
+      {selected && (
+        <section className="mb-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <TickerSheet row={rows.find(r => r.ticker === selected)} s={series?.series?.[selected]} hot={jumpHot}
+            onClose={() => setSelected(null)} />
+        </section>
+      )}
 
       <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
         <div className="flex items-center mb-3">
@@ -222,7 +347,7 @@ export default function Nasdaq() {
             </thead>
             <tbody>
               {sorted.slice(0, limit).map(r => (
-                <tr key={r.ticker} className="border-b border-gray-900 text-gray-200">
+                <tr key={r.ticker} onClick={() => setSelected(r.ticker)} className="border-b border-gray-900 text-gray-200 cursor-pointer hover:bg-gray-800/40">
                   <td className="py-1.5 pr-4 font-semibold text-white">{r.ticker}</td>
                   <td className="py-1.5 pr-4 text-gray-400 max-w-[280px] truncate">{r.name.replace(/ - .*$/, '')}</td>
                   <td className="py-1.5 pr-4 text-right tabular-nums">{r.price.toFixed(2)}</td>
@@ -231,6 +356,8 @@ export default function Nasdaq() {
                     {r.short_history && <span title="Historique de moins d'un an" className="ml-1 text-amber-400">•</span>}
                   </td>
                   <td className="py-1.5 pr-4 text-right tabular-nums">{fmtMult(r)}</td>
+                  <td className={`py-1.5 pr-4 text-right tabular-nums ${r.jump5 >= jumpHot ? 'text-red-300 font-semibold' : ''}`}>{fmtJump(r.jump5)}</td>
+                  <td className={`py-1.5 pr-4 text-right tabular-nums ${r.jump20 >= jumpHot ? 'text-red-300 font-semibold' : ''}`}>{fmtJump(r.jump20)}</td>
                   <td className="py-1.5 pr-4 text-right tabular-nums">{fmtCap(r.market_cap)}</td>
                   <td className="py-1.5 pr-4 text-right">
                     {r.alert_new ? <span className="text-red-300 font-semibold">NOUVELLE</span> : r.alert ? <span className="text-red-400">active</span> : <span className="text-gray-600">–</span>}

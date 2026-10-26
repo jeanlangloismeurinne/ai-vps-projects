@@ -4,16 +4,21 @@
   GET  /nasdaq/status          job en cours, derniers passages (journal)
   POST /nasdaq/run             lance le job maintenant (en tâche de fond)
   GET  /nasdaq/history/{t}     historique quotidien des deux indicateurs d'un titre
+  GET  /nasdaq/series          ancienneté et multiple de chaque titre aux ~260 dernières séances (reconstitués des cours)
 """
 from __future__ import annotations
 
 import asyncio
 from datetime import date
 
+import numpy as np
+
 from fastapi import APIRouter, HTTPException
 
 from app.db.database import get_db_session
 from app.nasdaq import job
+from app.nasdaq.indicators import series_tail, to_daynum
+from app.nasdaq.universe import yf_symbol
 
 router = APIRouter(prefix="/nasdaq", tags=["nasdaq"])
 
@@ -27,7 +32,10 @@ CATEGORIES = [
 ]
 STALE_DAYS = 5
 
+SERIES_SESSIONS = 260  # ~1 an de séances : couvre les sauts 5 j / 20 j et les traînées jusqu'à 3 mois
+
 _tasks: set[asyncio.Task] = set()
+_series_cache: dict = {}
 
 
 @router.get("/snapshot")
@@ -86,3 +94,33 @@ async def history(ticker: str) -> list[dict]:
     if not rows:
         raise HTTPException(status_code=404, detail=f"Titre `{ticker}` absent du suivi.")
     return [dict(r) for r in rows]
+
+
+@router.get("/series")
+async def series() -> dict:
+    """Dérivée des mêmes cours que l'instantané : jamais périmée, recalculée une fois par instantané publié."""
+    async with get_db_session() as conn:
+        run_date = await conn.fetchval(
+            "SELECT run_date FROM nasdaq_runs WHERE status='ok' ORDER BY run_date DESC, id DESC LIMIT 1")
+        if not run_date:
+            return {"run_date": None, "series": {}}
+        if _series_cache.get("run_date") == run_date:
+            return _series_cache["payload"]
+        tickers = [r["ticker"] for r in await conn.fetch(
+            "SELECT ticker FROM nasdaq_indicators WHERE run_date = $1", run_date)]
+        prices = await conn.fetch(
+            "SELECT ticker, day_nums, closes FROM nasdaq_prices WHERE ticker = ANY($1::text[])",
+            [yf_symbol(t) for t in tickers])
+    by_yf = {yf_symbol(t): t for t in tickers}
+    cut = to_daynum(run_date)
+    out: dict[str, dict] = {}
+    for r in prices:
+        d = np.array(r["day_nums"], dtype=np.int64)
+        c = np.array(r["closes"], dtype=np.float64)
+        keep = d <= cut
+        s = series_tail(d[keep], c[keep], SERIES_SESSIONS)
+        if s:
+            out[by_yf[r["ticker"]]] = s
+    payload = {"run_date": run_date.isoformat(), "series": out}
+    _series_cache.update(run_date=run_date, payload=payload)
+    return payload

@@ -83,15 +83,52 @@ def compute(day_nums: np.ndarray, closes: np.ndarray) -> Indicators | None:
     days, atl, ath = age_in_days(day_nums, closes)
     age = None if days is None else int(round(days / DAYS_PER_MONTH))
 
-    today = from_daynum(day_nums[-1])
+    multiple, lt10 = multiple_at(day_nums.tolist(), closes, len(closes) - 1)
+    short = int(day_nums[-1] - day_nums[0]) < SHORT_HISTORY_DAYS
+    return Indicators(price, age, atl, ath, multiple, lt10, short)
+
+
+def multiple_at(days: list[int], closes: np.ndarray, i: int) -> tuple[float | None, bool]:
+    """(multiple 10 ans, historique < 10 ans) à la séance d'indice i ; sans cours à -10 ans, base = première clôture."""
+    today = from_daynum(days[i])
     try:
         target = today.replace(year=today.year - 10)
     except ValueError:  # 29 février
         target = today.replace(year=today.year - 10, day=28)
-    tn = to_daynum(target)
-    i = bisect.bisect_right(day_nums.tolist(), tn) - 1
-    lt10 = i < 0
-    base = float(closes[0] if lt10 else closes[i])
-    multiple = price / base if base > 0 else None
-    short = int(day_nums[-1] - day_nums[0]) < SHORT_HISTORY_DAYS
-    return Indicators(price, age, atl, ath, multiple, lt10, short)
+    j = bisect.bisect_right(days, to_daynum(target), 0, i + 1) - 1
+    lt10 = j < 0
+    base = float(closes[0] if lt10 else closes[j])
+    return (float(closes[i]) / base if base > 0 else None), lt10
+
+
+def series_tail(day_nums: np.ndarray, closes: np.ndarray, k: int) -> dict | None:
+    """Les k dernières séances, chacune avec l'ancienneté et le multiple qu'elle aurait eus CE JOUR-LÀ.
+
+    Même définition qu'`age_in_days`, vectorisée : la première date où le cours a touché le niveau de la séance t
+    se lit par recherche dichotomique sur le maximum (ou minimum) cumulé. `a` = âge en jours (pour un plus bas
+    historique : jours depuis le début de l'histoire) ; `l` = 1 si plus bas historique.
+    """
+    day_nums, closes = clean_series(day_nums, closes)
+    n = len(closes)
+    if n < 2:
+        return None
+    cmax = np.maximum.accumulate(closes)
+    cmin = np.minimum.accumulate(closes)
+    t = np.arange(max(1, n - k), n)
+    p = closes[t]
+    first = closes[0]
+    idx_up = np.searchsorted(cmax, p, side="left")
+    idx_dn = np.searchsorted(-cmin, -p, side="left")
+    idx = np.where(p > first, idx_up, np.where(p < first, idx_dn, 0))
+    ath = (p > first) & (idx >= t)
+    atl = (p < first) & (idx >= t)
+    ages = np.where(ath, 0, np.where(atl, day_nums[t] - day_nums[0], day_nums[t] - day_nums[np.minimum(idx, t)]))
+    days = day_nums.tolist()
+    mult = [multiple_at(days, closes, int(i))[0] for i in t]
+    return {
+        "d": day_nums[t].tolist(),
+        "p": [round(float(x), 2) for x in p],
+        "a": ages.astype(int).tolist(),
+        "l": atl.astype(int).tolist(),
+        "m": [None if m is None else round(m, 3) for m in mult],
+    }

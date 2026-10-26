@@ -21,7 +21,10 @@ const BASES = [
   { v: 3, l: 'Log base 3' }, { v: 10, l: 'Log base 10' },
 ]
 
-export default function BubbleChart({ rows, base, setBase, minMult, setMinMult, minAge, setMinAge }) {
+export const BASES_LIST = BASES
+export const fmtJump = (v) => (v == null ? '–' : `${v > 0 ? '+' : ''}${v.toFixed(1)}`)
+
+export default function BubbleChart({ rows, base, trail, maxCap, selected, onSelect, jumpWin, jumpHot = 6, compact }) {
   const tx = (age) => (base === 'lin' ? age : Math.log(1 + age) / Math.log(base))
   const wrap = useRef(null)
   const canvas = useRef(null)
@@ -31,33 +34,40 @@ export default function BubbleChart({ rows, base, setBase, minMult, setMinMult, 
   const drag = useRef(null)
 
   const pts = useMemo(() => {
-    const finite = rows.filter(r => !r.is_atl && r.age_months != null).map(r => r.age_months)
+    const tr = (r) => (trail && r.prev ? r.prev : null)
+    const finite = rows.flatMap(r => [r, tr(r)]).filter(r => r && !r.is_atl && !r.atl && (r.age_months ?? r.age) != null)
+      .map(r => r.age_months ?? r.age)
     const maxAge = finite.length ? Math.max(...finite) : 12
     const xmax = base === 'lin' ? Math.max(24, Math.ceil(maxAge / 12) * 12) : Math.max(tx(12), tx(maxAge) * 1.1)
     const withMult = rows.filter(r => r.multiple_10y > 0)
-    const ys = withMult.map(r => clampY(Math.log10(r.multiple_10y)))
+    const ys = withMult.flatMap(r => [clampY(Math.log10(r.multiple_10y)),
+      ...(tr(r)?.mult > 0 ? [clampY(Math.log10(tr(r).mult))] : [])])
     let ymin = ys.length ? Math.min(...ys) : -0.5
     let ymax = ys.length ? Math.max(...ys) : 0.5
     if (ymax - ymin < 0.6) { const c = (ymin + ymax) / 2; ymin = c - 0.3; ymax = c + 0.3 }
     const padY = (ymax - ymin) * 0.08
     ymin -= padY; ymax += padY
-    const maxCap = Math.max(1, ...rows.map(r => r.market_cap || 0))
-    const list = withMult.map(r => ({
-      r, x: r.is_atl ? xmax : tx(r.age_months), y: clampY(Math.log10(r.multiple_10y)),
-      rad: r.market_cap ? Math.max(R_MIN, R_MAX * Math.sqrt(r.market_cap / maxCap)) : R_MIN,
-    }))
+    const capRef = maxCap || Math.max(1, ...rows.map(r => r.market_cap || 0))
+    const list = withMult.map(r => {
+      const p = tr(r)
+      return {
+        r, x: r.is_atl ? xmax : tx(r.age_months), y: clampY(Math.log10(r.multiple_10y)),
+        rad: r.market_cap ? Math.max(R_MIN, R_MAX * Math.sqrt(r.market_cap / capRef)) : R_MIN,
+        from: p && p.mult > 0 ? { x: p.atl ? xmax : tx(p.age), y: clampY(Math.log10(p.mult)) } : null,
+      }
+    })
     list.sort((a, b) => b.rad - a.rad)
     return { list, xmax, ymin, ymax }
-  }, [rows, base]) // eslint-disable-line
+  }, [rows, base, trail, maxCap]) // eslint-disable-line
 
   useEffect(() => { setView({ x0: -xpad(pts.xmax), x1: pts.xmax + xpad(pts.xmax), y0: pts.ymin, y1: pts.ymax }) }, [pts])
 
   useEffect(() => {
     const el = wrap.current
-    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: Math.max(380, Math.min(640, el.clientWidth * 0.56)) }))
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: compact ? Math.max(300, Math.min(420, el.clientWidth * 0.6)) : Math.max(380, Math.min(640, el.clientWidth * 0.56)) }))
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [compact])
 
   const px = (x) => M.l + ((x - view.x0) / (view.x1 - view.x0)) * (size.w - M.l - M.r)
   const py = (y) => M.t + (1 - (y - view.y0) / (view.y1 - view.y0)) * (size.h - M.t - M.b)
@@ -115,19 +125,32 @@ export default function BubbleChart({ rows, base, setBase, minMult, setMinMult, 
       g.beginPath(); g.moveTo(px(pts.xmax), M.t); g.lineTo(px(pts.xmax), size.h - M.b); g.stroke(); g.setLineDash([])
     }
     const sc = radScale()
+    if (trail) {
+      for (const p of pts.list) {
+        if (!p.from) continue
+        const x0 = px(p.from.x), y0 = py(p.from.y), x1 = px(p.x), y1 = py(p.y)
+        if (Math.hypot(x1 - x0, y1 - y0) < 3) continue
+        const hot = jumpWin && p.r['jump' + jumpWin] != null && p.r['jump' + jumpWin] >= jumpHot
+        g.strokeStyle = hot ? 'rgba(248,113,113,0.95)' : 'rgba(125,211,252,0.55)'
+        g.lineWidth = hot ? 2 : 1.2
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke()
+        g.fillStyle = g.strokeStyle
+        g.beginPath(); g.arc(x0, y0, hot ? 3 : 2.2, 0, 2 * Math.PI); g.fill()
+      }
+    }
     for (const p of pts.list) {
       const x = px(p.x), y = py(p.y), rad = p.rad * sc
       if (x < M.l - rad || x > size.w - M.r + rad || y < M.t - rad || y > size.h - M.b + rad) continue
       const c = p.r.alert ? RED : GRAY
       g.beginPath(); g.arc(x, y, rad, 0, 2 * Math.PI)
       g.fillStyle = `rgba(${c},${p.r.alert ? 0.30 : 0.20})`; g.fill()
-      g.strokeStyle = `rgba(${c},0.75)`; g.lineWidth = hover === p ? 2.2 : 0.8; g.stroke()
+      g.strokeStyle = selected === p.r.ticker ? '#fbbf24' : `rgba(${c},0.75)`; g.lineWidth = hover === p || selected === p.r.ticker ? 2.4 : 0.8; g.stroke()
       if (rad > 20) { g.fillStyle = '#e5e7eb'; g.textAlign = 'center'; g.fillText(p.r.ticker, x, y + 4) }
     }
     g.restore()
     g.fillStyle = '#9ca3af'; g.textAlign = 'left'
     if (pts.xmax >= view.x0 && pts.xmax <= view.x1) g.fillText('ATL →', Math.min(px(pts.xmax) + 4, size.w - 40), M.t + 12)
-  }, [view, size, pts, hover, base])
+  }, [view, size, pts, hover, base, trail, selected, jumpWin, jumpHot])
 
   const locate = (e) => {
     const b = canvas.current.getBoundingClientRect()
@@ -175,38 +198,26 @@ export default function BubbleChart({ rows, base, setBase, minMult, setMinMult, 
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-end gap-4 text-xs text-gray-400">
-        <label>Échelle horizontale
-          <select value={base} onChange={e => setBase(e.target.value === 'lin' ? 'lin' : Number(e.target.value))}
-            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
-            {BASES.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
-          </select>
-        </label>
-        <label>Multiple 10 ans ≥
-          <input value={minMult} onChange={e => setMinMult(e.target.value)} placeholder="ex. 2" inputMode="decimal"
-            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
-        </label>
-        <label>Ancienneté ≥ (mois)
-          <input value={minAge} onChange={e => setMinAge(e.target.value)} placeholder="ex. 12" inputMode="decimal"
-            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
-        </label>
-        <span className="pb-2 text-gray-500">{pts.list.length} bulles · échelles recalculées automatiquement (plus bas historiques toujours inclus)</span>
-      </div>
     <div ref={wrap} className="relative w-full select-none">
       <canvas ref={canvas} style={{ width: size.w, height: size.h, cursor: drag.current ? 'grabbing' : hover ? 'pointer' : 'grab' }}
         onMouseMove={onMove} onMouseLeave={() => { setHover(null); drag.current = null }}
         onMouseDown={(e) => { const { mx, my } = locate(e); drag.current = { mx, my, v: view } }}
-        onMouseUp={() => { drag.current = null }} />
+        onMouseUp={(e) => {
+          const { mx, my } = locate(e), d = drag.current
+          drag.current = null
+          if (d && Math.hypot(mx - d.mx, my - d.my) < 4) { const h = hit(mx, my); if (h && onSelect) onSelect(h.r.ticker) }
+        }} />
       <button onClick={reset} className="absolute top-2 right-3 text-[11px] px-2 py-1 rounded bg-gray-800 text-gray-300 hover:text-white border border-gray-700">
         Réinitialiser le zoom
       </button>
       {hover && (
         <div className="absolute z-10 pointer-events-none rounded-lg border border-gray-700 bg-gray-950/95 px-3 py-2 text-xs text-gray-200 shadow-lg"
-          style={{ left: Math.min(hover.mx + 14, size.w - 230), top: Math.min(hover.my + 14, size.h - 130), width: 220 }}>
+          style={{ left: Math.min(hover.mx + 14, size.w - 230), top: Math.min(hover.my + 14, size.h - 150), width: 220 }}>
           <div className="font-semibold text-white">{hover.r.ticker} <span className="font-normal text-gray-400">{hover.r.name.replace(/ - .*$/, '')}</span></div>
           <div>Cours : {hover.r.price.toFixed(2)} $</div>
           <div>Ancienneté : {fmtAge(hover.r)}{hover.r.alert ? ' · ALERTE' : ''}</div>
           <div>Multiple 10 ans : {fmtMult(hover.r)}</div>
+          <div>Saut d'ancienneté : {fmtJump(hover.r.jump5)} m (5 j) · {fmtJump(hover.r.jump20)} m (20 j)</div>
           <div>Capitalisation : {fmtCap(hover.r.market_cap)}{hover.r.market_cap == null ? ' (taille minimale)' : ''}</div>
           {hover.r.short_history && <div className="text-amber-400">Historique court (&lt; 1 an)</div>}
         </div>
