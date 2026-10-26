@@ -4,8 +4,8 @@ import BubbleChart, { fmtAge, fmtCap, fmtMult } from '../components/nasdaq/Bubbl
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const CAP_OPTIONS = [
-  { v: 0, l: 'Toutes' }, { v: 1e8, l: '≥ 100 M$' }, { v: 3e8, l: '≥ 300 M$' },
-  { v: 1e9, l: '≥ 1 Md$' }, { v: 5e9, l: '≥ 5 Md$' }, { v: 1e10, l: '≥ 10 Md$' }, { v: 5.8e10, l: '≥ 50 Md€ (≈ 58 Md$)' },
+  { v: 5e10, l: '≥ 50 Md$ (seuil de l’analyse)' }, { v: 1e11, l: '≥ 100 Md$' }, { v: 2e11, l: '≥ 200 Md$' },
+  { v: 5e11, l: '≥ 500 Md$' }, { v: 1e12, l: '≥ 1 000 Md$' },
 ]
 const ATL_AGE = 1e6 // tri : un plus bas historique passe avant toute ancienneté chiffrée
 const ageKey = (r) => (r.is_atl ? ATL_AGE : r.age_months ?? -1)
@@ -29,7 +29,7 @@ export default function Nasdaq() {
   const [snap, setSnap] = useState(null)
   const [err, setErr] = useState(null)
   const [status, setStatus] = useState(null)
-  const [minCap, setMinCap] = useState(5.8e10)
+  const [minCap, setMinCap] = useState(5e10)
   const [query, setQuery] = useState('')
   const [onlyAlerts, setOnlyAlerts] = useState(false)
   const [sort, setSort] = useState({ k: 'cap', dir: -1 })
@@ -190,7 +190,7 @@ export default function Nasdaq() {
           <span><i className="inline-block w-3 h-3 rounded-full align-[-2px] mr-1" style={{ background: 'rgba(156,163,175,.4)' }} />autres</span>
           <span>Surface ∝ capitalisation · molette = zoom · glisser = déplacer · pointillé = 1×</span>
         </div>
-        {shown.length ? <BubbleChart rows={shown} /> : <p className="text-sm text-gray-500 py-12 text-center">Rien à afficher.</p>}
+        <BubbleChart allRows={shown} />
       </section>
 
       <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">

@@ -16,7 +16,20 @@ export const fmtCap = (v) => {
 export const fmtMult = (r) => (r.multiple_10y == null ? '–' : `${r.multiple_10y.toFixed(r.multiple_10y < 10 ? 2 : 1)}×${r.lt_10y ? ' (<10 ans)' : ''}`)
 export const fmtAge = (r) => (r.is_atl ? 'ATL' : `${r.age_months} mois`)
 
-export default function BubbleChart({ rows }) {
+const BASES = [
+  { v: 'lin', l: 'Linéaire' }, { v: 1.5, l: 'Log base 1,5' }, { v: 2, l: 'Log base 2' },
+  { v: 3, l: 'Log base 3' }, { v: 10, l: 'Log base 10' },
+]
+
+export default function BubbleChart({ allRows }) {
+  const [base, setBase] = useState(2)
+  const [minMult, setMinMult] = useState('')
+  const [minAge, setMinAge] = useState('')
+  const rows = useMemo(() => {
+    const m = parseFloat(String(minMult).replace(',', '.')), a = parseFloat(String(minAge).replace(',', '.'))
+    return allRows.filter(r => (isNaN(m) || (r.multiple_10y ?? 0) >= m) && (isNaN(a) || r.is_atl || (r.age_months ?? 0) >= a))
+  }, [allRows, minMult, minAge])
+  const tx = (age) => (base === 'lin' ? age : Math.log(1 + age) / Math.log(base))
   const wrap = useRef(null)
   const canvas = useRef(null)
   const [size, setSize] = useState({ w: 900, h: 520 })
@@ -26,19 +39,23 @@ export default function BubbleChart({ rows }) {
 
   const pts = useMemo(() => {
     const finite = rows.filter(r => !r.is_atl && r.age_months != null).map(r => r.age_months)
-    const xmax = Math.max(24, Math.ceil((finite.length ? Math.max(...finite) : 24) / 12) * 12)
+    const maxAge = finite.length ? Math.max(...finite) : 12
+    const xmax = base === 'lin' ? Math.max(24, Math.ceil(maxAge / 12) * 12) : Math.max(tx(12), tx(maxAge) * 1.1)
     const withMult = rows.filter(r => r.multiple_10y > 0)
     const ys = withMult.map(r => clampY(Math.log10(r.multiple_10y)))
-    const ymin = ys.length ? Math.floor(Math.min(...ys) * 2) / 2 - 0.1 : -1
-    const ymax = ys.length ? Math.ceil(Math.max(...ys) * 2) / 2 + 0.1 : 1
+    let ymin = ys.length ? Math.min(...ys) : -0.5
+    let ymax = ys.length ? Math.max(...ys) : 0.5
+    if (ymax - ymin < 0.6) { const c = (ymin + ymax) / 2; ymin = c - 0.3; ymax = c + 0.3 }
+    const padY = (ymax - ymin) * 0.08
+    ymin -= padY; ymax += padY
     const maxCap = Math.max(1, ...rows.map(r => r.market_cap || 0))
     const list = withMult.map(r => ({
-      r, x: r.is_atl ? xmax : r.age_months, y: clampY(Math.log10(r.multiple_10y)),
+      r, x: r.is_atl ? xmax : tx(r.age_months), y: clampY(Math.log10(r.multiple_10y)),
       rad: r.market_cap ? Math.max(R_MIN, R_MAX * Math.sqrt(r.market_cap / maxCap)) : R_MIN,
     }))
     list.sort((a, b) => b.rad - a.rad)
     return { list, xmax, ymin, ymax }
-  }, [rows])
+  }, [rows, base]) // eslint-disable-line
 
   useEffect(() => { setView({ x0: -xpad(pts.xmax), x1: pts.xmax + xpad(pts.xmax), y0: pts.ymin, y1: pts.ymax }) }, [pts])
 
@@ -65,14 +82,23 @@ export default function BubbleChart({ rows }) {
     g.font = '11px ui-sans-serif, system-ui'
     g.fillStyle = '#9ca3af'; g.strokeStyle = '#1f2937'
 
-    const step = (view.x1 - view.x0) > 150 ? 24 : 12
     g.textAlign = 'center'
-    for (let x = 0; x <= view.x1; x += step) {
-      if (x < view.x0) continue
-      g.beginPath(); g.moveTo(px(x), M.t); g.lineTo(px(x), size.h - M.b); g.stroke()
-      g.fillText(String(x), px(x), size.h - M.b + 15)
+    const ticks = []
+    if (base === 'lin') {
+      const step = (view.x1 - view.x0) > 150 ? 24 : 12
+      for (let a = 0; a <= view.x1; a += step) ticks.push([a, a])
+    } else {
+      ticks.push([0, 0])
+      for (let a = 1, k = 0; k < 40 && tx(a) <= view.x1 * 1.001; a = Math.round(base ** ++k * 100) / 100) {
+        if (!ticks.length || a !== ticks[ticks.length - 1][1]) ticks.push([tx(a), a])
+      }
     }
-    g.fillText('Ancienneté du cours (mois)', M.l + (size.w - M.l - M.r) / 2, size.h - 6)
+    for (const [t, a] of ticks) {
+      if (t < view.x0 || t > view.x1) continue
+      g.beginPath(); g.moveTo(px(t), M.t); g.lineTo(px(t), size.h - M.b); g.stroke()
+      g.fillText(String(Math.round(a * 10) / 10), px(t), size.h - M.b + 15)
+    }
+    g.fillText(base === 'lin' ? 'Ancienneté du cours (mois)' : `Ancienneté du cours (mois, échelle log base ${base})`, M.l + (size.w - M.l - M.r) / 2, size.h - 6)
     g.textAlign = 'right'
     const yTicks = []
     for (let d = Math.floor(view.y0) - 1; d <= Math.ceil(view.y1) + 1; d++) for (const m of [1, 2, 5]) yTicks.push(Math.log10(m * 10 ** d))
@@ -108,7 +134,7 @@ export default function BubbleChart({ rows }) {
     g.restore()
     g.fillStyle = '#9ca3af'; g.textAlign = 'left'
     if (pts.xmax >= view.x0 && pts.xmax <= view.x1) g.fillText('ATL →', Math.min(px(pts.xmax) + 4, size.w - 40), M.t + 12)
-  }, [view, size, pts, hover])
+  }, [view, size, pts, hover, base])
 
   const locate = (e) => {
     const b = canvas.current.getBoundingClientRect()
@@ -155,6 +181,24 @@ export default function BubbleChart({ rows }) {
   const reset = () => setView({ x0: -xpad(pts.xmax), x1: pts.xmax + xpad(pts.xmax), y0: pts.ymin, y1: pts.ymax })
 
   return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-end gap-4 text-xs text-gray-400">
+        <label>Échelle horizontale
+          <select value={base} onChange={e => setBase(e.target.value === 'lin' ? 'lin' : Number(e.target.value))}
+            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white">
+            {BASES.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          </select>
+        </label>
+        <label>Multiple 10 ans ≥
+          <input value={minMult} onChange={e => setMinMult(e.target.value)} placeholder="ex. 2" inputMode="decimal"
+            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
+        </label>
+        <label>Ancienneté ≥ (mois)
+          <input value={minAge} onChange={e => setMinAge(e.target.value)} placeholder="ex. 12" inputMode="decimal"
+            className="mt-1 block rounded bg-gray-800 border border-gray-700 px-2 py-1.5 text-sm text-white w-24" />
+        </label>
+        <span className="pb-2 text-gray-500">{pts.list.length} bulles · échelles recalculées automatiquement (plus bas historiques toujours inclus)</span>
+      </div>
     <div ref={wrap} className="relative w-full select-none">
       <canvas ref={canvas} style={{ width: size.w, height: size.h, cursor: drag.current ? 'grabbing' : hover ? 'pointer' : 'grab' }}
         onMouseMove={onMove} onMouseLeave={() => { setHover(null); drag.current = null }}
@@ -174,6 +218,7 @@ export default function BubbleChart({ rows }) {
           {hover.r.short_history && <div className="text-amber-400">Historique court (&lt; 1 an)</div>}
         </div>
       )}
+    </div>
     </div>
   )
 }

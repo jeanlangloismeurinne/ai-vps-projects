@@ -13,3 +13,5 @@ page `/nasdaq`). Aucune dépendance vers les agents, la KB ou les tickers V1/V2.
 Décisions prises à la place des « points à confirmer » (§9) : alerte active tant que ≥ 12 mois ; ATL = alerte,
 badge « ATL », bulle posée à la valeur maximale de l'axe X ; capitalisation minimale par défaut 1 Md$.
 Idempotence : un instantané est clé par la dernière séance US couverte ; relancer le même jour le remplace.
+
+Seuil d'analyse : `MIN_MARKET_CAP_USD` (job.py, 50 Md$) — seules les entreprises au-dessus sont téléchargées et calculées ; capitalisation inconnue = exclue. Le filtre de la page ne peut que relever ce seuil.

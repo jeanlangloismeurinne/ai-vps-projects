@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 CHUNK = 40  # le VPS n'a que ~1 Go libre : un lot de 200 historiques complets a fait tuer le processus (OOM)
 CHUNK_TIMEOUT_S = 420
+MIN_MARKET_CAP_USD = 50_000_000_000  # l'analyse ne porte que sur les entreprises au-dessus de ce seuil
 MIN_PRICED_RATIO = 0.80
 MIN_ON_REF_RATIO = 0.70  # les titres peu liquides n'ont pas de cours tous les jours
 SUSPENDED_AFTER_DAYS = 7
@@ -149,6 +150,8 @@ async def run_daily() -> dict:
 async def _run(log: _Log, today: date) -> dict:
     listings = await fetch_universe()
     log(f"univers : {len(listings)} actions ordinaires (hors ETF/warrants/droits)")
+    listings = [l for l in listings if l.market_cap is not None and l.market_cap >= MIN_MARKET_CAP_USD]
+    log(f"retenues : {len(listings)} avec capitalisation ≥ {MIN_MARKET_CAP_USD / 1e9:.0f} Md$")
     state["step"] = "téléchargement des cours"
     by_yf = {l.yf: l for l in listings}
     expected = last_closed_session(datetime.now(timezone.utc))
