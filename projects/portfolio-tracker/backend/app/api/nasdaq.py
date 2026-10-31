@@ -173,7 +173,7 @@ async def watchlist() -> dict:
     return {"tickers": tickers}
 
 
-@router.put("/watchlist/{ticker}", status_code=204, response_class=Response)
+@router.put("/watchlist/{ticker}", status_code=204, response_class=Response, response_model=None)
 async def watchlist_add(ticker: str) -> None:
     t = _tk(ticker)
     async with get_db_session() as conn:
@@ -182,7 +182,7 @@ async def watchlist_add(ticker: str) -> None:
         await conn.execute("INSERT INTO nasdaq_watchlist (ticker) VALUES ($1) ON CONFLICT DO NOTHING", t)
 
 
-@router.delete("/watchlist/{ticker}", status_code=204, response_class=Response)
+@router.delete("/watchlist/{ticker}", status_code=204, response_class=Response, response_model=None)
 async def watchlist_del(ticker: str) -> None:
     async with get_db_session() as conn:
         await conn.execute("DELETE FROM nasdaq_watchlist WHERE ticker = $1", _tk(ticker))
