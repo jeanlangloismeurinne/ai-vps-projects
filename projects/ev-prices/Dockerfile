@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+# Correctifs de sécurité Debian publiés depuis la construction de l'image de base
+RUN apt-get update && apt-get -y --no-install-recommends upgrade && rm -rf /var/lib/apt/lists/*
+
 # Dépendances système pour Chromium (sans passer par playwright install-deps
 # qui échoue sur Debian Trixie avec des noms de paquets obsolètes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
