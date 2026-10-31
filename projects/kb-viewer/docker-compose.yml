@@ -20,7 +20,8 @@ volumes:
 
 services:
   web:
-    image: nginx:1.27-alpine
+    image: local/nginx-patched:alpine
+    build: ../../infrastructure/images/nginx
     container_name: kb-viewer
     restart: unless-stopped
     volumes:

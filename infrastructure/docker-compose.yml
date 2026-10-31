@@ -1,7 +1,8 @@
 version: '3.9'
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: local/pgvector-patched:pg16
+    build: ./images/postgres
     container_name: shared-postgres
     restart: always
     environment:
