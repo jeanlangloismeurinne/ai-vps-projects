@@ -11,8 +11,10 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev --no-audit --no-fund
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+# npm/yarn embarquent des dépendances vulnérables (tar, glob…) et ne servent plus à l'exécution
+RUN apk upgrade --no-cache && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
 COPY --from=build /app/dist ./dist
 EXPOSE 8000
 CMD ["node", "dist/server.js"]
