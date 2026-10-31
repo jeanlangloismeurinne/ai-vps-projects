@@ -220,4 +220,9 @@ async def _run(log: _Log, today: date) -> dict:
     n_alert = sum(1 for r in rows if r[11])
     log(f"{len(rows)} titres publiés, {n_alert} en alerte, {sum(1 for r in rows if r[12])} nouvelles")
     await _finish_run(ref_date, "ok", log, n_universe=n_universe, n_priced=len(data), n_shown=len(rows))
+    try:
+        from app.nasdaq import proba
+        await proba.ensure_models()
+    except Exception:  # noqa: BLE001 — le modèle de probabilité ne doit jamais faire échouer le calcul du jour
+        logging.getLogger("nasdaq").exception("ensure_models a échoué")
     return {"status": "ok", "run_date": str(ref_date), "shown": len(rows), "alerts": n_alert}

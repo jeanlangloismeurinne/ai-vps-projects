@@ -5,6 +5,10 @@
   POST /nasdaq/run             lance le job maintenant (en tâche de fond)
   GET  /nasdaq/history/{t}     historique quotidien des deux indicateurs d'un titre
   GET  /nasdaq/series/{t}      idem pour un titre sur 1y / 5y / max (fiche)
+  GET  /nasdaq/watchlist       titres suivis (cartes de l'accueil) ; PUT/DELETE /watchlist/{t}
+  GET  /nasdaq/search?q=       recherche parmi les titres publiés
+  GET  /nasdaq/proba/{t}       courbe de probabilité de nouveau plus haut à 12 mois (point par point, passé seul)
+  GET  /nasdaq/proba-calib     qualité du modèle mesurée hors échantillon
   GET  /nasdaq/series          ancienneté et multiple de chaque titre aux ~260 dernières séances (reconstitués des cours)
 """
 from __future__ import annotations
@@ -17,7 +21,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException
 
 from app.db.database import get_db_session
-from app.nasdaq import job
+from app.nasdaq import job, proba
 from app.nasdaq.indicators import series_tail, to_daynum
 from app.nasdaq.universe import yf_symbol
 
@@ -149,3 +153,85 @@ async def series_one(ticker: str, range: str = "1y") -> dict:
     if not s:
         raise HTTPException(status_code=404, detail=f"Historique insuffisant pour `{ticker}`.")
     return s
+
+
+def _tk(ticker: str) -> str:
+    return ticker.upper().strip()
+
+
+async def _published(conn, tickers: list[str]) -> dict[str, str]:
+    rows = await conn.fetch(
+        """SELECT DISTINCT ON (ticker) ticker, name FROM nasdaq_indicators
+           WHERE ticker = ANY($1::text[]) ORDER BY ticker, run_date DESC""", tickers)
+    return {r["ticker"]: r["name"] for r in rows}
+
+
+@router.get("/watchlist")
+async def watchlist() -> dict:
+    async with get_db_session() as conn:
+        tickers = [r["ticker"] for r in await conn.fetch("SELECT ticker FROM nasdaq_watchlist ORDER BY added_at")]
+    return {"tickers": tickers}
+
+
+@router.put("/watchlist/{ticker}", status_code=204)
+async def watchlist_add(ticker: str) -> None:
+    t = _tk(ticker)
+    async with get_db_session() as conn:
+        if t not in await _published(conn, [t]):
+            raise HTTPException(status_code=404, detail=f"Titre `{ticker}` absent du suivi.")
+        await conn.execute("INSERT INTO nasdaq_watchlist (ticker) VALUES ($1) ON CONFLICT DO NOTHING", t)
+
+
+@router.delete("/watchlist/{ticker}", status_code=204)
+async def watchlist_del(ticker: str) -> None:
+    async with get_db_session() as conn:
+        await conn.execute("DELETE FROM nasdaq_watchlist WHERE ticker = $1", _tk(ticker))
+
+
+@router.get("/search")
+async def search(q: str = "", limit: int = 8) -> list[dict]:
+    q = q.strip()
+    if not q:
+        return []
+    async with get_db_session() as conn:
+        run_date = await conn.fetchval(
+            "SELECT run_date FROM nasdaq_runs WHERE status='ok' ORDER BY run_date DESC, id DESC LIMIT 1")
+        if not run_date:
+            return []
+        rows = await conn.fetch(
+            """SELECT ticker, name, market_cap FROM nasdaq_indicators
+               WHERE run_date = $1 AND (ticker ILIKE $2 OR name ILIKE $3)
+               ORDER BY (ticker ILIKE $2) DESC, market_cap DESC NULLS LAST LIMIT $4""",
+            run_date, q + "%", "%" + q + "%", min(max(limit, 1), 20))
+    return [dict(r) for r in rows]
+
+
+@router.get("/proba-calib")
+async def proba_calib() -> dict:
+    async with get_db_session() as conn:
+        row = await conn.fetchrow("SELECT payload FROM nasdaq_proba_calib WHERE id = 1")
+    return {"calib": row["payload"] if row else None, "fitting": proba.state["running"], "error": proba.state["error"]}
+
+
+@router.get("/proba/{ticker}")
+async def proba_one(ticker: str, years: int = 5) -> dict:
+    """p = probabilité estimée à chaque date (modèle appris AVANT cette année) ; o = 1 atteint / 0 manqué / null en cours."""
+    if not 1 <= years <= 40:
+        raise HTTPException(status_code=422, detail="years ∈ 1..40")
+    models = await proba.load_models()
+    if not models:
+        raise HTTPException(status_code=503, detail="Modèle de probabilité pas encore appris.")
+    async with get_db_session() as conn:
+        run_date = await conn.fetchval(
+            "SELECT run_date FROM nasdaq_runs WHERE status='ok' ORDER BY run_date DESC, id DESC LIMIT 1")
+        row = await conn.fetchrow("SELECT day_nums, closes FROM nasdaq_prices WHERE ticker = $1",
+                                  yf_symbol(_tk(ticker))) if run_date else None
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Titre `{ticker}` absent du suivi.")
+    d = np.array(row["day_nums"], dtype=np.int64)
+    c = np.array(row["closes"], dtype=np.float64)
+    keep = d <= to_daynum(run_date)
+    out = proba.curve(d[keep], c[keep], models, years=years)
+    if not out:
+        raise HTTPException(status_code=404, detail=f"Historique insuffisant pour `{ticker}`.")
+    return out
