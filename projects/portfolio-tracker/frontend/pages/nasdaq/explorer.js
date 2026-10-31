@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import BubbleChart, { BASES_LIST, fmtAge, fmtCap, fmtJump, fmtMult } from '../components/nasdaq/BubbleChart'
-import TickerSheet from '../components/nasdaq/TickerSheet'
+import BubbleChart, { BASES_LIST, fmtAge, fmtCap, fmtJump, fmtMult } from '../../components/nasdaq/BubbleChart'
+import TickerSheet from '../../components/nasdaq/TickerSheet'
+import SlidePanes, { useSelectedTicker } from '../../components/nasdaq/SlidePanes'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const DPM = 30.4375
@@ -42,8 +43,8 @@ export default function Nasdaq() {
   const [jumpWin, setJumpWin] = useState(20)
   const [minJump, setMinJump] = useState('')
   const [trailWin, setTrailWin] = useState(20)
-  const [split, setSplit] = useState('none')
-  const [selected, setSelected] = useState(null)
+  const [split, setSplit] = useState('cap')
+  const [selected, openTicker, closeTicker] = useSelectedTicker()
   const [base, setBase] = useState(2)
   const [minMult, setMinMult] = useState('')
   const [minAge, setMinAge] = useState('')
@@ -160,9 +161,9 @@ export default function Nasdaq() {
   const dateFr = snap?.run_date ? new Date(snap.run_date + 'T12:00:00').toLocaleDateString('fr-FR') : null
   const lastRun = status?.runs?.[0]
 
-  return (
-    <div className="min-h-screen px-4 md:px-8 py-8 max-w-[1400px] mx-auto">
-      <Link href="/" className="text-sm text-gray-500 hover:text-white">← Choix de l'espace</Link>
+  const mainView = (
+    <div className="pb-8">
+      <Link href="/nasdaq" className="text-sm text-gray-500 hover:text-white">← Ma liste</Link>
       <div className="mt-4 mb-5 flex flex-wrap items-center gap-3">
         <span className="text-3xl">🫧</span>
         <h1 className="text-2xl font-bold text-white">Suivi NASDAQ</h1>
@@ -256,7 +257,7 @@ export default function Nasdaq() {
         {series && ranking.length === 0 && <p className="text-sm text-gray-500">Aucune hausse avec ces filtres.</p>}
         <div className="flex flex-wrap gap-1.5">
           {ranking.map(r => (
-            <button key={r.ticker} onClick={() => setSelected(r.ticker)}
+            <button key={r.ticker} onClick={() => openTicker(r.ticker)}
               title={`${r.name} — ancienneté ${fmtAge(r)} · multiple ${fmtMult(r)} · ${fmtCap(r.market_cap)}`}
               className={`rounded border px-2 py-1 text-xs ${r['jump' + jumpWin] >= jumpHot ? 'border-red-500 bg-red-950/60 text-red-200' : 'border-gray-700 bg-gray-800/60 text-gray-300'} hover:text-white`}>
               <b>{r.ticker}</b> <span className="text-gray-400">{fmtJump(r['jump' + jumpWin])} m{jumpWin === 20 && r.fact20 ? ` · ×${r.fact20.toFixed(1)}` : ''} · {r.is_atl ? 'ATL' : `${r.age_months} m`}</span>
@@ -311,19 +312,12 @@ export default function Nasdaq() {
             <div key={p.key} className={split === 'none' ? '' : 'rounded-lg border border-gray-800 p-2'}>
               {p.label && <div className="text-xs font-semibold text-gray-300 mb-1">{p.label} <span className="font-normal text-gray-500">· {p.rows.length} titres</span></div>}
               <BubbleChart rows={p.rows} base={base} trail={trailWin > 0} maxCap={maxCapShown} selected={selected}
-                onSelect={setSelected} jumpWin={jumpWin} jumpHot={jumpHot} compact={split !== 'none'} />
+                onSelect={openTicker} jumpWin={jumpWin} jumpHot={jumpHot} compact={split !== 'none'} />
             </div>
           ))}
           {panels.length === 0 && <p className="text-sm text-gray-500">Aucun titre avec ces filtres.</p>}
         </div>
       </section>
-
-      {selected && (
-        <section className="mb-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <TickerSheet key={selected} row={rows.find(r => r.ticker === selected)} ticker={selected} hot={jumpHot}
-            onClose={() => setSelected(null)} />
-        </section>
-      )}
 
       <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
         <div className="flex items-center mb-3">
@@ -347,7 +341,7 @@ export default function Nasdaq() {
             </thead>
             <tbody>
               {sorted.slice(0, limit).map(r => (
-                <tr key={r.ticker} onClick={() => setSelected(r.ticker)} className="border-b border-gray-900 text-gray-200 cursor-pointer hover:bg-gray-800/40">
+                <tr key={r.ticker} onClick={() => openTicker(r.ticker)} className="border-b border-gray-900 text-gray-200 cursor-pointer hover:bg-gray-800/40">
                   <td className="py-1.5 pr-4 font-semibold text-white">{r.ticker}</td>
                   <td className="py-1.5 pr-4 text-gray-400 max-w-[280px] truncate">{r.name.replace(/ - .*$/, '')}</td>
                   <td className="py-1.5 pr-4 text-right tabular-nums">{r.price.toFixed(2)}</td>
@@ -390,5 +384,14 @@ export default function Nasdaq() {
         </details>
       )}
     </div>
+  )
+
+  return (
+    <SlidePanes selected={selected} main={mainView}
+      detail={(t) => (
+        <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 mb-8">
+          <TickerSheet key={t} row={rows.find(r => r.ticker === t)} ticker={t} hot={jumpHot} onClose={closeTicker} />
+        </section>
+      )} />
   )
 }

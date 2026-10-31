@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import ProbaPanel from './ProbaPanel'
+import WatchButton from './WatchButton'
 
 const DPM = 30.4375
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
@@ -63,10 +65,13 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
         ))}
       </div>
       {full && <span className="text-xs text-gray-500">{full.d.length} séances · sauts ≥ {hot} mois sur 5 séances en rouge{range !== '1y' ? ' (les 6 plus forts)' : ''}</span>}
-      <button onClick={onClose} className="ml-auto text-xs px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white">Fermer</button>
+      <div className="ml-auto flex items-center gap-2">
+        <WatchButton ticker={ticker} />
+        <button onClick={onClose} className="text-xs px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white">← Retour</button>
+      </div>
     </div>
   )
-  if (!s) return <div>{head}<p className="text-sm text-gray-500">{err ? `Série indisponible pour ${row.ticker} (${err}).` : 'Chargement…'}</p></div>
+  if (!s) return <div>{head}<p className="text-sm text-gray-500">{err ? `Série indisponible pour ${row.ticker} (${err}).` : 'Chargement…'}</p><ProbaPanel ticker={ticker} /></div>
 
   const n = s.d.length
   const d0 = s.d[0], d1 = s.d[n - 1]
@@ -130,6 +135,7 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
         ))}
         <text x={W - MR} y={top2 + 12} fontSize="10" fill="#6b7280" textAnchor="end">Cours ajusté ($){useLog ? ' — échelle log' : ''}</text>
       </svg>
+      <ProbaPanel ticker={ticker} />
     </div>
   )
 }
