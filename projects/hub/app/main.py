@@ -11,6 +11,7 @@ from app.tickets import router as tickets_router
 from app.roadmap import router as roadmap_router
 from app.nuit import router as nuit_router
 from app.newsletter import router as newsletter_router
+from app.gmail import router as gmail_router
 
 
 class Settings(BaseSettings):
@@ -32,6 +33,7 @@ app.include_router(tickets_router)
 app.include_router(roadmap_router)
 app.include_router(nuit_router)
 app.include_router(newsletter_router)
+app.include_router(gmail_router)
 
 # ── Services ──────────────────────────────────────────────────────────────────
 SERVICES = [
@@ -242,6 +244,23 @@ async def login_get(request: Request):
     return HTMLResponse(_login_page())
 
 
+_LOGIN_FAILS: dict[str, list[float]] = {}
+LOGIN_MAX_FAILS, LOGIN_WINDOW_S = 5, 600
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return (fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?")) or "?"
+
+
+def _login_blocked(ip: str, now: float | None = None) -> bool:
+    import time as _t
+    now = now or _t.time()
+    fails = [t for t in _LOGIN_FAILS.get(ip, []) if now - t < LOGIN_WINDOW_S]
+    _LOGIN_FAILS[ip] = fails
+    return len(fails) >= LOGIN_MAX_FAILS
+
+
 @app.post("/login")
 async def login_post(
     request: Request,
@@ -249,10 +268,16 @@ async def login_post(
     password: str = Form(...),
     next: str = Form(default=""),
 ):
+    ip = _client_ip(request)
+    if _login_blocked(ip):
+        return HTMLResponse(_login_page("Trop de tentatives : réessayez dans quelques minutes."), status_code=429)
     ok_user = _secrets.compare_digest(username, settings.WEB_USERNAME)
     ok_pass = _secrets.compare_digest(password, settings.WEB_PASSWORD)
     if not (ok_user and ok_pass):
+        import time as _t
+        _LOGIN_FAILS.setdefault(ip, []).append(_t.time())
         return HTMLResponse(_login_page("Identifiant ou mot de passe incorrect."), status_code=401)
+    _LOGIN_FAILS.pop(ip, None)
 
     token = make_cookie_value(username, settings.SESSION_SECRET)
     response = RedirectResponse(_safe_next(next), status_code=302)

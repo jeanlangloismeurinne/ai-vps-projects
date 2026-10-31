@@ -113,3 +113,55 @@ class KbDocument(Base):
     content_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     # « metadata » est réservé sur la base déclarative → attribut metadata_ (colonne « metadata »).
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+
+
+class GmailRule(Base):
+    """Règle de transfert Gmail pilotée depuis le Hub. La base est la source de vérité ; le filtre
+    Gmail (créé par le script Apps Script) n'en est que la projection. Chaînes vides plutôt que NULL
+    pour `from_addr`/`subject_contains` : l'unicité du triplet doit tenir aussi quand l'un manque."""
+    __tablename__ = "gmail_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    from_addr: Mapped[str] = mapped_column(String(320), default="")
+    subject_contains: Mapped[str] = mapped_column(String(120), default="")
+    exclude_words: Mapped[str] = mapped_column(String(120), default="")
+    skip_inbox: Mapped[bool] = mapped_column(Boolean, default=False)
+    destination: Mapped[str] = mapped_column(String(320), default="")
+    gmail_filter_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Identifiant d'idempotence de la DERNIÈRE écriture demandée au script (renouvelé à chaque
+    # changement de critères ; rejoué tel quel lors d'un « Réessayer »).
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # create | replace | delete : écriture voulue mais non confirmée par le script.
+    pending_op: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    sync_status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    drift_kind: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GmailAudit(Base):
+    """Journal d'audit : une ligne par appel au script. Jamais le secret, jamais la signature."""
+    __tablename__ = "gmail_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    actor: Mapped[str] = mapped_column(String(32), default="hub")
+    action: Mapped[str] = mapped_column(String(32), index=True)
+    rule_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    client_request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ok: Mapped[bool] = mapped_column(Boolean, default=False)
+    error_code: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    payload_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class GmailSetting(Base):
+    """Réglages clé/valeur du pilotage Gmail (secret en rotation, dernier ping, compteurs d'alerte)."""
+    __tablename__ = "gmail_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

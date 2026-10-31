@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 pass=0; total=0
 for f in checks/check_golden_newsletter.py checks/check_alias_routing.py checks/check_prompt_scope.py \
          checks/check_migration.py checks/check_engine.py checks/check_urlfetch.py checks/check_kb_alias.py \
-         checks/check_webhook_event_filter.py; do
+         checks/check_webhook_event_filter.py checks/check_gmail_rules.py; do
   total=$((total+1))
   out=$(checks/run.sh "$f" 2>&1); code=$?
   if [ $code -eq 0 ] && echo "$out" | grep -qE '^OK'; then pass=$((pass+1)); echo "VERT   $f"; else echo "ROUGE  $f"; echo "$out" | grep -E 'Error|assert' | head -3; fi

@@ -29,6 +29,8 @@ _MIGRATIONS = [
     "ALTER TABLE aliases ADD COLUMN IF NOT EXISTS recipients JSON",
     "CREATE INDEX IF NOT EXISTS ix_emails_alias_id ON emails (alias_id)",
     "CREATE INDEX IF NOT EXISTS ix_prompt_versions_alias_id ON prompt_versions (alias_id)",
+    # Pilotage Gmail : un seul triplet expéditeur+sujet+destination par règle (cf. gmail_rules.py).
+    "CREATE UNIQUE INDEX IF NOT EXISTS ux_gmail_rules_triplet ON gmail_rules (from_addr, subject_contains, destination)",
 ]
 
 

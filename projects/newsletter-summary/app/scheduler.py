@@ -5,7 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app import alias_digest
+from app import alias_digest, gmail_rules
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler(timezone="Europe/Paris")
@@ -31,6 +31,8 @@ def start_scheduler():
         alias_digest.run_frequency, IntervalTrigger(minutes=1),
         args=["minute"], id="digest_minute", **_JOB,
     )
+    # Réconciliation Gmail : détecte et alerte, ne corrige jamais (la correction passe par un clic).
+    scheduler.add_job(gmail_rules.daily_check, CronTrigger(hour=6, minute=30), id="gmail_daily_check", **_JOB)
     scheduler.start()
     logger.info(
         "Scheduler démarré — digests matin %02d:%02d, soir %02d:%02d, et chaque minute (Europe/Paris)",

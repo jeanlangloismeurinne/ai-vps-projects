@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+GR, GC, GA = "app/gmail_rules.py", "app/gmail_client.py", "app/gmail_api.py"
 A, AD, P, U, K, D = "app/aliases.py", "app/alias_digest.py", "app/prompts.py", "app/urlfetch.py", "app/kb.py", "app/database.py"
 
 # (nom, fichier, ancien, nouveau, check, message attendu dans la sortie)
@@ -61,6 +62,31 @@ MUTATIONS = [
     ("ports internes autorisés", U, "ALLOWED_PORTS = {80, 443}", "ALLOWED_PORTS = {80, 443, 8000, 8443, 5432}", "check_urlfetch", "mauvaise raison"),
     ("lecture non plafonnée", U, "del buf[MAX_BYTES:]     # plafond STRICT même si un seul chunk le dépasse\n                            break", "pass", "check_urlfetch", "plafond de 2 Mo"),
     ("« lien + texte » pris pour un lien seul", U, "_BARE_URL = re.compile(r\"^<?(https?://[^\\s<>]+)>?$\", re.IGNORECASE)", "_BARE_URL = re.compile(r\"^<?(https?://[^\\s<>]+)>?\", re.IGNORECASE)", "check_urlfetch", "à tort reconnu"),
+    # ── pilotage des règles Gmail ──
+    ("adresse mal formée acceptée", GR, "if not _FROM_RE.match(frm):", "if False:", "check_gmail_rules", "G1"),
+    ("DENY_FROM ignoré", GR, 'if any(domain == d or domain.endswith("." + d) for d in csv(settings.DENY_FROM)):', "if False:", "check_gmail_rules", "G1"),
+    ("sous-domaine de DENY_FROM toléré", GR, 'domain == d or domain.endswith("." + d) for d in csv(settings.DENY_FROM)', 'domain == d for d in csv(settings.DENY_FROM)', "check_gmail_rules", "G1"),
+    ("suffixe public accepté", GR, "if frm.startswith(\"@\") and domain in PUBLIC_SUFFIXES:", "if False:", "check_gmail_rules", "G1"),
+    ("sujet court sans expéditeur accepté", GR, "if not frm and len(subject) < 6:", "if False:", "check_gmail_rules", "G1"),
+    ("doublon de triplet accepté", GR, 'raise RuleError("duplicate", "une règle existe déjà pour ce expéditeur + sujet + destination", 409)', "pass", "check_gmail_rules", "G3 (doublon)|G17"),
+    ("plafond de règles retiré", GR, 'raise RuleError("rule_limit", f"{MAX_RULES} règles actives au plus", 409)', "pass", "check_gmail_rules", "G3"),
+    ("plafond sans expéditeur retiré", GR, 'raise RuleError("rule_limit", f"{MAX_SENDERLESS} règles sans expéditeur au plus", 409)', "pass", "check_gmail_rules", "G3"),
+    ("réponse non signée crue (signature de réponse)", GC, "if not hmac.compare_digest(expected, str(sig)):\n                raise ScriptSignatureError(\"signature de réponse fausse\")\n            return json.loads", "if False:\n                raise ScriptSignatureError(\"signature de réponse fausse\")\n            return json.loads", "check_gmail_rules", "G4"),
+    ("nonce de réponse non vérifié", GC, 'if body.get("nonce") != nonce:', "if False:", "check_gmail_rules", "G4 : réponse d'un autre échange"),
+    ("signature de requête différente du script", GC, '".".join([str(v), str(ts), nonce, action, payload])', '".".join([str(v), str(ts), nonce, payload])', "check_gmail_rules", "G0"),
+    ("injoignable déclaré synchronisé", GR, 'rule.sync_status, rule.last_error = "pending", _failure_message(exc)', 'rule.sync_status, rule.last_error = "synced", _failure_message(exc)', "check_gmail_rules", "G4|G5"),
+    ("refus authentique laissé en attente", GR, 'rule.sync_status = "pending" if exc.is_auth or not exc.signed else "error"', 'rule.sync_status = "pending"', "check_gmail_rules", "G5"),
+    ("renommage appelle le script", GR, "changed = any(getattr(rule, k) != f[k] for k in _CRITERIA)", "changed = True", "check_gmail_rules", "G6"),
+    ("synchronisation corrige d'elle-même", GR, '    await db.commit()\n    summary = {"at"', '    for r in rules:\n        if r.drift_kind == "missing":\n            r.pending_op = "create"; await _run_op(db, r)\n    await db.commit()\n    summary = {"at"', "check_gmail_rules", "G8"),
+    ("alerte de dérive répétée chaque jour", GR, 'if sig != "[]" and sig != await get_setting(db, "alert_sig"):', 'if sig != "[]":', "check_gmail_rules", "G8"),
+    ("compteur d'échecs jamais remis à zéro", GR, '            await set_setting(db, "auth_failures", "0")\n', "", "check_gmail_rules", "G10"),
+    ("alerte d'authentification au 1er échec", GR, "AUTH_FAILURES_ALERT = 3", "AUTH_FAILURES_ALERT = 1", "check_gmail_rules", "G10"),
+    ("rotation promue sans ping", GR, 'client = await make_client(db, secret=nxt)\n    try:\n        res = await call_script(db, "ping", client=client)', 'client = await make_client(db, secret=nxt)\n    try:\n        res = {}', "check_gmail_rules", "G11"),
+    ("secret trop vieux jamais signalé", GR, "if age > SECRET_MAX_AGE_DAYS and await get_setting", "if False and await get_setting", "check_gmail_rules", "G12"),
+    ("adresse non acceptée sélectionnable", GR, '"selectable": a["status"] == "accepted"\n                    and', '"selectable": True\n                    and', "check_gmail_rules", "G13"),
+    ("cache des adresses ignoré", GR, "now - _addr_cache[\"at\"] < ADDR_CACHE_S", "False", "check_gmail_rules", "G13"),
+    ("route sans jeton ouverte", GA, "if x_hub_token != settings.HUB_API_TOKEN:", "if False:", "check_gmail_rules", "G15"),
+    ("HUB_API_TOKEN vide = routes ouvertes", GA, "    if not settings.HUB_API_TOKEN:\n        raise HTTPException(status_code=503", "    if False:\n        raise HTTPException(status_code=503", "check_gmail_rules", "G15"),
 ]
 
 

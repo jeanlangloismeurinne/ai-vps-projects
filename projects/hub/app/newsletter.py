@@ -163,6 +163,7 @@ def _page(title: str, body: str, tabs: str, active, extra_css: str = "") -> str:
     <a class="tab {'active' if active=='kb' else ''}" href="/newsletter">📚 Résumés (KB)</a>
     <a class="tab {'active' if active=='prompt' else ''}" href="/newsletter/prompt">✏️ Prompt de résumé</a>
     <a class="tab {'active' if active=='aliases' else ''}" href="/newsletter/aliases">📮 Alias</a>
+    <a class="tab {'active' if active=='gmail' else ''}" href="/newsletter/gmail">📨 Gmail</a>
   </div>
   {body}
 </div>

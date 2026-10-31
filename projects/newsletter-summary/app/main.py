@@ -16,6 +16,7 @@ from app import aliases as al
 from app.prompts import get_active_html_prompt, list_versions, create_version, activate_version, seed_default
 from app.kb import envelope_to_dict
 from app.scheduler import start_scheduler, stop_scheduler
+from app.gmail_api import router as gmail_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(docs_url=None, redoc_url=None, lifespan=lifespan)
+app.include_router(gmail_router)
 
 
 @app.get("/health")

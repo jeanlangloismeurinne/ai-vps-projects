@@ -76,6 +76,16 @@ class Settings(BaseSettings):
     # sur le réseau Docker. Si défini, le header `X-Hub-Token` doit correspondre.
     HUB_API_TOKEN: str = ""
 
+    # Pilotage des règles de transfert Gmail (script Apps Script signé HMAC). Vide = fonction inactive.
+    GMAIL_SCRIPT_URL: str = ""
+    GMAIL_SCRIPT_SECRET: str = ""
+    # Domaines où le script peut transférer (le domaine de réception Resend) ; sert aussi de garde côté VPS.
+    DEST_ALLOWED_DOMAINS: str = ""
+    # Domaines jamais transférés (banque, impôts, cabinet…), refusés comme expéditeur.
+    DENY_FROM: str = ""
+    # Date (ISO, AAAA-MM-JJ) de la dernière rotation du secret ; sinon la date du premier usage.
+    SECRET_ROTATED_AT: str = ""
+
     class Config:
         env_file = ".env"
 

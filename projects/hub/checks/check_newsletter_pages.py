@@ -40,8 +40,8 @@ KB_DOCS = [{
 
 
 def _sans_onglet_alias(html: str) -> str:
-    """Retire l'onglet ajouté par le chantier alias : seul écart légitime du rendu."""
-    return re.sub(r'\s*<a class="tab[^"]*" href="/newsletter/aliases[^"]*">[^<]*</a>', "", html)
+    """Retire les onglets ajoutés par les chantiers alias et Gmail : seuls écarts légitimes du rendu."""
+    return re.sub(r'\s*<a class="tab[^"]*" href="/newsletter/(?:aliases|gmail)[^"]*">[^<]*</a>', "", html)
 
 
 def render() -> dict:
