@@ -29,6 +29,18 @@ l'ancien code), mais **aucun digest de 5 à 8 mails réels n'est encore passé p
 objet « 📬 Résumé hebdo-news — N newsletter(s) », cartes séparées, aucun `failed` :
 `select status, count(*) from emails where alias_id = 1 group by 1;`
 
+## Pilotage des règles de transfert Gmail (chantier 2026-10-31, phases 1-5 livrées, phase 6 à faire)
+
+Spec et docs : `docs/gmail-forward/` (`SPEC.md`, `TUTORIEL.md`, `CONSTATS.md`, `RECETTE.md`). Code : `app/gmail_{client,rules,api}.py`,
+`apps-script/Code.gs` (+ tests Node), pages Hub `/newsletter/gmail` (`hub/app/gmail.py`). Inerte tant que `GMAIL_SCRIPT_URL` est vide.
+- **Newsletter-summary déployé** (conteneur reconstruit, tables `gmail_*` créées, routes 401 sans jeton). **Hub NON déployé** : le
+  `docker compose up -d --build` dans `projects/hub` a été refusé par le classifieur, à lancer par l'utilisateur, puis `docker exec homepage grep LOGIN_MAX_FAILS app/main.py`.
+- Éprouvé **uniquement contre un faux script** (suite 9/9, 24 mutations backend, 16 Hub, 28 script). Jamais contre Gmail : hypothèses 6-10
+  de la spec à constater en recette réelle (`RECETTE.md` §B), sur un compte de test.
+- Reste : recette réelle, contenu de `DENY_FROM`, mise en service. Commit non poussé (pas de `git push` fait).
+- Hors chantier, rouges préexistants du Hub : `check_frontmatter_preserved.py` (3 docs) et `check_reprise_inscription.py`
+  (chemin `portfolio-tracker/roadmap/provenance-cards/00-REPRISE.md` disparu depuis la réorganisation du 2026-09-13).
+
 ## Reste à faire / dettes ouvertes
 
 - **2026-10-14 — destinataires fixes par alias (livré, déployé)** : `aliases.recipients` (liste, 50 max) ; vide = réponse à
