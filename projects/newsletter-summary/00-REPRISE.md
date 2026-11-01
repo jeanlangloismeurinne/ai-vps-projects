@@ -31,6 +31,8 @@ objet « 📬 Résumé hebdo-news — N newsletter(s) », cartes séparées, auc
 
 ## Pilotage des règles de transfert Gmail (chantier 2026-10-31, phases 1-5 livrées, phase 6 à faire)
 
+**MàJ 2026-11-01 — mis en service sur le compte réel** : script déployé, ping OK, 3 règles créées depuis le Hub (`@theinformation.com`→newsletter, `@news.payloadspace.com` et `Payload @spacenews.com`→veille+spatial), toutes `synced`, sync sans écart ni orphelin, 0 échec d'auth. 4 filtres étrangers visibles en lecture seule (dont un déjà vers veille+spatial). Reste : constater qu'un vrai mail arrive via le filtre jusqu'au digest, remplir RECETTE.md §B, faire tourner le secret (il a transité en conversation).
+
 Spec et docs : `docs/gmail-forward/` (`SPEC.md`, `TUTORIEL.md`, `CONSTATS.md`, `RECETTE.md`). Code : `app/gmail_{client,rules,api}.py`,
 `apps-script/Code.gs` (+ tests Node), pages Hub `/newsletter/gmail` (`hub/app/gmail.py`). Inerte tant que `GMAIL_SCRIPT_URL` est vide.
 - **Newsletter-summary déployé** (conteneur reconstruit, tables `gmail_*` créées, routes 401 sans jeton). **Hub NON déployé** : le
