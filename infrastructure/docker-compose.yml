@@ -14,6 +14,7 @@ services:
       - '127.0.0.1:5432:5432'
     networks:
       - infra-net
+      - coolify
   redis:
     image: redis:7-alpine
     container_name: shared-redis
