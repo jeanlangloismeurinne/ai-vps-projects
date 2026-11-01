@@ -113,6 +113,7 @@ sert du système sans l'avoir écrit) :
 
 ## 4. Reste à faire / dettes ouvertes
 
+- **Pages Gmail déployées le 2026-11-01** (`/newsletter/gmail`, CSRF + verrou de login) : conteneur `homepage` sain, code vérifié par `docker exec … grep`. Le pilotage reste inerte tant que `GMAIL_SCRIPT_URL` est vide côté newsletter-summary (voir son `00-REPRISE.md`).
 - ⚠️ **Écriture concurrente dans le dépôt** — deux commits (`dd3aa1b`, `0cd7752`) sont apparus
   pendant la session du 2026-09-05, comme la fois précédente. Vraisemblablement la boucle
   autonome. **Ne jamais utiliser `git add -A` / `git add .` ici** : indexer par liste explicite,
