@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-13 (évaluation d'architecture rendue, phases 1-2 ; « Prochain pas » réécrit, récit du 21/10 au 13/11 sorti à l'archive ; historique des mises à jour : archive)
+updated: 2026-11-13 (évaluation ARBITRÉE : reconstruction module par module ; plan 07 réécrit ; historique des mises à jour : archive)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,48 +18,42 @@ role: >
 
 ## ➜ Prochain pas
 
-**ARBITRER L'ÉVALUATION D'ARCHITECTURE (2026-11-13).** Phases 1-2 rendues, RIEN n'est arbitré, phase 3 non
-commencée (autre séance, plafond de dépense à fixer). Doc à commenter :
-https://claude.ai/artifact/DiTMznggexcwavdtkHk8VA ; copie versionnée : `EVALUATION-ARCHITECTURE-2026-11-13.md`.
-Verdict : **adapter** la proposition du 24/10 (`PROPOSITION-PROCESSUS-INSTRUCTION-2026-10-24.md`, doc
-https://claude.ai/artifact/FrEvaCnM7py8ZTeJB8DRCn) — son ordre est bon (le modèle de l'entreprise devient la
-colonne vertébrale), avec cinq amendements : chef de dossier automatique, mesure du sens (étalons, relecteur,
-deux passages), contrats entre blocs gardés, point d'extension « émetteur et sources », gel de ce qui est en
-avance. Huit questions posées à l'utilisateur (fin du doc) ; aucun point fermé n'est rouvert.
-À la reprise : lire les commentaires du doc, consigner les arbitrages, PUIS réécrire `07-avant-comite.md` en
-conséquence (il reste l'unique plan d'action jusqu'au premier comité, cible **NVDA**) et annoncer le lot.
+**OUVRIR LE MODULE M0 « FONDATIONS »** du plan `07-avant-comite.md` (réécrit le 2026-11-13), une fois l'ordre
+des modules confirmé par l'utilisateur. Gratuit, sans base ni déploiement : ménage des documents de cadre
+(constitution, schéma des blocs, ligne de base de la suite ; lots 10-16 et prompts à archiver), charte du
+module et garde des accès, squelette du chef de dossier (pause tous les 1 $).
 
-**État du chantier « découpage » (B4g), EN PAUSE jusqu'à l'arbitrage** — récit complet : journal de
-`07-avant-comite.md` et archive, section « 2026-11-13 — sorti de la reprise ». Lots M1, M2, M3, M3 bis, P1 déployés ;
-B4d (`7d08a6d`), #143 (`f4a5872`), B4f, B4g étapes 0-3 et maillon 1 (inventaire) commités, **NON déployés**.
-Réorientation du 2026-10-24 : trois maillons — 1 INVENTAIRE (tâche séparée de `me_7`, V4.1 Flash, construit et
-mesuré : cœur relevé 3/3, périphérie fluctuante), 2 CLASSER selon l'arbre (un modèle, à construire), 3 CONSTRUIRE
-l'architecture (code, à construire). La proposition du 24/10 en fait ses étapes 3 et 4.
+**Direction arbitrée le 2026-11-13** (26 commentaires du doc https://claude.ai/artifact/DiTMznggexcwavdtkHk8VA ;
+tableau complet : `EVALUATION-ARCHITECTURE-2026-11-13.md` § « Arbitrages rendus ») : on ne finit plus l'ancien
+enchaînement, on **reconstruit module par module sur une base propre** — un module marche (seul, NVDA et RVMD)
+avant d'ouvrir le suivant ; l'ancien code est une carrière, trié à l'ouverture de chaque module. Chef de
+dossier automatique ; comité sur exceptions ; relecteur indépendant ; débats proposés par le système ; sources
+admises par le système sous contrôle a posteriori (principe 2 modifié) ; DeepInfra seul fournisseur ; NASDAQ
+sous-projet indépendant, hors chantier ; UE et non coté = kits et adaptateurs à venir. **Aucune mesure payante
+avant le module M6 (carte).**
+
+Attend une confirmation de l'utilisateur : l'ordre M0-M11 ; le kit de spécialité ; le contradicteur après le
+premier comité ; le contenu du procès-verbal (décision, conviction, marge de sécurité, conditions, revue) ;
+les garde-fous de l'admission des sources.
 
 ## Reste ouvert (ne s'archive pas)
 
-- Question 3 de l'arbre mal posée (« déjà vendu » sur l'élément au lieu de l'élément × marché) : correctif à valider.
-- Recouvrement clients × produit sous `data_center` (NVDA) ; RMC-5127 / RM-055 sans marché visé ; RM-055 manquant
-  à l'inventaire = PÉRIMÈTRE des pièces — à trancher.
-- `me_7` sur V4-Pro : à décider ; Rubin / IA souveraine instables sur V4-Pro.
-- Orientations de l'utilisateur NON arbitrées : une ligne par source de cash-flow (non-recoupement avant
-  granularité) ; finesse selon la maturité ; probabilité de succès hors du découpage ; vocabulaire standard dans
-  tous les prompts ; molécules précoces → plateforme sauf marché chiffrable.
-- Interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel. Portes : NVDA
-  ouverte ; RVMD fermée par se_3 (`--hors-porte`). ma_3/ma_4/A1 restent dans D1.
-- Deux découpages superposés sur un même axe (AAPL, MSFT) : dette périmètre. Jargon des titres du dossier : non traité.
-- Déploiement des lots commités (refusé par le classifieur le 2026-10-23 — à lancer par l'utilisateur) ; migrations
-  `nasdaq_01` / `nasdaq_02` à appliquer à la main (module NASDAQ livré le 2026-10-31, hors chantier V3).
-- Constats de l'évaluation sans propriétaire tant que non arbitrés : 26 contrôles sans test négatif à leur nom ;
-  identité de l'émetteur = numéro SEC ; site et secteur des émetteurs écrits dans le code ; deux modèles épinglés
-  dans le code ; constitution et `ARCHITECTURE-CIBLE.md` périmées.
-- Autres dettes : section « Dettes hors du chemin » du plan 07.
+- L'ancien chantier « découpage » (B4g) est **clos sans suite** : ses acquis (inventaire, arbre, premier niveau
+  par les segments) seront triés à l'ouverture de M6-M7. Lots B4d, #143, B4f, B4g commités, jamais déployés :
+  **ne pas les déployer** (remplacés par la reconstruction). Récit : archive, « 2026-11-13 — arbitrages ».
+- Dettes de l'ancien plan rattachées à leur module : plan 07, « Dettes reprises ».
+- Orientations de l'utilisateur à reprendre en M6 : une ligne par source de cash-flow ; finesse selon la
+  maturité ; probabilité de succès hors du découpage ; vocabulaire standard dans tous les prompts ; molécules
+  précoces → plateforme sauf marché chiffrable.
+- Interrupteur `porte_admet_reponses_refusees` : devient sans objet avec l'ancien architecte (à retirer à son tri).
+- NASDAQ (sous-projet indépendant) : migrations `nasdaq_01` / `nasdaq_02` à appliquer à la main.
+- 26 contrôles sans test négatif à leur nom ; deux modèles épinglés dans le code : soldés module par module.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
 - **Jalon** (réduit le 2026-10-17 : **NVDA + RVMD** d'abord, puis financière US, puis étranger, MSFT en
   contrôle de reproduction) : note d'initiation (6 chapitres + fourchette), fonctionnement
-  ET reproductibilité ; roadmap active `05-frameworks-complets.md` (A1-A3 cochés, A4 en cours).
+  ET reproductibilité ; **roadmap active : `07-avant-comite.md`** (modules M0-M11) ; `05-frameworks-complets.md` = ancien détail, à archiver en M0.
 - **Chapitres instruits** (`bash backend/tools/montrer_parcours.sh <TICKER>`, gratuit) :
   NVDA qualité financière 1,00 · défendabilité 0,17 · modèle économique 0,83 · secteur 0,50 ·
   management **2/7** (ma_6, ma_7 répondues — plan #270, réponses #1499-#1505 ; ma_4 #1506) · valorisation :
@@ -107,7 +101,7 @@ l'exigence (plancher, nature, champs requis) · dégrader le tier d'une source s
 
 ## À lire selon le besoin
 
-`EVALUATION-ARCHITECTURE-2026-11-13.md` (à arbitrer) · `05-frameworks-complets.md` (roadmap active) · `07-avant-comite.md` (LE plan d'action avant comité) · `03-spec-frameworks.md`
+`07-avant-comite.md` (LE plan : modules M0-M11) · `EVALUATION-ARCHITECTURE-2026-11-13.md` (audit, cible en blocs, arbitrages rendus) · `05-frameworks-complets.md` (ancien détail) · `03-spec-frameworks.md`
 §1/§2/§4 (spec, tableaux des questions) · `06-regle-fraicheur.md` (fraîcheur) · `04-taxonomie-evenements.md`
 · `principe-directeur.md` · `doctrine-trois-axes.md` · `METHODE-TEST.md` · `ARCHITECTURE-CIBLE.md` + les
 `ARCHITECTURE.md` de module · `00-REPRISE-ARCHIVE.md` quand le *pourquoi* manque.

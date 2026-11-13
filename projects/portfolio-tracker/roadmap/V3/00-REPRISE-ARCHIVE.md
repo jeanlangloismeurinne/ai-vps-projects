@@ -6976,3 +6976,18 @@ les prompts ; molécules précoces → plateforme sauf marché chiffrable.
 Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`
 à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1.
 Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
+
+
+## 2026-11-13 — arbitrages de l'évaluation d'architecture (sorti de la reprise)
+
+L'utilisateur a commenté le doc de l'évaluation (26 commentaires). Le verdict « adapter » est dépassé par son
+commentaire sur le constat 9 : prêt à jeter ce qu'il faut, développer module par module. Le plan du 2026-10-21
+(tâches A1-F2, journal du 21/10 au 24/10) est archivé dans `roadmap/archive/V3-07-avant-comite-plan-2026-10-21.md` ;
+`07-avant-comite.md` est réécrit en modules M0-M11 avec une charte commune. État laissé par l'ancien chantier
+« découpage » (B4g), en pause depuis le 24/10 : lots M1, M2, M3, M3 bis, P1 déployés ; B4d (`7d08a6d`), #143
+(`f4a5872`), B4f, B4g étapes 0-3 et maillon 1 (inventaire, V4.1 Flash : cœur relevé 3/3, périphérie fluctuante)
+commités, non déployés ; maillons 2 (classer selon l'arbre) et 3 (construire) jamais construits. Points restés
+ouverts et désormais rattachés au tri de M6 : question 3 de l'arbre posée sur l'élément au lieu de l'élément ×
+marché ; recouvrement clients × produit sous `data_center` (NVDA) ; RMC-5127 / RM-055 sans marché visé ; `me_7`
+sur V4-Pro, Rubin / IA souveraine instables. Le principe fondateur 2 est modifié le même jour (admission des
+sources par le système, contrôle a posteriori).

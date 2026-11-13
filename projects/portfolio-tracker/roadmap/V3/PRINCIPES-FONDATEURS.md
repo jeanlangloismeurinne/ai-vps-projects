@@ -53,8 +53,11 @@ cette situation ?** Et on s'en sert pour orienter la conception.
 - **Quand la pratique varie d'un fonds à l'autre**, présenter les deux ou trois pratiques
   courantes, avec leur logique, et recommander celle qui correspond au style du fonds (investissement
   fondamental, long terme, concentré).
-- Ce qu'un vrai fonds **n'automatiserait jamais** (admettre une nouvelle source, décider qu'un fait
-  est remplacé, prendre la décision d'investissement) reste un acte humain dans le système.
+- Ce qu'un vrai fonds **n'automatiserait jamais** (décider qu'un fait est remplacé, prendre la décision
+  d'investissement) reste un acte humain dans le système.
+- **Admettre une source** (modifié par l'utilisateur le 2026-11-13) : le système évalue les sources et les
+  admet lui-même ; chaque admission est datée et motivée dans un registre que l'utilisateur suit et
+  corrige. Ce n'est plus un acte humain préalable, c'est un acte du système sous contrôle a posteriori.
 
 **Arbitrages déjà rendus de cette façon** (pour le ton et le niveau, pas pour être relus en détail) :
 - *Le cours coté et sa date* (2026-09-23, conv. #81) : quand le dernier cours manque, un fonds

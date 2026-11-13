@@ -1,6 +1,6 @@
 ---
 id: evaluation-architecture
-status: phases 1-2 rendues (audit + propositions) — RIEN n'est arbitré ; phase 3 non commencée
+status: ARBITRÉ le 2026-11-13 (26 commentaires du doc, section « Arbitrages rendus » en fin de fichier) ; phase 3 = plan `07-avant-comite.md`
 created: 2026-11-13
 source: https://claude.ai/artifact/DiTMznggexcwavdtkHk8VA (doc à commenter ; en cas d'écart, le doc vivant fait foi — il porte le schéma des blocs en figure et les propositions en tableau)
 project: portfolio-tracker
@@ -342,3 +342,61 @@ rôle (7), documents de cadre (9).
 Deux passages complets de la carte sur NVDA et RVMD avec sa collecte dédiée, pour établir la première
 ligne de base d'exhaustivité et de stabilité. Ordre de grandeur d'après le journal : moins de 2 $ de
 modèle, plus les recherches web, non comptées à ce jour. À décider en phase 3, sous votre plafond.
+
+## Arbitrages rendus (2026-11-13, commentaires de l'utilisateur sur le doc)
+
+**La direction change : non plus « adapter », mais reconstruire module par module sur une base propre.**
+L'utilisateur est prêt à jeter ce qu'il faut ; un module marche avant qu'on ouvre le suivant. Le plan :
+`07-avant-comite.md`.
+
+| Sujet | Arbitrage | Conséquence |
+|---|---|---|
+| Constats 1, 5, 6 | À traiter | Chef de dossier ; fiche de l'émetteur ; contrats entre modules |
+| Constat 2 | Non compris à la lecture — réexpliqué (réponse dans le fil du doc) ; le second lecteur est accepté (question 3) | Mesure de la qualité à partir de la carte |
+| Constat 3 | Reconnu : erreur d'architecture initiale | Le modèle devient la colonne vertébrale |
+| Constat 4 | Approche modulaire : la SEC d'abord parce que ses bases sont accessibles, puis l'UE et le non coté | Rien de propre à une juridiction dans le cœur (charte, point 5) |
+| Constat 7 | Fournisseur unique assumé : DeepInfra | Le « second fournisseur » de la proposition 7 est retiré ; restent le modèle par rôle en donnée et le rejeu des étalons |
+| Constat 8, 10, 11 | Reconnus | — |
+| Constat 9 | « Prêt à jeter tout ce qu'il faut pour recommencer sur une base » ; développer module par module | La proposition 6 (geler) devient : trier à l'ouverture de chaque module, supprimer ce qui est remplacé |
+| Constat 13 | Supprimer les documents inutiles, actualiser le reste | Module M0 |
+| Constat 14 | NASDAQ = sous-projet indépendant, peut-être un jour une partie d'un module de sélection | Sorti du chantier V3 |
+| Interventions humaines | La cible est juste ; à voir pendant la construction | Lecture humaine de chaque sortie de module tant que son taux d'erreur n'est pas mesuré (interrupteur par module) |
+| Coût | Un système utile et crédible avant un système contraint en budget | On mesure le coût (web compris), on ne plafonne pas la qualité |
+| Mesure payante sur la carte | Laissée à mon jugement, sans jamais devoir refaire une recherche complète | **Non lancée maintenant** : elle sera l'acceptation du module « carte », quand sa collecte s'enregistrera sous le nouveau contrat |
+| Architecture cible | À vérifier contre l'organisation d'un vrai fonds | Section suivante |
+| Question 1 | Oui ; pas de plafond fixé : pause tous les 1 $ consommés, avec estimation du coût restant jusqu'au comité | Chef de dossier |
+| Question 2 | Seulement les exceptions | Mémo et comité |
+| Question 3 | Oui | Relecteur indépendant, étalons relus une fois |
+| Question 4 | Le système propose les débats, l'utilisateur peut en ajouter et valide le lot complet | Carte |
+| Question 5 | Ouvert aux options | Recommandé et retenu sauf avis contraire : décision + conviction + fourchette signée + marge de sécurité au cours daté + conditions + indicateurs de suivi + date de revue |
+| Question 6 | A priori des documents reçus, toujours complétés par le web ; le cas sans document arrivera aussi | L'entrée accepte les deux ; aucune n'est construite avant le premier comité |
+| Question 7 | Le système évalue les sources et les ajoute ; l'utilisateur suit et corrige | **Modifie le principe fondateur 2** (l'admission n'est plus un acte humain préalable, mais un acte du système sous contrôle a posteriori). Garde-fous proposés : l'évaluateur n'est jamais le collecteur qui utilise la source (#24) ; critères écrits ; journal daté et motivé ; révocation qui signale les pièces concernées |
+| Question 8 | Oui : NVDA d'abord, RVMD témoin | — |
+
+Non commentés, retenus comme hypothèses de travail : le constat 12, et les six réponses aux questions de
+la proposition du 24/10.
+
+### L'architecture cible reproduit-elle l'organisation d'un fonds ?
+
+**Oui pour la chaîne et pour qui décide ; deux écarts à corriger, un poste à prévoir.**
+
+| Poste dans un fonds | Ce qu'il fait | Ici | Nature |
+|---|---|---|---|
+| Documentation, données | Trouve, range, date les documents | Collecte, base de connaissance | Processus ; un modèle court pour lire le web |
+| Analyste comptable | Saisit les comptes dans le gabarit maison | Comptes et segments | Processus pur |
+| Analyste de secteur | Comprend l'activité, cherche, relève, juge | Carte, recherche ciblée, jugements | Modèle d'IA, outillé (pièces, recherche, kit de spécialité) |
+| Modélisateur | Tient le classeur, calcule | Modèle de l'entreprise, valorisation | Processus pur |
+| Directeur de la recherche | Distribue le travail ; valide la carte ; relit par sondage ; renvoie | Chef de dossier (processus) + relecteur (modèle d'IA indépendant) + vous pour la carte | Mixte |
+| Gérant | Arrête ou poursuit ; propose la décision | Filtres, mémo | Humain |
+| Comité | Décide | Comité | Humain |
+| Secrétaire du comité | Tient le procès-verbal | Procès-verbal | Processus |
+| Contrôle des risques, middle-office | Cours daté, limites de position | Valorisation au cours daté ; construction de portefeuille (prévue) | Processus |
+
+1. **La spécialisation n'apparaissait pas.** Un fonds a un analyste des semi-conducteurs et un analyste
+   de la biotechnologie, chacun avec ses sources, ses indicateurs, ses gabarits. La cible ne montrait
+   qu'un « analyste ». Correction : un analyste générique + un **kit de spécialité** en donnée (sources
+   du secteur, famille de comptes, moteurs types, questions propres, étalons).
+2. **Personne ne défend la thèse inverse.** Le relecteur vérifie qu'une réponse est fondée ; il ne
+   demande pas « et si c'était faux ? ». Un comité de fonds a un contradicteur. Prévu après le premier
+   comité, sauf avis contraire.
+3. **L'entrée manque** : la sélection des titres à étudier (poste prévu ; NASDAQ pourra s'y brancher).
