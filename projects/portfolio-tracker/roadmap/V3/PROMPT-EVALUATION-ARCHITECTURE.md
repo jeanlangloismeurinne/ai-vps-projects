@@ -60,7 +60,9 @@ d'abord, le non coté ensuite. Quatre exigences, par ordre d'importance :
 5. Les ARCHITECTURE.md de module ; CONVENTIONS.md par grep ciblé (#1 à #143) AVANT de
    toucher ou critiquer un module.
 Une brique n'existe que si un backend/checks/check_*.py la garde et qu'un negatif_*.sh
-prouve que ce check rougit quand on la casse. Exécute les checks gratuits, ne présume pas.
+prouve que ce check rougit quand on la casse. Exécute les checks gratuits (depuis backend/),
+ne présume pas ; si ton environnement ne permet pas de les lancer (base, Docker absents),
+dis-le et classe le constat « non vérifié » plutôt que de le déduire du texte.
 
 # Ce qui est fermé (ne pas rouvrir sans le dire explicitement)
 
@@ -122,7 +124,8 @@ Documentation commitée même sans déploiement.
 
 # Livrable
 
-Un doc à commenter (ou un fichier Markdown dans roadmap/V3/ si tu n'as pas d'outil Docs), en français, comme le précédent : verdict en tête (adopter / adapter /
+Un doc à commenter (ou un fichier Markdown dans roadmap/V3/ si tu n'as pas d'outil Docs),
+en français, comme le précédent : verdict en tête (adopter / adapter /
 remplacer la proposition, en une phrase), tableau des constats par gravité, architecture
 cible en blocs, recommandations ordonnées, questions pour moi. Puis mise à jour de
 00-REPRISE.md SANS l'empiler (CONTROL_SYSTEM.md §5), et commit de la doc.
