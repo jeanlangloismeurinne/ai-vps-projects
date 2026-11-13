@@ -1,6 +1,6 @@
 ---
 id: prompt-evaluation-architecture
-status: brouillon-v1 (à valider par l'utilisateur avant lancement)
+status: v1 prêt à lancer (phases 1-2 seulement)
 created: 2026-11-13
 project: portfolio-tracker
 role: >
@@ -50,10 +50,10 @@ d'abord, le non coté ensuite. Quatre exigences, par ordre d'importance :
    (questions en termes métier, « ce que ferait un vrai fonds », un raffinement se
    débraye vers la règle simple, on corrige la CAUSE jamais l'exemple).
 2. roadmap/V3/00-REPRISE.md.
-3. La proposition à évaluer : doc « Processus d'instruction — proposition »
-   https://claude.ai/artifact/FrEvaCnM7py8ZTeJB8DRCn (état de réflexion du 24/10,
+3. La proposition à évaluer : roadmap/V3/PROPOSITION-PROCESSUS-INSTRUCTION-2026-10-24.md
+   (copie du doc « Processus d'instruction — proposition » ; état de réflexion du 24/10,
    issu des difficultés rencontrées avec le système conçu initialement ; PAS un
-   arbitrage ; lis aussi ses commentaires s'il y en a).
+   arbitrage). Les schémas du doc d'origine n'y figurent pas.
 4. roadmap/V3/principe-directeur.md (constitution, prime sur toute spec),
    03-spec-frameworks.md (§0 : les faits qui ont motivé la V3), doctrine-trois-axes.md,
    ARCHITECTURE-CIBLE.md, 09-modele-entreprise.md, 07-avant-comite.md (plan et journal).
@@ -114,21 +114,16 @@ Documentation commitée même sans déploiement.
 - Production : aucun déploiement, aucune migration appliquée, aucun outil qui écrit ou
   dépense (tools/executer_chaine.sh, mesureurs) sans mon accord. Instance neuve de
   l'image, jamais dans portfolio-backend ; ps aux / docker ps avant toute relance.
-- Dépense de modèle : phases 1 et 2 gratuites. Phase 3 : plafond à fixer par moi
-  avant toute mesure payante ; demande avant de dépasser.
+- Dépense de modèle (crédits API DeepInfra/Exa des mesures du projet) : ZÉRO dans cette
+  séance. Si une mesure payante te paraît indispensable, décris-la (objet, coût estimé)
+  et attends mon accord. Phase 3 : plafond à fixer par moi avant toute mesure.
 - Secrets : jamais dans le repo ni dans une sortie ; .env hors git.
 - Pas de correctif qui reconnaît un exemple (nom, libellé, seuil calé sur NVDA ou RVMD).
 
 # Livrable
 
-Un doc à commenter, en français, comme le précédent : verdict en tête (adopter / adapter /
+Un doc à commenter (ou un fichier Markdown dans roadmap/V3/ si tu n'as pas d'outil Docs), en français, comme le précédent : verdict en tête (adopter / adapter /
 remplacer la proposition, en une phrase), tableau des constats par gravité, architecture
 cible en blocs, recommandations ordonnées, questions pour moi. Puis mise à jour de
 00-REPRISE.md SANS l'empiler (CONTROL_SYSTEM.md §5), et commit de la doc.
 ```
-
-## Points à valider avant lancement
-
-- Plafond de dépense de la phase 3 : à fixer par l'utilisateur.
-- Faut-il que Fable ait accès au doc de proposition par lien, ou en copie dans le repo ? Le lien suppose que Fable ait les outils Docs ; sinon, exporter le doc en Markdown dans `roadmap/V3/`.
-- Le doc de proposition est daté du 24/10 ; le NASDAQ (26-31/10) et la sécurité ne figurent pas encore dans `00-REPRISE.md`.

@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-10-23 (B4f livré et mesuré, corrections #143/me_7 en tête) ; 2026-10-23 (B4d livré : architecte NVDA 2/2, RVMD 1/2 acceptés à blanc ; sens NVDA à arbitrer) ; 2026-10-23 (ventilation NVDA publiée, correctif DEF 14A d504d96) ; 2026-10-23 (P1 terminé et déployé, arbitrage Q1 révisé, #142) ; 2026-10-22 soir (M3 bis déployé, me_7 instruite, P1 partiel, architecte à blanc) ; 2026-10-22 (M3 bis v2.1 livré, vérifié, commité, NON déployé) ; 2026-10-22 (M3 déployé ; spec M3 bis écrite) ; 2026-10-22 (M2 déployé ; spec M3 écrite) ; 2026-10-21 (M2 livré, commité, non déployé ; porte NVDA ouverte) ; 2026-10-21 (commentaires sur la page de lecture → spec v2.1 §12 ; C1 livré, #141) ; 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
+updated: 2026-11-13 (NASDAQ + prompt d'évaluation) ; 2026-10-23 (B4f livré et mesuré, corrections #143/me_7 en tête) ; 2026-10-23 (B4d livré : architecte NVDA 2/2, RVMD 1/2 acceptés à blanc ; sens NVDA à arbitrer) ; 2026-10-23 (ventilation NVDA publiée, correctif DEF 14A d504d96) ; 2026-10-23 (P1 terminé et déployé, arbitrage Q1 révisé, #142) ; 2026-10-22 soir (M3 bis déployé, me_7 instruite, P1 partiel, architecte à blanc) ; 2026-10-22 (M3 bis v2.1 livré, vérifié, commité, NON déployé) ; 2026-10-22 (M3 déployé ; spec M3 bis écrite) ; 2026-10-22 (M2 déployé ; spec M3 écrite) ; 2026-10-21 (M2 livré, commité, non déployé ; porte NVDA ouverte) ; 2026-10-21 (commentaires sur la page de lecture → spec v2.1 §12 ; C1 livré, #141) ; 2026-10-21 (plan d'action unique avant comité, cible NVDA ; spec du modèle de l'entreprise validée, #140) ; 2026-10-19 (points 10 et 12 construits ; point 9 en arbitrage ; mesure (e)) ; 2026-10-19 (ré-analyse qui dégrade, point 13, `6760090`) ; 2026-10-18 (demandes de recherche closes à la livraison, point 14, `8af6f4a` ; causes du point 13) ; 2026-10-18 (fraîcheur sujet par sujet, point 15, `331aa7c`) ; 2026-10-18 (changement de stade + classement par le comité, #139) ; 2026-10-18 (« pas encore observable », #138) ; 2026-10-17 (relance bornée + réinitialisation, `c2bc1af`) ; 2026-10-17 (séance d'arbitrages #137) ; 2026-10-16 (allègement : état complet copié dans 00-REPRISE-ARCHIVE.md, section « 2026-10-16 — COPIE CONFORME »)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -50,6 +50,12 @@ l'entreprise devient la colonne vertébrale (carte des sources de profit collect
 recherche par ligne → jugements transverses → valorisation calculée → mémo). Proposition, écart avec l'existant, sort
 de chaque tâche du plan 07, contestations et questions : https://claude.ai/artifact/FrEvaCnM7py8ZTeJB8DRCn (doc,
 commentaires à lire). Rien n'est arbitré ; maillon 2 (classement) EN PAUSE d'ici là.
+
+**Hors chantier V3 (2026-10-26 → 31) — suivi NASDAQ LIVRÉ** (module autonome `app/nasdaq/`, page `/nasdaq`, job quotidien
+17h30 ET : ancienneté du cours × multiple 10 ans, liste de suivi, probabilité de nouveau plus haut à 12 mois ; migrations
+`nasdaq_01`/`nasdaq_02` à appliquer à la main) ; sécurité 2026-10-31 (`46a663f`). **2026-11-13** : copie Markdown de la
+proposition de refonte = `PROPOSITION-PROCESSUS-INSTRUCTION-2026-10-24.md` ; prompt d'évaluation de l'architecture pour
+Fable 5.2 = `PROMPT-EVALUATION-ARCHITECTURE.md` (lecture seule, gratuit, avant tout arbitrage).
 
 **PROCHAIN PAS — plan « découpage » B4g** (arbitré le 2026-10-23 après revue de la page
 https://claude.ai/artifact/38FsoJwzzM1GEYYEobQi57, 28 commentaires ; détail : ligne B4g du plan) : un seul levier par
