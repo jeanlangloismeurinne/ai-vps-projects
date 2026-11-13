@@ -38,7 +38,7 @@ Heuristique — **ouverte**, à lire comme une aide au jugement :
 | Frontière déterministe (lire la sortie en TEXTE) | `tools/rejeu_producteurs.sh`, `… --plan-only` / `--dry-run` | à 0 $, avant toute dépense |
 | Ligne de base (re-**requêtée**, versionnée, jamais `/tmp`) | `tools/ligne_de_base_frameworks.sh`, `tools/mesure_*.sh` | se mesure AVANT le lot, ne se souvient pas |
 | Vrai-modèle bon marché (hors prod) | `tools/acceptation_*.sh` (`acceptation_analyste.sh` ≈ 0,005 $, `acceptation_gate.sh`, …) | **jamais dans `portfolio-backend`** (code déployé) |
-| Suite hors-ligne complète | `bash checks/run_all.sh` | ligne de base **2388 / 0** |
+| Suite hors-ligne complète | `bash checks/run_all.sh` | ligne de base : `backend/checks/LIGNE_DE_BASE.md` |
 | Test négatif d'un check neuf | `checks/_negatif.sh` (harnais) + `checks/_harness.py` (garde-fous py) | **obligatoire : prouver rouge une fois** |
 
 ## 3. Écrire un test négatif — le harnais fait le gros

@@ -58,7 +58,7 @@ __all__ = [
     "Fourchette", "Deplacement", "Scenario", "SCENARIO_CENTRAL",
 ]
 
-# 1.2.0 — lot M3 bis (roadmap V3 `13-lot-M3bis-structure.md`, principe fondateur n° 4) : traite les
+# 1.2.0 — lot M3 bis (`roadmap/archive/V3-13-lot-M3bis-structure.md`, principe fondateur n° 4) : traite les
 # CAUSES des erreurs des architectures à blanc du 2026-10-22, pas leurs symptômes.
 #   ① `RattachementPublie.membres` (liste, regroupement) remplace `membre` (un seul) ; `Bloc.maille`
 #     n'est plus un champ du modèle (`BlocPropose`, ce que l'agent produit) — le CODE la pose
@@ -69,7 +69,7 @@ __all__ = [
 #   ④ `ReferentielModele.unites` (table des dimensions physiques, `dimensions.py`, [S11]).
 #   ⑤ `Bloc.origine` (interne/acquisition/licence/partenariat), `Bloc.jalon` (requis SSI
 #     `statut == "en_developpement"`) — [S12] (ici, invariant d'un seul objet, #37).
-# 1.3.0 — lot M3 ter (roadmap V3 `15-lot-M3ter-architecte.md`, principe fondateur n° 4) : UNE LIGNE
+# 1.3.0 — lot M3 ter (`roadmap/archive/V3-15-lot-M3ter-architecte.md`, principe fondateur n° 4) : UNE LIGNE
 # PAR PROGRAMME que l'émetteur NOMME individuellement ET dont la réussite est incertaine.
 #   `BlocPropose.programmes` (noms recopiés du dossier, REQUIS/interdit selon `statut`) et
 #   `.plateforme`/`.nombre_de_programmes_non_nommes` (un bloc plateforme regroupe des programmes
@@ -223,7 +223,7 @@ class ReferentielModele(Strict):
     # leur échelle. REQUISE, sans défaut : un référentiel qui ne la porte pas laisserait
     # `dimensions.py` deviner l'unité d'une fiche.
     unites: Annotated[dict[str, UniteDimension], Field(min_length=1)]
-    # 1.3.0 (lot B4f, roadmap V3 `16-lot-B4f-explorateur.md` §5) — l'INTERRUPTEUR à trois positions
+    # 1.3.0 (lot B4f, `roadmap/archive/V3-16-lot-B4f-explorateur.md` §5) — l'INTERRUPTEUR à trois positions
     # de l'accès au dossier par l'architecte (principe fondateur n° 3) : REQUIS, sans défaut.
     # `aucun` (ordre 0, défaut à la livraison) : matière seule, sortie identique à avant ce lot.
     # `deux_temps` (garde-fou F) : un premier appel SANS outil rend `besoins_d_information`, le CODE

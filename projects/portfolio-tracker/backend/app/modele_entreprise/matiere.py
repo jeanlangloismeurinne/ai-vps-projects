@@ -1,4 +1,4 @@
-"""La MATIÈRE DE L'ARCHITECTE — lot M3, roadmap V3 `12-lot-M3-architecte.md` §3.3.
+"""La MATIÈRE DE L'ARCHITECTE — lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §3.3.
 
 `charger_matiere(conn, ticker_id, *, publier)` est la SEULE moitié qui lit (et, avec `publier=True`,
 publie la ventilation/le socle s'ils manquent) ; `rendre_matiere(m)` est PURE et déterministe — c'est
@@ -71,7 +71,7 @@ class Matiere:
     # #143 / diagnostic du 2026-10-23 — le second chiffre clé de `me_7` : ceux que l'émetteur compte
     # sans les nommer. Avec lui, [S15] exige un décompte EXACT ; sans lui, l'écart n'est qu'un signal.
     me_7_nombre_non_nommes: Optional[float] = None
-    # Lot B4f (roadmap V3 `16-lot-B4f-explorateur.md` §8, addendum du 2026-10-23) — le texte RENDU
+    # Lot B4f (`roadmap/archive/V3-16-lot-B4f-explorateur.md` §8, addendum du 2026-10-23) — le texte RENDU
     # des pièces OUVERTES par l'explorateur pendant le passage (`numéro → texte`), en modes
     # `deux_temps`/`explorateur` seulement (vide en mode `aucun`, ordre 0). [S14]/[S15] de
     # `structure.py` y cherchent un nom de programme ABSENT de `me_7_verbatim` : « absent de me_7,

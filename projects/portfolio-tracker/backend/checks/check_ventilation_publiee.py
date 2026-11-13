@@ -1,5 +1,5 @@
 """Check de la VENTILATION PUBLIÉE (`app/knowledge/ventilation.py` + `ventilation_xbrl.py` +
-`ventilation_publiee.yaml`) — hors ligne (lot M2, roadmap V3 `11-lot-M2-ventilation-publiee.md`).
+`ventilation_publiee.yaml`) — hors ligne (lot M2, `roadmap/archive/V3-11-lot-M2-ventilation-publiee.md`).
 
 Les fixtures sont COPIÉES DU RÉEL (`checks/fixtures/ventilation/*.xml.gz`, extraites par
 `tools/extraire_fixture_ventilation.py` le 2026-10-21 : NVDA 10-K `0001045810-26-000021` et 10-Q

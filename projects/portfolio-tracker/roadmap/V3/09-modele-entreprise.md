@@ -12,6 +12,10 @@ role: >
   Page de lecture : https://claude.ai/artifact/Dx7LBBpsNAWAYzXroPiDiC
 ---
 
+> **Statut au 2026-11-13** : spec de l'ANCIEN classeur (architecte par modèle). Ses règles de fond (trois
+> origines d'un chiffre, fourchettes, seuil de matérialité) restent la référence ; sa mécanique sera triée
+> à l'ouverture des modules M6 (carte) et M7 (modèle de l'entreprise) du plan `07-avant-comite.md`.
+
 # Le modèle de l'entreprise — spec B1 (v2)
 
 > Orientation de l'utilisateur (2026-10-19) : « un outil unique, le modèle de l'entreprise, avec autant

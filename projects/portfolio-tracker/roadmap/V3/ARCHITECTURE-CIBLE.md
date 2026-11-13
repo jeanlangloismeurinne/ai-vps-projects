@@ -1,72 +1,90 @@
-# Architecture V3 — cible
+# Architecture cible — le schéma des blocs
 
-> **Ce document décrit l'architecture CIBLE**, dérivée de `03-spec-frameworks.md` et de
-> `doctrine-trois-axes.md`. Il est le point d'entrée pour comprendre les modules et leurs contrats
-> d'extension.
+> **Réécrit le 2026-11-13** après les arbitrages de l'évaluation d'architecture
+> (`EVALUATION-ARCHITECTURE-2026-11-13.md`). Règles durables : `principe-directeur.md` (la constitution).
+> Ordre et acceptation des modules : `07-avant-comite.md`.
 >
-> **L'architecture RÉALISÉE n'est pas décrite en prose** — elle dérive vite du réel et fabrique des
-> faux verts. Elle est **prouvée par la suite `backend/checks/`** (rejouée par `bash checks/run_all.sh`,
-> ligne de base **2172 assertions / 0 échec**). Chaque module a son `ARCHITECTURE.md` qui mappe
-> *invariant cible → `check_*.py` garant*. Un invariant sans check est une **dette**, marquée ⚠️.
->
-> Pour connaître l'état réalisé d'un module : lire son `ARCHITECTURE.md`, puis **exécuter** ses checks.
->
-> **Cette organisation est elle-même gardée** par `check_architecture.py` (+ `negatif_architecture.sh`) :
-> bijection registre ↔ docs, pointeurs de checks vivants, aucune garde orpheline, discipline de
-> dossier, autonomie de /V3. Ajouter un module = ajouter sa ligne au registre ci-dessous **et** son
-> `ARCHITECTURE.md` — le check refuse l'un sans l'autre.
+> **L'architecture RÉALISÉE n'est pas décrite en prose** : elle est prouvée par la suite
+> `backend/checks/` (`bash checks/run_all.sh` ; dernier total : `backend/checks/LIGNE_DE_BASE.md`, écrit
+> par le lanceur — seule source du chiffre). Chaque module a son `ARCHITECTURE.md` qui mappe
+> *invariant → assert garant*. Cette organisation est elle-même gardée par `check_architecture.py`
+> (+ `negatif_architecture.sh`) : ajouter un module = sa ligne dans un des deux registres ci-dessous
+> **et** son `ARCHITECTURE.md`.
 
-## Le modèle-objet V3, en une phrase
-
-Le système répond à des **frameworks** (questions d'investissement stables) en collectant des
-**faits** rangés dans une **base de connaissance** ; deux de ces objets sont conçus pour être
-**standard et extensibles** — un framework, une source de données.
+## Les blocs
 
 ```mermaid
-graph LR
-  subgraph EXT["Objets standard extensibles"]
-    F["frameworks.yaml<br/>AJOUTER UN FRAMEWORK"]:::ext
-    K["knowledge/*_feed.py<br/>AJOUTER UNE SOURCE"]:::ext
+flowchart TB
+  subgraph REF["Référentiels du fonds (données, versionnées)"]
+    R1["M1 Fiche de l'émetteur<br/>et sources admises"]
+    R2["Méthode : questions, variables,<br/>familles de comptes, kits de spécialité,<br/>paramètres du fonds"]
   end
-  subgraph FLOW["agents/v2/ — le flux"]
-    T[traducteur<br/>questions→plan] --> C[collecteur<br/>plan→collecte]
-    C --> AN[analyste<br/>réponses] --> MG[curator/manager<br/>4 contrôles]
-  end
-  subgraph IFACE["Interfaces"]
-    CT["contracts/<br/>contrats figés (#19)"]:::stable
-    API["api/*_v2<br/>surface frontend"]:::stable
-  end
-  F --> T
-  K --> C
-  MG --> CT --> API
-  classDef ext fill:#d4edda,stroke:#28a745;
-  classDef stable fill:#cfe2ff,stroke:#0d6efd;
+  CHEF["M0 Chef de dossier (automate, sans modèle)<br/>état du dossier → pas suivant<br/>arrêt aux actes humains · pause tous les 1 $"]
+  A["M2 Collecte de sources<br/>adaptateurs : dépôts réglementaires · site · web<br/>(prévu : documents fournis)"]
+  B["M3 Base de connaissance<br/>pièces datées, citées, immuables"]
+  C["M4 Comptes et segments<br/>calculé"]
+  D["M5 Filtres<br/>alerte au gérant"]
+  E["M6 Carte des sources de profit<br/>+ débats de la thèse"]
+  F["M7 Modèle de l'entreprise<br/>squelette par le code"]
+  G["M8 Recherche ciblée<br/>par cellule, par poids"]
+  H["M9 Jugements<br/>effets sur les hypothèses"]
+  I["M10 Valorisation<br/>calculée"]
+  J["M11 Mémo et comité<br/>décision au procès-verbal"]
+  K["Suivi (après le premier comité)"]
+  L["Construction de portefeuille (prévu)"]
+  Q["Mesure de la qualité<br/>étalons · relecteur · deux passages"]
+
+  R1 --> A --> B
+  R2 --> C & E & F & H
+  B --> C --> D --> E --> F
+  F -- "cellules vides" --> G --> B
+  F --> H --> F
+  F --> I --> J --> L
+  J --> K -- "rouvre cellules et lignes" --> F
+  CHEF -.-> A & E & G & H & J
+  Q -.-> E & G & H
 ```
 
-## Carte des modules backend
+| # | Bloc | Reçoit | Rend (contrat de sortie) | Tenu au fonds par |
+|---|---|---|---|---|
+| M0 | Chef de dossier | L'état du dossier, les pas déclarés | Pas suivant, ou acte humain attendu, nommé ; dépense comptée | Analyste responsable |
+| M1 | Fiche de l'émetteur et sources | Vos corrections | Fiche (identité maison, références externes facultatives, où la société publie, spécialité) ; registre des sources admises, daté et motivé | Direction de la recherche |
+| M2 | Collecte de sources | Une demande (quoi, pour qui, depuis quand) | Documents bruts avec leur origine, ou « source indisponible » nommée | Documentation |
+| M3 | Base de connaissance | Documents | Pièces datées, à extraits vérifiés, jamais modifiées | Documentation |
+| M4 | Comptes et segments | Pièces comptables | Comptes reconstitués, ratios maison, ventilation, périmètre — par famille de comptes | Personne : calculé |
+| M5 | Filtres | Comptes, quelques pièces | Alertes motivées ; continuer ou arrêter reste au gérant | Gérant |
+| M6 | Carte des sources de profit | Collecte dédiée | Inventaire élément × marché, classé, contrôlé ; débats de la thèse proposés | Directeur de la recherche (valide) |
+| M7 | Modèle de l'entreprise | Carte, segments, catalogue | Classeur : lignes, moteurs, cellules avec origine ; cellules vides | Modélisateur |
+| M8 | Recherche ciblée | Une cellule vide, son poids | Valeur, fourchette, pièce ou méthode | Analyste |
+| M9 | Jugements | Classeur rempli, pièces | Pour chaque jugement : l'hypothèse déplacée, le sens, la pièce | Analyste |
+| M10 | Valorisation | Classeur, cours daté | Valeur centrale, fourchette, ce que le prix suppose, marge de sécurité | Personne : calculé |
+| M11 | Mémo et comité | Classeur, jugements, valorisation | **Décision du comité** au procès-verbal | Comité |
+| — | Mesure de la qualité (à partir de M6) | Sorties de M6, M8, M9 ; étalons | Taux d'erreur par bloc ; écart entre deux passages | Directeur de la recherche |
 
-| Module | Rôle (cible) | Point d'extension | `ARCHITECTURE.md` |
+Deux règles tiennent le schéma (constitution §3) : **un bloc ne lit d'un autre que son contrat de
+sortie** ; **le non coté et l'UE n'ajoutent que des adaptateurs, un kit de spécialité et une famille de
+comptes**.
+
+## Registre 1 — modules reconstruits (`backend/app/modules/`)
+
+| Module | Rôle | Contrôle | `ARCHITECTURE.md` |
 |---|---|---|---|
-| `app/knowledge/` | Base de connaissance + 8 feeds déterministes + recherche | **Ajouter une source** | `app/knowledge/ARCHITECTURE.md` |
-| `app/frameworks/` | Référentiel des frameworks (`frameworks.yaml`, inerte versionné) | **Ajouter un framework** | `app/frameworks/ARCHITECTURE.md` |
-| `app/agents/v2/` | Le flux V2/V3 (Option C, chaîne de collecte, manager) | Ajouter un maillon du flux | `app/agents/v2/ARCHITECTURE.md` |
-| `app/contracts/` | Copies runtime des cartes figées (`provenance-cards/`) | Faire évoluer un contrat (#19) | `app/contracts/ARCHITECTURE.md` |
-| `app/api/` | Surface backend → frontend (routers `_v2`) | Exposer une info au frontend | `app/api/ARCHITECTURE.md` |
-| `app/valorisation/` | Atelier de valorisation : gabarits maison + bac à calcul où s'exécute le modèle propre à chaque entreprise (#96) | **Ajouter un gabarit maison** | `app/valorisation/ARCHITECTURE.md` |
-| `app/modele_entreprise/` | Le classeur de l'entreprise : catalogue de variables, patrons, architecture, cellule, fourchette/scénario/déplacement (lot M1, #140) | **Ajouter une variable au catalogue** | `app/modele_entreprise/ARCHITECTURE.md` |
-| `app/data_collection/` | ⚠️ **LEGACY V0/V1** — DataService marché | (pas d'extension V3) | `app/data_collection/ARCHITECTURE.md` |
-| `app/nasdaq/` | Suivi NASDAQ indépendant du reste (ancienneté du cours × multiple 10 ans, job quotidien 17h30 ET) | (aucune, module autonome) | `app/nasdaq/ARCHITECTURE.md` |
+| (charte) | Registre des modules et garde des accès entre eux | `check_charte_modules.py` | `app/modules/ARCHITECTURE.md` |
+| `chef_de_dossier` (M0) | État du dossier → pas suivant | `check_chef_de_dossier.py` | `app/modules/chef_de_dossier/ARCHITECTURE.md` |
 
-## Les trois garde-fous (constitution — `principe-directeur.md`)
+## Registre 2 — ancien code (la carrière)
 
-- **G1** — le contrat JSON encode la méthodologie : l'agent ne peut pas sauter une étape.
-- **G2** — un contrat de décision ne vaut que par ce que le corps HTTP **n'expose pas** (#36).
-- **G3** — la décision est indépendante de l'UX.
-- **Ordre des lots : UX (contrat) → agent → données.** Jamais commencer par le schéma de table.
+Reste en place et vert tant que le module qui le remplace n'est pas accepté ; trié à l'ouverture de ce
+module (repris tel quel / repris derrière le contrat / laissé), supprimé à son acceptation.
 
-## La doctrine des trois axes (`doctrine-trois-axes.md`) — jamais recombinés en scalaire (#50)
-
-- **fiabilité** — propriété de la **source**, stockée.
-- **nature** (`mesure`|`evenement`|`interpretation`) — propriété de l'**assertion**, stockée (#51).
-- **actualité** — propriété de la **relation** fait ↔ ancre, **calculée à la lecture, jamais persistée** (#53).
-- Porte de complétude à **trois états** (`couvert`/`couvert_perime`/`non_couvert`), deux remèdes (#54).
+| Paquet | Ce que c'est | Trié à l'ouverture de | `ARCHITECTURE.md` |
+|---|---|---|---|
+| `app/knowledge/` | Base de connaissance, producteurs déterministes, recherche, registre des sources | M1 (sources), M2, M3, M4 | `app/knowledge/ARCHITECTURE.md` |
+| `app/frameworks/` | Référentiel des questions (`frameworks.yaml`) | M6, M9 | `app/frameworks/ARCHITECTURE.md` |
+| `app/agents/v2/` | L'ancien flux : traducteur, collecteur, analyste, manager, comité | M2, M8, M9, M11 | `app/agents/v2/ARCHITECTURE.md` |
+| `app/contracts/` | Contrats des sorties d'agents | au fil des modules | `app/contracts/ARCHITECTURE.md` |
+| `app/api/` | Surface backend → frontend | au fil des écrans | `app/api/ARCHITECTURE.md` |
+| `app/valorisation/` | Atelier de valorisation, bac à calcul | M10 | `app/valorisation/ARCHITECTURE.md` |
+| `app/modele_entreprise/` | Ancien classeur : catalogue, inventaire, architecte | M6, M7 | `app/modele_entreprise/ARCHITECTURE.md` |
+| `app/data_collection/` | Service de marché V0/V1 | M10 (cours daté) | `app/data_collection/ARCHITECTURE.md` |
+| `app/nasdaq/` | **Sous-projet indépendant, hors chantier** (reprise : `backend/app/nasdaq/00-REPRISE-NASDAQ.md`) | — | `app/nasdaq/ARCHITECTURE.md` |

@@ -1,4 +1,4 @@
-"""Lanceur de l'agent ARCHITECTE (lot M3, roadmap V3 `12-lot-M3-architecte.md` §7).
+"""Lanceur de l'agent ARCHITECTE (lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §7).
 
   python tools/architecte.py TICKER [--matiere-seule] [--hors-porte] [--ecrire] [--sortie FICHIER]
 

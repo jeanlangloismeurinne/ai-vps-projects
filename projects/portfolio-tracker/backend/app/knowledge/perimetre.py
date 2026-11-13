@@ -1,5 +1,5 @@
 """Le détenteur UNIQUE des changements de DÉCOUPAGE et de PÉRIMÈTRE (lot P1, roadmap V3
-`14-lot-P1-perimetre.md`, principe fondateur n° 4).
+`roadmap/archive/V3-14-lot-P1-perimetre.md`, principe fondateur n° 4).
 
 CE QUE CE MODULE REMPLACE (§0.2 de la spec) — six endroits qui décidaient chacun, pour leur besoin
 propre, de ce qu'un redécoupage ou un changement de périmètre voulait dire :

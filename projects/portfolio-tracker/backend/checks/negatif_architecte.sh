@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# TEST NÉGATIF de `check_architecte.py` (lot M3 / M3 bis, roadmap V3 `12-lot-M3-architecte.md` /
-# `13-lot-M3bis-structure.md`) — sur le harnais existant (`_negatif.sh`, détenteur unique, #65).
+# TEST NÉGATIF de `check_architecte.py` (lot M3 / M3 bis, `roadmap/archive/V3-12-lot-M3-architecte.md` /
+# `roadmap/archive/V3-13-lot-M3bis-structure.md`) — sur le harnais existant (`_negatif.sh`, détenteur unique, #65).
 #
 #   bash checks/negatif_architecte.sh
 #
@@ -18,7 +18,7 @@
 # [S12] (maturité ≠ origine, cause ⑤) n'a PAS de mutation ici : c'est un invariant d'UN SEUL objet
 # (#37), posé dans le contrat (`BlocPropose`) et gardé par `negatif_modele_entreprise.sh`.
 #
-# Lot M3 ter (`15-lot-M3ter-architecte.md`) : [S13] (un bloc non plateforme couvre UN SEUL
+# Lot M3 ter (`roadmap/archive/V3-15-lot-M3ter-architecte.md`) : [S13] (un bloc non plateforme couvre UN SEUL
 # programme) est, comme [S12], un invariant d'UN SEUL objet posé dans le CONTRAT
 # (`app/contracts/modele_entreprise_schema.py`) — mais son assert de test ne vit que dans
 # `check_architecte.py` (§10), jamais dans `check_modele_entreprise.py` : sa mutation vit donc ICI

@@ -1,5 +1,5 @@
 """Check du PÉRIMÈTRE (`app/knowledge/perimetre.py`) — hors ligne, pur, lot P1
-(`roadmap/V3/14-lot-P1-perimetre.md`).
+(`roadmap/archive/V3-14-lot-P1-perimetre.md`).
 
 Catalogue de cas FICTIFS (aucun nom réel, aucun ticker) — un cas par type de transition (§2.2),
 plus les cas additionnels du §4 : retraitement d'une activité cédée au socle, deux transitions

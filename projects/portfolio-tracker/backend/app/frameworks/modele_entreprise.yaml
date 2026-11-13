@@ -22,7 +22,7 @@
 # réplique sur des entreprises très différentes. Les fixtures de test, elles, sont copiées du réel
 # et nomment des émetteurs — mais jamais ce fichier.
 
-# L'INTERRUPTEUR de la signature de l'architecture (09 §1.2, §7 ; roadmap V3 `12-lot-M3-architecte.md`
+# L'INTERRUPTEUR de la signature de l'architecture (09 §1.2, §7 ; `roadmap/archive/V3-12-lot-M3-architecte.md`
 # §2.1). true = DEUX signatures : l'architecture proposée attend la signature du comité avant d'ouvrir
 # les relances ciblées (M4). false = cible annoncée, une seule signature (celle du classeur) : la
 # dernière architecture proposée qui tient AUJOURD'HUI est en vigueur sans signature. Lu à la LECTURE
@@ -42,7 +42,7 @@ signature_de_l_architecture: true
 porte_admet_reponses_refusees: true
 
 # L'INTERRUPTEUR à trois positions de l'ACCÈS AU DOSSIER par l'architecte (lot B4f, roadmap V3
-# `16-lot-B4f-explorateur.md` §5, garde-fou F). `aucun` : l'architecte actuel, matière seule — c'est
+# `roadmap/archive/V3-16-lot-B4f-explorateur.md` §5, garde-fou F). `aucun` : l'architecte actuel, matière seule — c'est
 # l'ORDRE 0, et le DÉFAUT à la livraison (le banc B4e décide, sur chaque entreprise, en comparant les
 # trois). `deux_temps` : un premier appel sans outil rend `besoins_d_information`, le CODE exécute
 # `rechercher` pour chacun (sans modèle) et enrichit la matière, un second appel conclut — coût et

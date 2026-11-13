@@ -1,5 +1,5 @@
 """Les FAITS PUBLIÉS — ce que le CODE établit à partir de la ventilation, jamais déclaré par le
-modèle (lot M3 bis, roadmap V3 `13-lot-M3bis-structure.md` §2, cause ①). NOUVEAU, PUR : aucune IO.
+modèle (lot M3 bis, `roadmap/archive/V3-13-lot-M3bis-structure.md` §2, cause ①). NOUVEAU, PUR : aucune IO.
 
 CE QUI RESTE AU MODÈLE (arbitrage 09 §1.1/§2, inchangé) : l'axe du premier niveau, la maille à
 laquelle il s'arrête (un membre publié peut rester un seul bloc sans ses enfants), les

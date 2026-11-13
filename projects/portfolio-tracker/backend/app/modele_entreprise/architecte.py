@@ -1,4 +1,4 @@
-"""L'AGENT ARCHITECTE — lot M3, roadmap V3 `12-lot-M3-architecte.md` §4.
+"""L'AGENT ARCHITECTE — lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §4.
 
 Dessine l'architecture du classeur d'UNE entreprise à partir de sa matière (`matiere.py`) : les blocs,
 les variables qu'il retient par bloc, la règle de passage au format agrégé, et les cellules à remplir.
@@ -57,7 +57,7 @@ class ArchitectureRefusee(RuntimeError):
     télémétrie cumulée des deux appels (même geste que `AgentOutputInvalid`).
 
     `sorties` : `(sortie_brute_du_modele, motif)` de CHAQUE tentative refusée (une ou deux, dans
-    l'ordre) — §3 de la spec `15-lot-M3ter-architecte.md` : « que tout refus se lise ». Avant ce
+    l'ordre) — §3 de la spec `roadmap/archive/V3-15-lot-M3ter-architecte.md` : « que tout refus se lise ». Avant ce
     lot, cette télémétrie n'existait pas et `tools/architecte.py --sortie` n'écrivait qu'en cas de
     succès (diagnostic impossible, §0 de la spec)."""
 
@@ -76,7 +76,7 @@ class ArchitectureRefusee(RuntimeError):
 
 
 class DemandeDeRecherche(Strict):
-    """Lot B4f (spec `16-lot-B4f-explorateur.md` §4, « B′ ») — ce que le DOSSIER NE CONTIENT PAS et
+    """Lot B4f (spec `roadmap/archive/V3-16-lot-B4f-explorateur.md` §4, « B′ ») — ce que le DOSSIER NE CONTIENT PAS et
     dont le classeur a besoin. À blanc : rendue, pour que le comité la voie. À l'écriture (hors
     périmètre de ce lot) : chacune devient une demande au collecteur par le mécanisme EXISTANT des
     demandes de recherche (`FrameworkMandate`/`persist_mandate`, `app/agents/v2/manager_persist.py`
@@ -114,7 +114,7 @@ class ArchitecteSortie(Strict):
 
 def _refus_hors_contrat(e: AgentOutputInvalid, precedentes: tuple[tuple[str, str], ...]) -> ArchitectureRefusee:
     """Une sortie que le contrat refuse même après les réparations du runner : refus NOMMÉ
-    `[CONTRAT]`, télémétrie cumulée, sortie brute gardée (§3 de `15-lot-M3ter-architecte.md`)."""
+    `[CONTRAT]`, télémétrie cumulée, sortie brute gardée (§3 de `roadmap/archive/V3-15-lot-M3ter-architecte.md`)."""
     motif = f"[CONTRAT] la sortie ne respecte pas le contrat de l'architecture : {e.last_error}"
     return ArchitectureRefusee(motifs=motif, tokens_in=e.tokens_in, tokens_out=e.tokens_out,
                                cost_usd=e.cost_usd, attempts=e.attempts,

@@ -1,5 +1,5 @@
-"""Les CONTRÔLES DE STRUCTURE [S1]-[S11] — lot M3 (roadmap V3 `12-lot-M3-architecte.md` §5), étendus
-par le lot M3 bis (`13-lot-M3bis-structure.md` §2/§5/§7) : [S10] (place des autres axes, cause ①),
+"""Les CONTRÔLES DE STRUCTURE [S1]-[S11] — lot M3 (`roadmap/archive/V3-12-lot-M3-architecte.md` §5), étendus
+par le lot M3 bis (`roadmap/archive/V3-13-lot-M3bis-structure.md` §2/§5/§7) : [S10] (place des autres axes, cause ①),
 [S11] (dimensions typées, cause ④). [S12] (maturité ≠ origine, cause ⑤) est un invariant d'UN SEUL
 objet (#37) : il vit dans le contrat (`BlocPropose._s12_acquisition_jamais_en_developpement`),
 jamais ici.

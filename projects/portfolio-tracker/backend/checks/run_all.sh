@@ -67,4 +67,16 @@ for f in checks/check_*.py; do
   fi
 done
 echo "TOTAL assertions = $total"
+# Ligne de base : écrite ICI et nulle part ailleurs (trois documents citaient trois totaux différents).
+{
+  echo "# Ligne de base de la suite — SEULE source du chiffre"
+  echo
+  echo "Ce fichier est **réécrit par \`checks/run_all.sh\`** à chaque passage. Aucun autre document ne recopie le total."
+  echo
+  echo "- Date : $(date -u +%Y-%m-%dT%H:%MZ)"
+  echo "- Total d'assertions : $total"
+  echo "- Sortie du lanceur : $worst (0 = aucun échec)"
+  echo "- Scripts joués : $(ls checks/check_*.py | wc -l) présents, hors contrôles « live »"
+  echo "- Commit : $(git rev-parse --short HEAD 2>/dev/null || echo inconnu)"
+} > checks/LIGNE_DE_BASE.md 2>/dev/null || echo "(ligne de base non écrite : checks/ en lecture seule)"
 exit $worst

@@ -1,5 +1,5 @@
 """Recoupe CHAQUE nombre d'une réponse rédigée avec le texte des pièces qu'elle cite — en lecture
-seule, sans modèle (méthode de relecture des jalons A3/A4 de `05-frameworks-complets.md`).
+seule, sans modèle (méthode de relecture des jalons A3/A4 de `roadmap/archive/V3-05-frameworks-complets.md`).
 
 Pourquoi un outil : les quatre contrôles du manager gardent la STRUCTURE, jamais le sens (#78) ; un
 `repondu` peut porter un chiffre calculé ou tiré d'une pièce NON citée (D-me6). Relire à la main

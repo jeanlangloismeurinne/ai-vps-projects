@@ -1,4 +1,4 @@
-"""Les formules du classeur sont TYPÉES (lot M3 bis, roadmap V3 `13-lot-M3bis-structure.md` §5,
+"""Les formules du classeur sont TYPÉES (lot M3 bis, `roadmap/archive/V3-13-lot-M3bis-structure.md` §5,
 cause ④). NOUVEAU, PUR : aucune IO, rejouable hors-ligne.
 
 POURQUOI UN MODULE À PART DE `app/contracts/formule_grammaire.py`. Cette grammaire-là calcule déjà

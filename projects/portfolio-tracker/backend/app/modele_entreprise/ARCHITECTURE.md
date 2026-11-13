@@ -1,7 +1,7 @@
 # `app/modele_entreprise/` — le classeur de l'entreprise
 
 Spec métier : `roadmap/V3/09-modele-entreprise.md`. Spec d'exécution de ce lot :
-`roadmap/V3/10-lot-M1-catalogue-et-contrats.md`.
+`roadmap/archive/V3-10-lot-M1-catalogue-et-contrats.md`.
 
 ## Ce qui existe (M1)
 
@@ -21,7 +21,7 @@ Spec métier : `roadmap/V3/09-modele-entreprise.md`. Spec d'exécution de ce lot
   `inscrire_fourchette`, `inscrire_scenario`), même geste que `valorisation/signature.py` : append-
   only, transaction explicite (#35), refuse `SCENARIO_CENTRAL` (jamais une ligne).
 
-## Ce qui existe (M3 — roadmap V3 `12-lot-M3-architecte.md`)
+## Ce qui existe (M3 — `roadmap/archive/V3-12-lot-M3-architecte.md`)
 
 - `porte.py` — `porte_de_l_architecte(etat, ref) -> Porte` : pure, lit le diagnostic existant
   (`parcours.manque_pour_question`, détenteur unique des arguments de `manque_de_la_question`,
@@ -59,7 +59,7 @@ récursivement (le raccord chiffré de l'emboîtement est de toute façon M5). `
 prend `ticker_id` en paramètre explicite (la spec ne le liste pas dans la signature ; sans lui, un
 titre sans AUCUNE architecture proposée ne pourrait pas être nommé dans la réponse servie).
 
-## Ce qui existe (M3 bis — roadmap V3 `13-lot-M3bis-structure.md`, principe fondateur n° 4)
+## Ce qui existe (M3 bis — `roadmap/archive/V3-13-lot-M3bis-structure.md`, principe fondateur n° 4)
 
 Traite les CAUSES des erreurs des 4 architectures à blanc du 2026-10-22, pas leurs symptômes.
 
@@ -111,7 +111,7 @@ Traite les CAUSES des erreurs des 4 architectures à blanc du 2026-10-22, pas le
   cohérence entre deux), et la numérotation [S1]-[S11] de `structure.py` ne saute donc pas de S11 à
   S13.
 
-## Ce qui existe (M3 ter — roadmap V3 `15-lot-M3ter-architecte.md`, principe fondateur n° 4)
+## Ce qui existe (M3 ter — `roadmap/archive/V3-15-lot-M3ter-architecte.md`, principe fondateur n° 4)
 
 Traite les défauts de l'ARCHITECTE SEUL relevés par les quatre passages à blanc du 2026-10-22
 (NVDA 1/2, RVMD 1/2) : la citation de pièces invisible, le plantage au lieu d'un refus nommé, et
@@ -185,7 +185,7 @@ Traite les défauts de l'ARCHITECTE SEUL relevés par les quatre passages à bla
   (aucun code de jalon-à-jalon n'existe encore dans `structure.py`), à construire si le besoin se
   confirme sur le banc séquentiel (B4e).
 
-## Ce qui existe (B4f — roadmap V3 `16-lot-B4f-explorateur.md`, étapes 0-3)
+## Ce qui existe (B4f — `roadmap/archive/V3-16-lot-B4f-explorateur.md`, étapes 0-3)
 
 Branchement de l'explorateur du dossier (`app/knowledge/explorateur.py`) sur l'architecte, derrière
 l'interrupteur à trois positions `acces_au_dossier` (référentiel 1.3.0, défaut `aucun`).

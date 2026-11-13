@@ -49,7 +49,7 @@ règle simple, l'automatisation son raffinement).
 
 | # | Module | Rend | Acceptation (résumé) | Dépense |
 |---|---|---|---|---|
-| M0 | **Fondations** | Documents de cadre à jour (une constitution, un schéma des blocs, une seule ligne de base de la suite) ; documents inutiles supprimés ou archivés ; charte et garde des accès entre modules ; squelette du chef de dossier (état → pas suivant, pause tous les 1 $) ; NASDAQ sorti du chantier | Aucun document ne décrit un mécanisme supprimé ; le contrôle d'accès rougit sur un accès interdit ; le chef de dossier conduit une société fictive à travers des modules simulés et s'arrête à 1 $ | 0 |
+| M0 ✅ | **Fondations** (accepté hors ligne le 2026-11-13, voir journal) | Documents de cadre à jour (une constitution, un schéma des blocs, une seule ligne de base de la suite) ; documents inutiles supprimés ou archivés ; charte et garde des accès entre modules ; squelette du chef de dossier (état → pas suivant, pause tous les 1 $) ; NASDAQ sorti du chantier | Aucun document ne décrit un mécanisme supprimé ; le contrôle d'accès rougit sur un accès interdit ; le chef de dossier conduit une société fictive à travers des modules simulés et s'arrête à 1 $ | 0 |
 | M1 | **Fiche de l'émetteur et sources** | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
 | M2 | **Collecte de sources** | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
 | M3 | **Base de connaissance** | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
@@ -108,3 +108,10 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | Date | Module | Action | Preuve |
 |---|---|---|---|
 | 2026-11-13 | — | Arbitrages de l'évaluation consignés (26 commentaires du doc) ; plan réécrit par modules ; ancien plan archivé | `EVALUATION-ARCHITECTURE-2026-11-13.md` § Arbitrages rendus |
+| 2026-11-13 | — | Confirmations de l'utilisateur (ordre M0-M11, kit de spécialité avec parcours généraliste sans kit, contradicteur après le comité, sélection des titres par l'utilisateur) | commentaires du doc, 21 h 04 ; `EVALUATION-…md` § Arbitrages rendus |
+| 2026-11-13 | M0 | Chef de dossier : société fictive conduite de « titre entré » à la fin, arrêt aux deux actes déclarés, pause à 1 $ avec coût restant | `check_chef_de_dossier.py` 68/0 ; `negatif_chef_de_dossier.sh` 14/14 (hôte) |
+| 2026-11-13 | M0 | Charte et garde des accès entre modules (`app/modules/registre.py`) | `check_charte_modules.py` 16/0 ; `negatif_charte_modules.sh` 27 mutations détectées, 7 cas permis verts (hôte) |
+| 2026-11-13 | M0 | Documents de cadre : constitution réécrite, schéma des blocs, 12 documents archivés, ligne de base unique, NASDAQ sorti | `check_architecture.py` vert (hôte) |
+
+**Réserve sur M0** : tout a été prouvé sur l'hôte d'un bac à sable (Python 3.13, sans Docker ni base). À
+rejouer une fois sur le VPS : `bash checks/run_all.sh` (réécrit la ligne de base) et les deux négatifs.

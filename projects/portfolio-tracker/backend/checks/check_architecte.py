@@ -1,6 +1,6 @@
 """Vérification de l'AGENT ARCHITECTE — sa porte, les périodes, la matière, l'exemple du prompt,
 les contrôles de structure [S1]-[S9], le renvoi, le service de signature (lot M3, roadmap V3
-`12-lot-M3-architecte.md`). Sans réseau, sans modèle, sans base.
+`roadmap/archive/V3-12-lot-M3-architecte.md`). Sans réseau, sans modèle, sans base.
 
   • §1 LA PORTE — une ligne du tableau §3.1 = un cas (via `porte._diagnostic`, la plomberie de
        lecture `manque_pour_question` étant remplacée par un double contrôlé) ; l'interrupteur

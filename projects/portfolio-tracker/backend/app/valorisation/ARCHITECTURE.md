@@ -1,6 +1,6 @@
 # `valorisation/` — l'atelier de valorisation
 
-> **Cible** (spec : `roadmap/V3/03-spec-frameworks.md` §4.6, roadmap `05-frameworks-complets.md`
+> **Cible** (spec : `roadmap/V3/03-spec-frameworks.md` §4.6, roadmap `roadmap/archive/V3-05-frameworks-complets.md`
 > capacité 4 bis, convention #96 du `CLAUDE.md` projet).
 > **Réalisé** : prouvé par les `check_*.py` cités ci-dessous — les exécuter.
 

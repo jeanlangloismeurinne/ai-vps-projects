@@ -1,4 +1,4 @@
-"""Check — l'EXPLORATEUR DU DOSSIER (lot B4f, roadmap V3 `16-lot-B4f-explorateur.md`), §6 « Gardes ».
+"""Check — l'EXPLORATEUR DU DOSSIER (lot B4f, `roadmap/archive/V3-16-lot-B4f-explorateur.md`), §6 « Gardes ».
 
 Cas FICTIFS (aucun nom réel, deux tickers inventés) : un dossier à trois étages (notes → pièces →
 documents d'origine, conceptuellement — deux étages ADRESSABLES en pratique : notes et pièces) avec

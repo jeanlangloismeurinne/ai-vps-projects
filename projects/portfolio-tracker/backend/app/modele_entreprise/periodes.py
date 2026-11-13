@@ -1,4 +1,4 @@
-"""Les PÉRIODES DU CLASSEUR — détenteur unique (lot M3, roadmap V3 `12-lot-M3-architecte.md` §3.4).
+"""Les PÉRIODES DU CLASSEUR — détenteur unique (lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §3.4).
 
 `PeriodeCellule` (contrat, `^(FY[0-9]{4}|sans_periode)$`) ne porte qu'une ANNÉE — plus courte que
 l'id d'un exercice du socle des comptes (`FY2026-01-25`, daté de sa clôture, §4 de `socle_comptes.py`).

@@ -1,203 +1,134 @@
 ---
-id: principe-directeur-v2
-status: cadre-fondateur
+id: principe-directeur
+status: constitution en vigueur
 created: 2026-08-11
+updated: 2026-11-13 (réécrite après les arbitrages de l'évaluation d'architecture ; version antérieure, intégrale : `roadmap/archive/V3-principe-directeur-avant-2026-11-13.md`)
 project: portfolio-tracker
 role: >
-  Principe directeur de l'Architecture V2. À placer en tête de la consigne unique
-  de mise en place V2 (préambule des specs fusionnées). Toute spec, tout ticket,
-  toute décision d'implémentation doit s'y conformer — sur le fond (processus
-  d'investissement) comme sur la forme (processus de développement).
+  La constitution technique du système visé : les règles durables que tout module, toute spec et tout
+  changement de code doivent respecter. Elle ne raconte rien et ne planifie rien — le plan est
+  `07-avant-comite.md`, le schéma des blocs `ARCHITECTURE-CIBLE.md`, la conduite des arbitrages
+  `PRINCIPES-FONDATEURS.md`.
 ---
 
-# Principe directeur — Architecture V2
+# Principe directeur — la constitution
 
-Ce document est la **constitution** de la V2. Il prime sur toute spec de détail :
-en cas de contradiction, c'est lui qui tranche. Il définit *comment on conçoit*
-(la chaîne UX → agents → données) et *quelles garanties sont non négociables*
-(auditabilité, horizon long terme).
+Ce document prime sur toute spec de détail : en cas de contradiction, c'est lui qui tranche. Il ne
+cède qu'aux `PRINCIPES-FONDATEURS.md` (comment on décide et comment on demande) et à la liste « Ce
+qui est fermé » de `00-REPRISE.md` (ce qu'on ne rouvre pas).
 
----
+## 1. Comment on construit
 
-## 1. Le principe en trois couches
+- **Module par module, sur une base propre.** Un module marche — seul, sur NVDA et sur RVMD — avant
+  qu'on ouvre le suivant. L'ordre et l'acceptation de chacun sont dans `07-avant-comite.md`.
+- **Les modules reconstruits vivent dans `backend/app/modules/`.** Tout le reste de `backend/app/`
+  est l'ancien code : une **carrière**. À l'ouverture d'un module on y reprend ce qui tient dans son
+  contrat, on laisse le reste ; ce qu'un module remplace est **supprimé le jour où ce module est
+  accepté**. Tant qu'il n'est pas remplacé, l'ancien code reste en place et ses contrôles restent verts.
+- **Un document de cadre ne décrit jamais comme en vigueur un mécanisme supprimé ou une méthode
+  abandonnée.** Un plan terminé, un prompt ponctuel, une proposition arbitrée partent dans
+  `roadmap/archive/`.
 
-Toute fonctionnalité se conçoit et se construit dans cet ordre :
+## 2. La charte d'un module
 
-```
-1. UX          → définit le contrat d'affichage (le JSON attendu à l'écran)
-2. AGENTS      → logiques métier qui produisent ce JSON (jugement + délégation)
-3. DONNÉES     → dérivées du besoin des agents ; alimentent la base de connaissance
-                 par flux standards OU par recherche ad hoc d'agents ouvriers
-```
+Elle vaut pour tous les modules, sans exception.
 
-**On part toujours de l'écran, jamais de la donnée.** L'UX fixe le contrat ; les
-agents s'engagent à le produire ; les données sont exactement celles qu'il faut
-pour que les agents tiennent cet engagement — ni plus, ni moins.
+1. Il **possède ses tables** ; personne d'autre ne les lit.
+2. Il rend **un seul objet de sortie**, versionné, lu par une seule fonction. Un contrôle refuse tout
+   autre accès, et vire au rouge quand on le casse.
+3. Il se livre **avec son écran** : on voit ce qu'il produit.
+4. Il se teste **seul**, sur une société fictive et des modèles simulés, sans dépense.
+5. **Rien de propre à une société, à un pays ou à une place de cotation n'est écrit dans son code** :
+   c'est une donnée des référentiels (principe fondateur n° 4).
+6. Son **acceptation est écrite avant** sa construction, et passée sur NVDA **et** RVMD.
+7. Il s'ouvre par un **tri** de l'ancien code et des données déjà en base : repris tel quel / repris
+   derrière le contrat / laissé. Une pièce déjà collectée se garde si elle satisfait le contrat ; les
+   réponses des anciens chapitres ne sont pas reprises (elles servent de contrôle, gratuitement).
+8. Il **déclare son pas au chef de dossier** et **compte ce qu'il dépense** — modèles et recherches web.
 
----
+**Lecture humaine.** Tant que le taux d'erreur d'un module n'est pas mesuré, sa sortie est lue par un
+humain avant que le module suivant s'en serve. C'est un interrupteur par module, levé un à un
+(principe fondateur n° 3 : la lecture humaine est la règle simple, l'automatisation son raffinement).
 
-## 2. Les trois garde-fous (non négociables)
+## 3. Les deux règles du schéma des blocs
 
-Le principe ci-dessus est un squelette. Il n'est solide qu'avec ces trois
-contraintes, qui répondent aux failles identifiées à l'audit du flux
-d'investissement.
+1. **Un bloc ne lit d'un autre que son contrat de sortie.** Ni ses tables, ni ses fonctions internes.
+2. **Le non coté et les émetteurs de l'UE n'ajoutent que des adaptateurs, un kit de spécialité et une
+   famille de comptes.** S'il fallait toucher un autre bloc pour les accueillir, le contrat de ce
+   bloc serait à revoir maintenant.
 
-### G1 — Le schéma JSON est un artefact versionné, source de vérité unique
+Le **chef de dossier** (automate sans modèle de langage) lit tous les contrats et n'en écrit aucun :
+il donne le pas suivant ou nomme l'acte humain attendu. Le schéma : `ARCHITECTURE-CIBLE.md`.
 
-Le contrat de la couche 1 n'est pas implicite : c'est un **schéma JSON explicite
-et versionné** (JSON Schema / Pydantic). Trois consommateurs en dérivent, jamais
-l'inverse — et doivent rester synchronisés (règle des « 3 points de
-synchronisation ») :
+## 4. Les trois garde-fous
 
-1. **Prompt de l'agent** — le schéma de sortie attendu.
-2. **Frontend** — l'affichage et l'édition des champs.
-3. **Import / validation backend** — les champs acceptés à l'écriture.
+- **G1 — Le contrat est un objet versionné, source de vérité unique.** La consigne donnée au modèle
+  (exemple de sortie compris), l'écran et la validation à l'écriture en dérivent, jamais l'inverse ;
+  les trois se modifient dans le même changement.
+- **G2 — La décision ne dépend pas de l'écran.** Les règles de décision (§8) sont définies d'abord et
+  contraignent l'affichage. Un écran n'encode jamais un comportement séduisant mais faux, et le corps
+  d'un acte de décision ne porte que ce que son auteur a le droit de décider.
+- **G3 — Toute information entre datée, sourcée et figée avant d'être utilisée.** Aucune pièce n'est
+  lue par un module avant d'exister dans la base de connaissance avec son origine et ses dates ; une
+  pièce ne se modifie pas, elle se remplace en laissant sa trace ; une recherche faite à la demande
+  entre par la même porte qu'un flux régulier. Fiabilité, nature et actualité restent trois
+  propriétés distinctes, jamais fondues en une note (`doctrine-trois-axes.md`).
 
-Modifier une structure de données = modifier le schéma versionné, puis répercuter
-sur les trois points **dans le même changement**. En omettre un crée une
-désynchronisation silencieuse.
+## 5. Les modèles de langage
 
-### G2 — La logique de décision contraint l'UX, pas l'inverse
+- **Un seul fournisseur : DeepInfra.** Tout appel passe par l'interface de fournisseur du projet ;
+  aucun module n'appelle directement une bibliothèque de modèle.
+- **Le modèle de chaque rôle est une donnée**, pas une constante dans le code ni un nom dans un
+  document de cadre.
+- **Changer le modèle d'un rôle rejoue les dossiers étalons** de ce rôle avant d'être adopté.
+- **Ce qui se calcule ne se demande pas à un modèle** : comptes, squelette du classeur, valorisation
+  et enchaînement du dossier sont du code, rejouable à l'identique.
+- **On mesure le coût, on ne plafonne pas la qualité.** Chaque module compte sa dépense ; le chef de
+  dossier fait une pause tous les 1 $ consommés sur un dossier, avec l'estimation du coût restant.
 
-« UX-first » vaut pour la **présentation**, jamais pour la **décision**. Les
-invariants métier (voir §4) sont définis indépendamment et **contraignent**
-l'UX. Un écran ne doit jamais encoder un comportement séduisant mais faux
-(ex. vendre un compounder parce que le prix dépasse l'IV haute). Pour tout écran
-de décision : d'abord le modèle de décision correct, ensuite l'habillage.
+## 6. Le kit de spécialité
 
-### G3 — Toute donnée entre versionnée et scorée avant usage — y compris l'ad hoc
+Un seul analyste générique, outillé par un **kit de spécialité** tenu en donnée dans les référentiels :
+sources du secteur, famille de comptes, moteurs types, questions propres, dossiers étalons. Ajouter un
+secteur ajoute un kit, sans toucher aux modules.
 
-La donnée de la couche 3 arrive par deux voies :
-- **flux standards** (EDGAR, IR, RSS, batch d'ingestion) ;
-- **recherche ad hoc** d'agents ouvriers, à la demande d'un agent métier.
+**Une entreprise sans kit suit le parcours généraliste**, qui doit rester assez souple pour bien
+l'analyser : le kit affine, il n'est jamais une condition d'entrée (arbitrage du 2026-11-13).
 
-Les deux voies obéissent à la même règle : **aucune donnée n'est consommée par un
-agent métier avant d'exister comme `knowledge_entry`** — source, `reliability_score`,
-`reliability_tier`, timestamp, et **snapshot immuable du contenu au moment de la
-décision**. Ad hoc ≠ éphémère. Ad hoc ≠ non tracé. C'est la condition de
-l'auditabilité intégrale (principe P1–P4 de la spec V2), et elle impose des
-`knowledge_entries` **append-only / versionnées** (on ne mute pas, on supersède).
+## 7. Les sources
 
----
+- **Le système évalue les sources et les admet lui-même**, sous contrôle a posteriori : chaque
+  admission est datée et motivée dans un registre que l'utilisateur suit et corrige (principe
+  fondateur n° 2, modifié le 2026-11-13).
+- Une source **révoquée** signale les pièces qui s'y appuient.
+- Le modèle qui utilise une source n'est jamais celui qui la qualifie.
+- La fiabilité d'une source ne se dégrade pas selon l'émetteur étudié.
 
-## 3. Architecture d'agents — tiering, cache, batch
+## 8. Règles de décision (ce que tout écran doit servir)
 
-### Deux tiers, une interface stricte
+- **Horizon d'au moins cinq ans.** Une valeur centrale, une fourchette et ce que le prix suppose —
+  pas un objectif de cours.
+- **On vend sur une dégradation de la thèse**, pas sur un seuil de prix mécanique. À chaque revue on
+  se demande si la thèse, restée valide, justifie encore le prix ; la surévaluation seule conduit à
+  ne pas renforcer et à revoir.
+- **Trois indicateurs distincts, jamais fusionnés** : qualité de l'information · conviction sur la
+  thèse · marge de sécurité.
+- **Tout se reconstitue** : on peut toujours répondre « pourquoi le système a dit cela » à partir des
+  pièces figées qu'il a lues.
+- **L'effort de recherche suit le poids dans la valeur et les débats de la thèse** ; on ne cherche pas
+  pour accumuler.
+- **Restent des actes humains** : arrêter ou poursuivre un dossier, valider la carte et les débats,
+  signer le modèle et sa fourchette, décider d'investir. Le comité ne voit que les exceptions.
 
-| Tier | Modèle par défaut | Rôle | Prix (in/out par M tokens) |
-|---|---|---|---|
-| **Métier (orchestrateur)** | `claude-opus-4-8` | Jugement, synthèse bull/bear, risk matrix, arbitrage | $5 / $25 |
-| **Ouvrier** | `claude-haiku-4-5` | web_search, fetch_url, extraction, classification de matérialité | $1 / $5 |
-| *Intermédiaire (option)* | `claude-sonnet-4-6` | Ingestion de gros documents (10-K) si Haiku peine | $3 / $15 |
+## 9. Test de conformité
 
-L'abstraction provider (LiteLLM) reste la règle : changer de modèle = changer une
-valeur en DB, pas du code. Les modèles ci-dessus sont les **défauts**, pas un
-verrou.
+Une contribution est prête si elle répond « oui » à tout :
 
-**L'interface orchestrateur → ouvrier est le point critique.** L'agent Opus
-n'envoie jamais une consigne vague (« cherche des infos sur NVDA »). Il émet une
-**requête structurée** : `query` + schéma de sortie attendu + fiabilité minimale
-exigée. L'ouvrier renvoie des `knowledge_entries` scorées, jamais du texte libre.
-Garbage in, garbage out : la qualité de la délégation dépend de la précision de la
-demande.
-
-### Économie de tokens & arrêt de Pareto (comme un fonds)
-
-Deux principes gouvernent la consommation, au même rang que le tiering :
-
-- **Agent adapté + sous-segmentation.** Chaque tâche va au plus petit modèle qui
-  la traite bien ; une tâche lourde est **découpée** en sous-tâches déléguées à des
-  ouvriers plutôt que traitée d'un bloc par l'orchestrateur. On ne paie de l'Opus
-  que là où il y a du jugement.
-- **Arrêt de Pareto sur la recherche.** On cesse de chercher plus d'information dès
-  que son **impact marginal sur la décision** devient faible — comme un fonds qui ne
-  vise pas l'exhaustivité mais résout les 2-3 incertitudes qui peuvent inverser la
-  thèse. Le curator (readiness / incertitudes bloquantes) opérationnalise ce seuil
-  d'arrêt.
-
-### Économie d'exécution
-
-- **Prompt caching** pour rendre l'orchestrateur Opus abordable. Le contexte
-  réutilisé d'une étape à l'autre (system prompt figé, knowledge entries triées de
-  façon déterministe, contexte portefeuille) va en **tête** de prompt ; le volatile
-  (la query du tour) en **fin**. Les lectures de cache coûtent ~0,1× l'entrée.
-  Interdit absolu en tête de prompt : `datetime.now()`, ID de session, JSON non
-  trié — tout invalidateur silencieux du cache.
-- **Batch API** pour l'ingestion de masse non latence-sensible (onboarding EDGAR,
-  regénération annuelle, ingestion 10-K/10-Q en volume) : **−50 %** sur les tokens.
-  Les appels synchrones sont réservés aux analyses on-demand.
-
----
-
-## 4. Invariants métier (ce que l'UX doit servir, jamais contredire)
-
-Rappel des règles de fond qui contraignent toute UX de décision (cf. audit du
-flux) :
-
-- **Horizon ≥ 5 ans.** Valorisation scénarisée (bear/base/bull) + reverse-DCF,
-  pas un prix cible à 36 mois.
-- **On vend sur dégradation de thèse** (moat, ROIC, allocation du capital,
-  gouvernance), **pas sur un seuil de prix mécanique**. Nuance : à chaque revue on
-  réévalue si la thèse **valide justifie encore le prix** — si le rendement attendu
-  à terme ne compense plus le risque et le coût d'opportunité, on **réduit
-  l'exposition même thèse intacte** (arbitrage rendement/risque prospectif, pas
-  market-timing). La surévaluation seule = signal de non-renforcement + revue.
-- **Trois indicateurs distincts, jamais fusionnés** : qualité/couverture de
-  l'information · conviction sur la thèse · marge de sécurité. Pas de
-  `confidence_score` global trompeur.
-- **Auditabilité reconstructible** : on peut toujours répondre « pourquoi l'agent
-  a dit ça » à partir du snapshot figé des sources utilisées.
-- **Curator MVDD / readiness / too-hard** préservé : on évalue si on en sait
-  assez pour juger, avant de juger.
-- **Arrêt de Pareto** : on n'accumule pas l'information pour elle-même ; on s'arrête
-  quand une recherche supplémentaire ne changerait probablement pas la décision.
-
----
-
-## 5. Le même principe gouverne le développement du projet
-
-La chaîne UX → agents → données, et ses garde-fous, ne s'appliquent pas qu'au
-produit : ils structurent **comment on le construit**.
-
-1. **On spécifie de l'écran vers la donnée.** Une spec commence par le contrat
-   d'affichage (le JSON + son schéma versionné), puis l'agent qui le produit, puis
-   les données nécessaires. Une spec qui commence par le schéma de table sans
-   écran cible est incomplète.
-
-2. **Le schéma JSON précède le code.** Avant d'implémenter, le schéma versionné
-   existe et les 3 points de synchronisation sont identifiés. Un ticket = une
-   évolution de contrat cohérente sur les 3 points.
-
-3. **Aucune donnée non tracée dans le code.** Toute écriture dans la base de
-   connaissance (flux ou ad hoc) passe par la même porte versionnée/scorée. Pas
-   de chemin de contournement, même « temporaire ».
-
-4. **Décision avant habillage.** Pour toute fonctionnalité de décision, la revue
-   valide d'abord la conformité aux invariants métier (§4), ensuite l'UX.
-
-5. **Tiering et coût sont des choix de conception, pas d'après-coup.** Chaque
-   nouvel agent déclare son tier (métier / ouvrier), son modèle par défaut, et
-   s'il passe par batch ou synchrone. Le cache est pensé dès la structure du
-   prompt.
-
-6. **Provider-agnostic par défaut.** Tout agent passe par l'abstraction provider.
-   Aucun appel direct à un SDK de modèle dans la logique métier.
-
----
-
-## 6. Test de conformité (à appliquer à chaque spec / PR de la V2)
-
-Une contribution est conforme si elle peut répondre « oui » à tout :
-
-- [ ] Part-elle d'un contrat d'affichage (JSON) avant la donnée ? *(couche 1→3)*
-- [ ] Le schéma JSON est-il versionné et synchronisé sur les 3 points ? *(G1)*
-- [ ] La logique de décision est-elle définie indépendamment de l'UX et
-      conforme aux invariants métier ? *(G2, §4)*
-- [ ] Toute donnée utilisée est-elle versionnée + scorée + figée au moment de la
-      décision, ad hoc compris ? *(G3)*
-- [ ] Chaque agent déclare-t-il tier, modèle, batch/synchrone, et stratégie de
-      cache ? *(§3)*
-- [ ] Passe-t-elle par l'abstraction provider ? *(§3, §5.6)*
-
-Si une case est « non », la contribution n'est pas prête — quelle que soit la
-qualité du reste.
+- [ ] Respecte-t-elle les huit points de la charte (§2) ? Son acceptation était-elle écrite avant ?
+- [ ] Ne lit-elle des autres blocs que leur contrat de sortie (§3) ?
+- [ ] Son contrat est-il versionné, et consigne, écran et validation changés ensemble (G1) ?
+- [ ] La règle de décision est-elle définie avant l'écran et conforme au §8 (G2) ?
+- [ ] Toute information utilisée est-elle une pièce datée, sourcée et figée (G3) ?
+- [ ] Le modèle de chaque rôle est-il une donnée, appelé par l'interface de fournisseur (§5) ?
+- [ ] Rien de propre à une société, un pays ou une place de cotation n'est-il dans le code (§2.5) ?
+- [ ] Chaque contrôle neuf a-t-il viré au rouge pour la bonne raison (`METHODE-TEST.md`) ?

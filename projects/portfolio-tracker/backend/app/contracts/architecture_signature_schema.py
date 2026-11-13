@@ -1,5 +1,5 @@
 """Contrat de la SIGNATURE DE L'ARCHITECTURE du classeur (lot M3, roadmap V3
-`12-lot-M3-architecte.md` §6.2, migration 062). Calqué sur `signature_modele_schema.py` (#46) :
+`roadmap/archive/V3-12-lot-M3-architecte.md` §6.2, migration 062). Calqué sur `signature_modele_schema.py` (#46) :
 même geste, mêmes choix pris « comme un vrai fonds », transposés à l'architecture plutôt qu'à la
 fourchette de valorisation — pas de `Fourchette` ici, mais les SIGNAUX ([S2]/[S3b]) que le comité
 avait sous les yeux en décidant.

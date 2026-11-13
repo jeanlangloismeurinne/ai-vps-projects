@@ -1,4 +1,4 @@
-"""La PORTE DE L'ARCHITECTE — lot M3, roadmap V3 `12-lot-M3-architecte.md` §3.1 (spec métier 09 §11.2).
+"""La PORTE DE L'ARCHITECTE — lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §3.1 (spec métier 09 §11.2).
 
 « Au moins une réponse instruite, quel qu'en soit le statut ; un échec technique ou une question
 jamais cherchée ferme la porte, et le manque est nommé. » Cette règle se lit sur le DIAGNOSTIC

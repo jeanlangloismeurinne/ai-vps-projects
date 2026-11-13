@@ -1,4 +1,4 @@
-"""La SIGNATURE DE L'ARCHITECTURE et sa persistance (lot M3, roadmap V3 `12-lot-M3-architecte.md`
+"""La SIGNATURE DE L'ARCHITECTURE et sa persistance (lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md`
 §6.2, migration 062). Même geste que `app/valorisation/signature.py` (#46) : `servir_architecture`
 PURE (rien de stocké n'est un verdict, #53/#77 — `juger` rejoue le pont et [S1]-[S9] contre la
 matière DU JOUR), l'écriture des deux registres (061 proposer, 062 signer/ecarter), l'INTERRUPTEUR

@@ -1,5 +1,9 @@
 # Conventions et pièges — portfolio-tracker
 
+> **Note du 2026-11-13** : ces conventions décrivent l'ancien code. Elles ne sont pas réécrites en bloc :
+> chacune est triée (reprise, reformulée ou abandonnée) à l'ouverture du module qui remplace le code
+> qu'elle gouverne. Les règles des modules reconstruits : `roadmap/V3/principe-directeur.md`.
+
 > Texte intégral des conventions (#1 → la dernière), sorti de `CLAUDE.md` le 2026-10-16 pour alléger
 > le contexte chargé à chaque conversation. `CLAUDE.md` n'en garde qu'un index d'une ligne : lire ici
 > la convention entière AVANT de toucher au module qu'elle concerne (`grep -n "#NN" CONVENTIONS.md`).
@@ -3281,7 +3285,7 @@ certaines clôtures sont vides** — cadre plein, valeurs absentes. Cf. **#81**.
 
 ### #137 — séance d'arbitrages du 2026-10-17 : marchés visés, taux exigé unique, relance bornée, réinitialisation
 
-**Arbitrages rendus en une séance** (dossier : `roadmap/V3/08-seance-arbitrages.md`, cas relevés en base le
+**Arbitrages rendus en une séance** (dossier : `roadmap/archive/V3-08-seance-arbitrages.md`, cas relevés en base le
 jour même). Ce sont des RÈGLES À CONSTRUIRE : rien n'est encore en code au moment où elles sont écrites.
 - **Les marchés visés (point 9)** — la question « marché adressable » devient la LISTE des marchés visés :
   statut (métier actuel / extension annoncée / en développement), taille, part prise mesurée sur des ventes
@@ -3622,7 +3626,7 @@ qu'à poser le point de départ de chaque bloc (dernier exercice, douze derniers
 récent ; les analyses longues (cycle, marges normatives) se font au niveau consolidé, que le découpage
 n'affecte pas. Quand l'émetteur change de découpage, c'est LUI qui republie ses comparatifs (ASC 280 /
 IFRS 8) ; un analyste ne répartit jamais un ancien historique au prorata — aucun comité ne signerait une
-tendance bâtie sur un chiffre fabriqué (arbitrage du 2026-10-23, `14-lot-P1-perimetre.md` §7 bis, qui
+tendance bâtie sur un chiffre fabriqué (arbitrage du 2026-10-23, `roadmap/archive/V3-14-lot-P1-perimetre.md` §7 bis, qui
 révise la Q1 du 2026-10-22).
 
 **Règle.**

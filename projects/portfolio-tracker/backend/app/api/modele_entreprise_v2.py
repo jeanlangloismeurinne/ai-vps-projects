@@ -1,4 +1,4 @@
-"""L'ARCHITECTURE DU CLASSEUR vue du comité (lot M3, roadmap V3 `12-lot-M3-architecte.md` §6.3).
+"""L'ARCHITECTURE DU CLASSEUR vue du comité (lot M3, `roadmap/archive/V3-12-lot-M3-architecte.md` §6.3).
 Calqué sur `valorisation_v2.py` (#46), monté comme lui.
 
   GET  /v2/tickers/{ticker_id}/architecture                        la signée, la version en attente,

@@ -1,4 +1,4 @@
-"""L'EXPLORATEUR DU DOSSIER — lot B4f (roadmap V3 `16-lot-B4f-explorateur.md`), brique COMMUNE aux
+"""L'EXPLORATEUR DU DOSSIER — lot B4f (`roadmap/archive/V3-16-lot-B4f-explorateur.md`), brique COMMUNE aux
 agents, branchée d'abord sur l'architecte (`app/modele_entreprise/architecte.py`, interrupteur
 `acces_au_dossier`).
 

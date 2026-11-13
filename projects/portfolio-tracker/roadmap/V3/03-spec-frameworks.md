@@ -1,6 +1,11 @@
 # Spec v3 — Frameworks d'analyse, managers, et base de connaissance dictée par le framework
 
-> **Statut** : spec d'architecture, écrite le 2026-09-09, **roadmap active** du projet. C'est le
+> **Statut au 2026-11-13** : spec de l'ANCIEN enchaînement par chapitres. La roadmap active est
+> `07-avant-comite.md` (reconstruction par modules). Les questions et leurs tableaux (§4) restent la
+> référence et sont lus par `check_frameworks_definitions.py` ; ils seront triés à l'ouverture des
+> modules M6 et M9.
+>
+> **Statut d'origine** : spec d'architecture, écrite le 2026-09-09. C'est le
 > point d'entrée du dossier `/V3`, qui est **autonome** — tout le nécessaire y vit, sans dépendance
 > sortante :
 > - `principe-directeur.md` — la **constitution**, prime sur toute spec (y compris celle-ci) ;
@@ -771,7 +776,7 @@ le **mandat de recherche**, pas le contrat.
 
 ### 4.3 Framework « Modèle économique » — le premier après les pilotes (2026-09-28)
 
-Écrit sous la roadmap `05-frameworks-complets.md` (capacité 1), co-écrit question par question avec
+Écrit sous la roadmap `roadmap/archive/V3-05-frameworks-complets.md` (capacité 1), co-écrit question par question avec
 l'utilisateur. **Thèse méthodologique** (écoles « qualité » : Buffett / Fundsmith, Baillie Gifford) :
 avant de juger la barrière ou les chiffres, établir comment l'argent est gagné. Il écarte ce que les
 pilotes portent déjà (preuve de la barrière `mo_2`, conversion en cash `qf_2`, coût de la croissance
@@ -790,7 +795,7 @@ décrit avant la première vente, on demande ce qui est visé.
 
 > Un changement de périmètre (`perimetre`, portée totale) rouvre les sept sans qu'aucune ait à le
 > lister. `me_3` est à B+ comme `mo_2` : le coût par unité se publie rarement dans un
-> dépôt. **`me_7`** (lot M3 bis, roadmap V3 `13-lot-M3bis-structure.md` §4) : ce que l'entreprise
+> dépôt. **`me_7`** (lot M3 bis, `roadmap/archive/V3-13-lot-M3bis-structure.md` §4) : ce que l'entreprise
 > prépare — l'inventaire des programmes, génération suivantes, capacités en construction,
 > acquisitions et accords en cours — est une part de la valeur, parfois la principale ; **jamais
 > `sans_objet`**, une entreprise qui ne prépare rien le dit (`sens: rien_de_prepare`). Elle entre
@@ -801,7 +806,7 @@ décrit avant la première vente, on demande ce qui est visé.
 
 ### 4.4 Framework « Secteur et concurrence » (2026-09-28)
 
-Roadmap `05-frameworks-complets.md`, capacité 2, co-écrit avec l'utilisateur. **Thèse méthodologique**
+Roadmap `roadmap/archive/V3-05-frameworks-complets.md`, capacité 2, co-écrit avec l'utilisateur. **Thèse méthodologique**
 (Porter, cinq forces, et la pratique de l'analyste sectoriel) : un bon acteur dans un secteur
 structurellement pauvre reste un placement médiocre ; l'analyste tient la structure du secteur et un
 tableau des pairs, qu'il remet à jour à chaque publication d'un concurrent. Il écarte ce que les autres
@@ -828,7 +833,7 @@ d'une barrière. Aucune question n'est sans objet pour un émetteur sans ventes.
 
 ### 4.5 Framework « Management et allocation du capital » (2026-09-28)
 
-Roadmap `05-frameworks-complets.md`, capacité 3, co-écrit avec l'utilisateur. **Thèse
+Roadmap `roadmap/archive/V3-05-frameworks-complets.md`, capacité 3, co-écrit avec l'utilisateur. **Thèse
 méthodologique** (Thorndike, *The Outsiders*) : on juge la direction sur ce qu'elle fait de l'argent,
 puis sur ce qui la motive, sa parole tenue et qui décide vraiment. Il écarte le rendement du capital
 (`qf_1`), la dette et ses clauses (`qf_4`, `qf_8`), les choix comptables (`qf_6`). Aucune question n'est
@@ -854,7 +859,7 @@ sans objet pour un émetteur sans ventes.
 
 ### 4.6 Framework « Valorisation » (2026-09-28)
 
-Roadmap `05-frameworks-complets.md`, capacité 4, co-écrit avec l'utilisateur (#95). **Thèse
+Roadmap `roadmap/archive/V3-05-frameworks-complets.md`, capacité 4, co-écrit avec l'utilisateur (#95). **Thèse
 méthodologique** (Greenwald, Damodaran, Mauboussin) : une fourchette, jamais un point ; la valeur
 (va_1-3) ne bouge que sur un fait nouveau, ce que le prix suppose (va_4-6) se recalcule à la lecture
 au dernier cours coté daté (**option 1**, arbitrage du 2026-09-28 — construit en capacité 4 bis).

@@ -6991,3 +6991,19 @@ ouverts et désormais rattachés au tri de M6 : question 3 de l'arbre posée sur
 marché ; recouvrement clients × produit sous `data_center` (NVDA) ; RMC-5127 / RM-055 sans marché visé ; `me_7`
 sur V4-Pro, Rubin / IA souveraine instables. Le principe fondateur 2 est modifié le même jour (admission des
 sources par le système, contrôle a posteriori).
+
+## 2026-11-13 — M0 « Fondations »
+
+Confirmations de l'utilisateur lues dans le doc (21 h 04) : ordre des modules, kit de spécialité (sans kit,
+parcours généraliste souple), contradicteur après le comité, sélection des titres par l'utilisateur.
+Livré, sans base ni déploiement ni dépense : `app/modules/chef_de_dossier/` (contrat `EtatDossier` 1.0.0,
+automate pur bibliothèque standard ; 68 vérifications, 14 mutations détectées) ; `app/modules/registre.py`
+et `check_charte_modules.py` (sept invariants C1-C7 ; 27 mutations détectées, 7 cas permis verts) ;
+constitution `principe-directeur.md` réécrite (ancienne version archivée) ; `ARCHITECTURE-CIBLE.md` = schéma
+des blocs + deux registres ; archivés : 05, 08, 10 à 16, le prompt d'évaluation, la proposition du 24/10,
+`viz/` ; `checks/LIGNE_DE_BASE.md` écrit par le lanceur ; `app/nasdaq/00-REPRISE-NASDAQ.md`.
+Appris : (1) hors locale UTF-8, le séparateur `¦` du harnais négatif coupait mal et toutes les mutations
+sortaient « script mort » — corrigé dans `_negatif.sh` ; (2) un contrôle dont une section plante sur la
+règle cassée meurt avant son bilan : chaque section est désormais un échec nommé ; (3) trois agents
+délégués ont été coupés par la limite de dépense du compte, leur travail partiel a été repris et vérifié
+à la main — le tri de l'ancien code pour M1 n'a rien rendu.

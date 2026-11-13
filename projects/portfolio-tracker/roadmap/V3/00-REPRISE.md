@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-13 (évaluation ARBITRÉE : reconstruction module par module ; plan 07 réécrit ; historique des mises à jour : archive)
+updated: 2026-11-13 (M0 « Fondations » accepté hors ligne ; prochain pas : M1 ; historique : archive)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,23 +18,32 @@ role: >
 
 ## ➜ Prochain pas
 
-**OUVRIR LE MODULE M0 « FONDATIONS »** du plan `07-avant-comite.md` (réécrit le 2026-11-13), une fois l'ordre
-des modules confirmé par l'utilisateur. Gratuit, sans base ni déploiement : ménage des documents de cadre
-(constitution, schéma des blocs, ligne de base de la suite ; lots 10-16 et prompts à archiver), charte du
-module et garde des accès, squelette du chef de dossier (pause tous les 1 $).
+**OUVRIR LE MODULE M1 « FICHE DE L'ÉMETTEUR ET SOURCES »** (plan `07-avant-comite.md`). Dans l'ordre de la
+charte (`principe-directeur.md` §2) : (1) le **tri** de l'ancien code — identité de l'émetteur, domaines des
+sites, registre des sources, toute constante par société (une recherche déléguée a été coupée le 2026-11-13
+par la limite de dépense du compte : à relancer) ; (2) l'**acceptation écrite avant** (ajouter un titre ne
+modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale
+les pièces qui s'y appuient ; le module passe aussi SANS kit de spécialité) ; (3) la construction dans
+`backend/app/modules/`, déclarée dans `registre.py`, avec son pas au chef de dossier. M1 a besoin d'une
+table : prévoir la **migration 063** et, avec elle, le rangement en base de l'état du chef de dossier.
 
-**Direction arbitrée le 2026-11-13** (26 commentaires du doc https://claude.ai/artifact/DiTMznggexcwavdtkHk8VA ;
-tableau complet : `EVALUATION-ARCHITECTURE-2026-11-13.md` § « Arbitrages rendus ») : on ne finit plus l'ancien
-enchaînement, on **reconstruit module par module sur une base propre** — un module marche (seul, NVDA et RVMD)
-avant d'ouvrir le suivant ; l'ancien code est une carrière, trié à l'ouverture de chaque module. Chef de
-dossier automatique ; comité sur exceptions ; relecteur indépendant ; débats proposés par le système ; sources
-admises par le système sous contrôle a posteriori (principe 2 modifié) ; DeepInfra seul fournisseur ; NASDAQ
-sous-projet indépendant, hors chantier ; UE et non coté = kits et adaptateurs à venir. **Aucune mesure payante
-avant le module M6 (carte).**
+**À faire une fois sur le VPS avant M1** (M0 a été prouvé sur l'hôte d'un bac à sable, sans Docker ni base) :
+`bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md`), puis depuis `backend/` :
+`bash checks/negatif_chef_de_dossier.sh`, `bash checks/negatif_charte_modules.sh`, `bash checks/negatif_architecture.sh`.
+Rien n'est à déployer : M0 n'est appelé par rien en production.
 
-Attend une confirmation de l'utilisateur : l'ordre M0-M11 ; le kit de spécialité ; le contradicteur après le
-premier comité ; le contenu du procès-verbal (décision, conviction, marge de sécurité, conditions, revue) ;
-les garde-fous de l'admission des sources.
+**M0 « Fondations » : ACCEPTÉ hors ligne le 2026-11-13.** Chef de dossier (`app/modules/chef_de_dossier/`,
+automate sans modèle : arrêt aux actes humains, pause tous les 1 $ avec coût restant, lecture humaine de
+chaque sortie de module par défaut) ; charte et garde des accès (`app/modules/registre.py`,
+`check_charte_modules.py`) ; constitution réécrite ; schéma des blocs ; documents de lots archivés ; une
+seule ligne de base ; NASDAQ sorti du chantier. Récit : archive, « 2026-11-13 — M0 ».
+
+**Direction** (arbitrée et CONFIRMÉE le 2026-11-13 ; tableau : `EVALUATION-ARCHITECTURE-2026-11-13.md`
+§ « Arbitrages rendus ») : reconstruction module par module sur une base propre, l'ancien code est une
+carrière ; ordre M0-M11 accepté ; kit de spécialité accepté (sans kit : parcours généraliste, assez souple
+pour bien analyser l'entreprise) ; contradicteur après le premier comité ; c'est l'utilisateur qui dit quoi
+analyser. **Aucune mesure payante avant le module M6 (carte).** Retenus sans objection exprimée : le contenu
+du procès-verbal et les garde-fous de l'admission des sources.
 
 ## Reste ouvert (ne s'archive pas)
 
@@ -46,21 +55,24 @@ les garde-fous de l'admission des sources.
   maturité ; probabilité de succès hors du découpage ; vocabulaire standard dans tous les prompts ; molécules
   précoces → plateforme sauf marché chiffrable.
 - Interrupteur `porte_admet_reponses_refusees` : devient sans objet avec l'ancien architecte (à retirer à son tri).
-- NASDAQ (sous-projet indépendant) : migrations `nasdaq_01` / `nasdaq_02` à appliquer à la main.
+- NASDAQ : sous-projet indépendant, hors chantier V3 — sa reprise : `backend/app/nasdaq/00-REPRISE-NASDAQ.md`.
 - 26 contrôles sans test négatif à leur nom ; deux modèles épinglés dans le code : soldés module par module.
+- `backend/tools/mesure_gate_capacite4.py` ne compile pas (erreur d'indentation, relevée par la garde des
+  accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
+- Chef de dossier : ni rangement en base, ni écran, ni déclencheur (dit dans son `ARCHITECTURE.md`) : avec M1.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
 - **Jalon** (réduit le 2026-10-17 : **NVDA + RVMD** d'abord, puis financière US, puis étranger, MSFT en
   contrôle de reproduction) : note d'initiation (6 chapitres + fourchette), fonctionnement
-  ET reproductibilité ; **roadmap active : `07-avant-comite.md`** (modules M0-M11) ; `05-frameworks-complets.md` = ancien détail, à archiver en M0.
+  ET reproductibilité ; **roadmap active : `07-avant-comite.md`** (modules M0-M11) ; `roadmap/archive/V3-05-frameworks-complets.md` = ancien détail (archivé).
 - **Chapitres instruits** (`bash backend/tools/montrer_parcours.sh <TICKER>`, gratuit) :
   NVDA qualité financière 1,00 · défendabilité 0,17 · modèle économique 0,83 · secteur 0,50 ·
   management **2/7** (ma_6, ma_7 répondues — plan #270, réponses #1499-#1505 ; ma_4 #1506) · valorisation :
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
-- **Suite** `bash backend/checks/run_all.sh` verte (2026-10-23, après B4f : 6 082 assertions ; négatifs explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
+- **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : B4d COMMITÉ (`7d08a6d`) mais NON DÉPLOYÉ (déploiement refusé par le classifieur le 2026-10-23 — à lancer par l’utilisateur, puis `docker exec portfolio-backend grep -c "architecture-1.3.0" /app/app/contracts/modele_entreprise_schema.py`) ; dernier déploiement `d504d96` (correctif DEF 14A) ; avant, P1 complet (`f6b5659`) ; avant, M3 bis (`1f9a364`) ; avant, `1d5dfbf` (M3) ; avant, `67f7e87` (M2) ; `4c6d37e` (M1), vérifié dans le conteneur (référentiel 1.0.0 chargé, 21 fiches, seuil 10). Migration 061 appliquée. Mandats : 1 manager ouvert (2918).
 - **Porte de l'architecte NVDA — mesurée le 2026-10-21** (`montrer_parcours.sh NVDA`) : les 12 questions sources d'une rentable (me_2-me_5, mo_4, mo_6, qf_1, qf_3, qf_7, se_2-se_4) ont toutes une première réponse instruite (mo_4 recherche épuisée, mo_6/se_2 pièces insuffisantes = information, 09 §11.2) → ouverte ; 22 manques au total, inchangés.
 - **Prochaine migration : 063** (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
@@ -70,7 +82,7 @@ les garde-fous de l'admission des sources.
 
 ## Arbitrages récents
 
-Le détail : `CONVENTIONS.md` #129-#139 ; séance du 2026-10-17 : `08-seance-arbitrages.md` ; liste du 2026-10-16
+Le détail : `CONVENTIONS.md` #129-#139 ; séance du 2026-10-17 : `roadmap/archive/V3-08-seance-arbitrages.md` ; liste du 2026-10-16
 au 2026-10-18 : archive, section « 2026-10-19 — sortis de la reprise (arbitrages récents) ».
 
 ## Outils (tous dans `backend/tools/`, gratuits sauf mention)
@@ -101,7 +113,7 @@ l'exigence (plancher, nature, champs requis) · dégrader le tier d'une source s
 
 ## À lire selon le besoin
 
-`07-avant-comite.md` (LE plan : modules M0-M11) · `EVALUATION-ARCHITECTURE-2026-11-13.md` (audit, cible en blocs, arbitrages rendus) · `05-frameworks-complets.md` (ancien détail) · `03-spec-frameworks.md`
+`07-avant-comite.md` (LE plan : modules M0-M11) · `EVALUATION-ARCHITECTURE-2026-11-13.md` (audit, cible en blocs, arbitrages rendus) · `roadmap/archive/V3-05-frameworks-complets.md` (ancien détail) · `03-spec-frameworks.md`
 §1/§2/§4 (spec, tableaux des questions) · `06-regle-fraicheur.md` (fraîcheur) · `04-taxonomie-evenements.md`
 · `principe-directeur.md` · `doctrine-trois-axes.md` · `METHODE-TEST.md` · `ARCHITECTURE-CIBLE.md` + les
 `ARCHITECTURE.md` de module · `00-REPRISE-ARCHIVE.md` quand le *pourquoi* manque.

@@ -9,8 +9,11 @@
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
 > | Texte INTÉGRAL d'une convention (#1 → #143) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
-> | Ce que la V3 DOIT faire | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
-> | Ce qui existe RÉELLEMENT, module par module | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
+> | Les règles durables (charte d'un module, garde-fous) | `roadmap/V3/principe-directeur.md` |
+> | Le plan (modules M0-M11) et le schéma des blocs | `roadmap/V3/07-avant-comite.md`, `roadmap/V3/ARCHITECTURE-CIBLE.md` |
+> | Les modules RECONSTRUITS (seul endroit où l'on construit) | `backend/app/modules/` — charte gardée par `check_charte_modules.py` |
+> | Les questions de l'ancien enchaînement (triées en M6/M9) | `roadmap/V3/03-spec-frameworks.md` (+ `doctrine-trois-axes.md`) |
+> | Ce qui existe RÉELLEMENT dans l'ancien code (la carrière), paquet par paquet | le `ARCHITECTURE.md` du module (`backend/app/**/ARCHITECTURE.md`) |
 > | La PREUVE qu'une brique existe | `backend/checks/` — on l'exécute, on ne la lit pas |
 >
 > Une brique V3 n'est « faite » que si un `check_*.py` la garde **et** qu'un `negatif_*.sh` prouve que ce

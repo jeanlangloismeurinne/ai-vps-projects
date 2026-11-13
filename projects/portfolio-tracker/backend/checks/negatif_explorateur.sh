@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TEST NÉGATIF de `check_explorateur.py` — une mutation par RÈGLE du lot B4f (roadmap V3
-# `16-lot-B4f-explorateur.md` §6) : état non rendu, pièce remplacée citable, borne levée, portée
+# `roadmap/archive/V3-16-lot-B4f-explorateur.md` §6) : état non rendu, pièce remplacée citable, borne levée, portée
 # élargie, fusion des signaux. Chacune exige exit≠0 + FAIL sur l'assert NOMMÉ + bilan atteint
 # (harnais `_negatif.sh`, détenteur unique de la boucle, #65).
 #
