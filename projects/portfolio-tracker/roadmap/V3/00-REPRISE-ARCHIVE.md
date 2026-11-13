@@ -6902,3 +6902,77 @@ pièce `ventilation_publiee` SANS appelant en production (son lecteur = l'archit
 **déployé le 2026-10-22** (`67f7e87`, vérifié dans le conteneur). NVDA a redécoupé ses
 marchés au 10-Q (Data Center = Hyperscale + AI Clouds/Industrial/Enterprise ; Edge Computing) : matière directe pour M3 ;
 (3) ✅ **B4/M3 livré et DÉPLOYÉ le 2026-10-22** (`12-lot-M3-architecte.md`, `1d5dfbf` ; migration 062 appliquée ; `check_architecture_persist` 10/0 contre la vraie base). (4) ✅ **M3 bis v2.1 livré le 2026-10-22** (`13-lot-M3bis-structure.md` ; Sonnet, vérifié par Opus par exécution, 2 défauts corrigés par Opus — journal du plan) : commité, **NON déployé** (déploiement refusé par le classifieur : à lancer par l'utilisateur, `infrastructure/compose-deploy.sh portfolio-backend`, puis vérifier `me_7` dans `frameworks.yaml` DANS le conteneur). **NOUVEAU (2026-10-22, demande de l'utilisateur) — lot P1 `14-lot-P1-perimetre.md`** : les changements de découpage/périmètre sortent de l'architecte vers un détenteur unique (`app/knowledge/perimetre.py`, catalogue de cas propre) ; arbitrages rendus le 2026-10-22 (historique dans le découpage le plus récent, par passage vérifié sinon hypothèse déclarée ; agrégat sans rupture ; acquisition significative signalée, croissance hors acquisitions = module ad hoc P2 après le comité) ; exécution confiée à Sonnet, à VÉRIFIER par exécution ; gratuit, à faire AVANT l'acceptation à blanc de l'architecte, en parallèle de l'instruction de `me_7`. **ÉTAT DU SOIR (2026-10-22, fin de conversation)** : M3 bis DÉPLOYÉ ; me_7 instruite (NVDA #2292 faible, TAM mal cité ; RVMD #2304 juste) ; P1 en trois tranches commitées NON déployées — `perimetre.py` éprouvé (78→ assertions, négatif 22/22), jumeau lu, signal d'acquisition, douze mois sur la version retraitée, cellules par dépôt, `vue_servie` + garde de l'agrégat ; **reste la tranche B** (§8 de `14-lot-P1-perimetre.md` : branchement des lecteurs, rendu de la chronique, axe pays NVDA aussi redécoupé, [S2]/[S3b], `faits_publies`, consigne, périodes non jugées nommées) — **à exécuter par Opus** (Sonnet a buté trois fois sur le branchement). Puis B4d (`15-lot-M3ter-architecte.md`), B4f (`16-lot-B4f-explorateur.md`), B4e (banc séquentiel, arrêt à 2 succès consécutifs). Architecte = maillon critique. Diagnostic de la matière : `mesures/2026-10-22/matiere/`. Ancien prochain pas, FAIT :  instruire `me_7` pour NVDA puis RVMD (`executer_chaine.sh <T> modele_economique <archétype> --questions=me_7`, ~1 h chacun, APRÈS le déploiement : l'outil tourne sur l'image), lire les réponses contre leurs pièces, puis l'acceptation à blanc (`architecte.sh` deux fois par titre, `--hors-porte` pour RVMD tant que se_3 la ferme). Portes : NVDA **fermée par `me_7`** ; RVMD fermée par `me_7` et se_3. Interrupteur `porte_admet_reponses_refusees` à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1. C2 sans objet, C5 vérifié (≈ 5,55 $, à re-mesurer).
+
+
+## 2026-11-13 — sorti de la reprise (section « Prochain pas » du 2026-10-21 au 2026-11-13 : B4d → B4g, refonte, NASDAQ) — COPIE CONFORME
+
+## ➜ Prochain pas
+
+**`07-avant-comite.md` est L'UNIQUE plan d'action** jusqu'au premier comité réussi (cible **NVDA** : six
+chapitres + classeur signé + décision au PV) ; son **journal** consigne chaque action. Réplicabilité exigée
+(principe n° 4). Spec du modèle : `09-modele-entreprise.md` (v2.1, #140). Lots M1, M2, M3, M3 bis déployés ;
+`me_7` instruite (NVDA #2292 faible, RVMD #2304 juste).
+**Fait le 2026-10-23 — lot B4d (M3 ter, architecte) LIVRÉ** (journal du plan, ligne B4d) : contrat 1.3.0 (une
+ligne par programme nommé, plateforme pour les non nommés, inventaire), [S13]-[S15], pièces citables visibles,
+péremption au pied du verbatim, jamais de plantage. À blanc : **NVDA accepté 2/2, RVMD 1/2** (`mesures/2026-10-23/
+b4d-apres3/`, `b4d-apres4/`). Avant : P1 terminé et déployé (#142, `f6b5659`) ; ventilation NVDA publiée (#1770).
+**⚠ ARBITRAGE EN ATTENTE (sens, pas structure)** : sur NVDA, Vera Rubin (déjà expédiée) et Vera CPU sont traités en
+paris de développement sans chiffre d'affaires, « l'IA souveraine » (un segment de clients) en programme — la règle
+« génération suivante → rattachée à son activité » n'est pas appliquée et aucun contrôle de structure ne la voit
+(#68). Piste : changer la FORME de l'inventaire (pour chaque ligne propre, écrire le produit vendu dont elle serait
+la suite, ou « aucun », et ce qui rend la réussite incertaine). RVMD : les essais d'extension d'indication
+(RASolute 303/304, RASolve 301) sont tantôt rattachés à RASONQUE, tantôt une ligne chacun — à trancher.
+**DIAGNOSTIC du 2026-10-23** (journal, ligne « B4d (diagnostic) », `mesures/2026-10-23/banc-modeles/`) : Vera
+Rubin = capacité du modèle (V4-Pro réussit, même anonymisé) ; IA souveraine, Vera CPU et le « 8 programmes » RVMD =
+information (me_7 mal formée, comptage faux, pièces invisibles à l'architecte) ; [S15] contournable par une
+plateforme inventée. **Arbitré** : V4-Pro en architecte (accord sous réserve de qualité, mesurée) ; extension
+d'indication = ligne propre, critère « faut-il des données de marché et de concurrence ad hoc ? » (#143). **Construit**
+`f4a5872`, NON déployé ; me_7 réémise (#2625 NVDA, #2624 RVMD incomplète) ; architecte à blanc `apres-143/` : pas encore
+acquis (journal, ligne « #143 (construit, éprouvé) »).
+**B4f LIVRÉ le 2026-10-23** (commité, NON déployé) : explorateur du dossier,
+interrupteur `acces_au_dossier` (défaut `aucun`), `--acces-au-dossier` à blanc. Mesure à blanc en mode `explorateur`
+(`mesures/2026-10-23/b4f-explorateur/LECTURE.md`, 0,88 $) : l'ouverture des pièces règle PEU — NVDA accepté mais Vera CPU
+`en_developpement` et IA souveraine en extension alors que #1004/#1012 sont citées (CONSIGNE) ; RVMD refusé [S15] :
+une ligne par indication de daraxonrasib sous le même nom de molécule (granularité #143 ≠ `me_7`).
+Arbitrés (2026-10-23) : les corrections différées passent APRÈS B4f — donc maintenant ; `me_7` sur V4-Pro : à décider.
+**EN COURS (2026-10-24) — REFONTE DU PROCESSUS D'INSTRUCTION, à commenter par l'utilisateur** : le modèle de
+l'entreprise devient la colonne vertébrale (carte des sources de profit collectée pour elle → squelette par le code →
+recherche par ligne → jugements transverses → valorisation calculée → mémo). Proposition, écart avec l'existant, sort
+de chaque tâche du plan 07, contestations et questions : https://claude.ai/artifact/FrEvaCnM7py8ZTeJB8DRCn (doc,
+commentaires à lire). Rien n'est arbitré ; maillon 2 (classement) EN PAUSE d'ici là.
+
+**Hors chantier V3 (2026-10-26 → 31) — suivi NASDAQ LIVRÉ** (module autonome `app/nasdaq/`, page `/nasdaq`, job quotidien
+17h30 ET : ancienneté du cours × multiple 10 ans, liste de suivi, probabilité de nouveau plus haut à 12 mois ; migrations
+`nasdaq_01`/`nasdaq_02` à appliquer à la main) ; sécurité 2026-10-31 (`46a663f`). **2026-11-13** : copie Markdown de la
+proposition de refonte = `PROPOSITION-PROCESSUS-INSTRUCTION-2026-10-24.md` ; prompt d'évaluation de l'architecture pour
+Fable 5.2 = `PROMPT-EVALUATION-ARCHITECTURE.md` (lecture seule, gratuit, avant tout arbitrage).
+
+**PROCHAIN PAS — plan « découpage » B4g** (arbitré le 2026-10-23 après revue de la page
+https://claude.ai/artifact/38FsoJwzzM1GEYYEobQi57, 28 commentaires ; détail : ligne B4g du plan) : un seul levier par
+étape, V4-Pro et `acces_au_dossier = aucun` FIXES jusqu'à l'étape 5, appels V4-Pro limités (un passage par titre
+aux étapes intermédiaires). **0 ✅** (non déployé) : [S15] signal, [S16] double comptage, provenance #1004 en dette ;
+rejugé gratuitement sur les sorties gardées : RVMD `b4f` ACCEPTÉE (signal [S15]), RVMD `apres-143` REFUSÉE [S16].
+**1 ✅** (non déployé) premier niveau imposé par le code (`axes_du_premier_niveau: [activites, secteurs]`, descente
+à l'axe suivant SEULEMENT s'il n'est pas publié), [S17], [R7] ; NVDA C1 ✅ C2 ❌ (sens : étapes 2-4), RVMD sans
+régression ; AAPL/MSFT/AMZN : rien d'imposé (axe produits à deux découpages superposés — dette périmètre).
+**2 ✅** (non déployé, formulation validée le 2026-10-24) arbre en cinq questions (client → accord non conclu →
+déjà vendu → génération suivante → nouveau marché), probabilité de succès hors du choix, paragraphe sectoriel,
+reste seulement si nécessaire ; NVDA C1-C6 ✅ (Vera Rubin et IA souveraine rattachées, Vera CPU sous-ligne
+`metier_actuel`, Hugging Face extension) ; RVMD molécule × indication ✅, noms longs ❌ (cause `me_7` : un nom
+pour trois indications → étape 4). Points ouverts : recouvrement clients × produit sous `data_center` (à
+trancher) ; RMC-5127 / RM-055 en lignes propres sans marché visé nommé (étape 3). **3 — EN COURS** (non déployé) inventaire à
+cases ([S18]) + un seul découpage par segment ([S19], produit OU clients) construits ; passage 2 refusé des deux côtés :
+question 3 de l'arbre mal posée (élément au lieu d'élément × marché) — correctif à valider avec l'utilisateur ; Rubin /
+IA souveraine instables sur V4-Pro. **RÉORIENTÉ le 2026-10-24** (utilisateur) : trois maillons — 1 INVENTAIRE
+(tâche séparée de `me_7`, V4.1 Flash, construit et mesuré : cœur relevé 3/3, périphérie et granularité des marchés
+fluctuent ; RM-055 manquant = PÉRIMÈTRE des pièces, à trancher), 2 CLASSER selon l'arbre (un modèle, à construire),
+3 CONSTRUIRE l'architecture (code, à construire). Ancien plan pour mémoire : 4
+(`me_7` refondue, 3 rejeux d'abord), 5 (V4.1 Flash), 6 (demandes traitées). Jargon des TITRES du dossier
+(« Patron de départ de l'archétype », « Périodes du classeur ») : levier à part, non traité.
+Orientations de l'utilisateur, NON arbitrées : une ligne par source de cash-flow, priorité au non-recoupement sur la
+granularité ; finesse selon la maturité (grand groupe → grands métiers, startup → produit ou thèse adossée à un
+signal, santé → molécule × indication) ; probabilité de succès hors du découpage ; vocabulaire standard dans TOUS
+les prompts ; molécules précoces → plateforme sauf marché chiffrable.
+Portes : NVDA ouverte ; RVMD fermée par se_3 (`--hors-porte`). Interrupteur `porte_admet_reponses_refusees`
+à basculer à `false` AVANT le premier comité réel. ma_3/ma_4/A1 restent dans D1.
+Dettes : voir la section « Dettes hors du chemin » du plan. Historique de l'ancien ordre : archive.
