@@ -7007,3 +7007,8 @@ sortaient « script mort » — corrigé dans `_negatif.sh` ; (2) un contrôle d
 règle cassée meurt avant son bilan : chaque section est désormais un échec nommé ; (3) trois agents
 délégués ont été coupés par la limite de dépense du compte, leur travail partiel a été repris et vérifié
 à la main — le tri de l'ancien code pour M1 n'a rien rendu.
+
+## 2026-11-13 — sortis de la reprise (état de production et porte de l'architecte, mesurés en octobre)
+
+- **Production** : B4d COMMITÉ (`7d08a6d`) mais NON DÉPLOYÉ (déploiement refusé par le classifieur le 2026-10-23 — à lancer par l’utilisateur, puis `docker exec portfolio-backend grep -c "architecture-1.3.0" /app/app/contracts/modele_entreprise_schema.py`) ; dernier déploiement `d504d96` (correctif DEF 14A) ; avant, P1 complet (`f6b5659`) ; avant, M3 bis (`1f9a364`) ; avant, `1d5dfbf` (M3) ; avant, `67f7e87` (M2) ; `4c6d37e` (M1), vérifié dans le conteneur (référentiel 1.0.0 chargé, 21 fiches, seuil 10). Migration 061 appliquée. Mandats : 1 manager ouvert (2918).
+- **Porte de l'architecte NVDA — mesurée le 2026-10-21** (`montrer_parcours.sh NVDA`) : les 12 questions sources d'une rentable (me_2-me_5, mo_4, mo_6, qf_1, qf_3, qf_7, se_2-se_4) ont toutes une première réponse instruite (mo_4 recherche épuisée, mo_6/se_2 pièces insuffisantes = information, 09 §11.2) → ouverte ; 22 manques au total, inchangés.
