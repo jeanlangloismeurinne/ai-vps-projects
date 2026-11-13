@@ -13,6 +13,7 @@
 #   CHECK="checks/check_xxx.py"          # obligatoire — le check à éprouver
 #   WITH_FROZEN=1                        # défaut 0 — monte ../roadmap/V3/provenance-cards en /contract_frozen
 #   NET=none                             # défaut none — ou "coolify" (+ CHECK_DB_URL) pour les checks d'état
+#   HOTE_SI_SANS_CONTENEUR=1             # défaut 0 — check pur stdlib : python3 de l'hôte si pas de conteneur
 #   WITH_FRONT=1                         # défaut 0 — copie pages/ + components/ du frontend en /frontend
 #   mutations=( "fichier¦vieux¦neuf¦assert attendu" … )   # FROZEN:<f> vise un doc figé, FRONT:<f> un écran
 #   source "$(dirname "$0")/_negatif.sh"
@@ -27,9 +28,27 @@
 
 run_mutations() {
   : "${CHECK:?run_mutations: CHECK (chemin du check) est requis}"
+  # Le séparateur `¦` est sur deux octets : hors locale UTF-8, `read` coupe au milieu, le motif
+  # arrive VIDE et la mutation s'insère en tête de fichier (mesuré le 2026-11-13 dans un bac à sable
+  # en locale C : 14 « scripts morts » pour 14 mutations valides).
+  case "$(locale charmap 2>/dev/null)" in UTF-8) ;; *) local LC_ALL=C.UTF-8 ;; esac
   local with_frozen="${WITH_FROZEN:-0}" net="${NET:-none}"
   local frozen_src="${FROZEN_SRC:-../roadmap/V3/provenance-cards}"
-  local img; img=$(docker inspect portfolio-backend --format '{{.Config.Image}}')
+  # HOTE_SI_SANS_CONTENEUR=1 (défaut 0) — réservé aux checks PUR BIBLIOTHÈQUE STANDARD (modules
+  # reconstruits, `app/modules/`) : sans conteneur `portfolio-backend` (poste de développement, bac
+  # à sable), le check tourne avec le python3 de l'hôte, et le harnais L'ANNONCE. Jamais par défaut :
+  # un check qui dépend de l'image (pydantic v2, asyncpg) rendrait sur l'hôte un verdict d'un autre code.
+  local img hote=0
+  img=$(docker inspect portfolio-backend --format '{{.Config.Image}}' 2>/dev/null)
+  if [ -z "$img" ]; then
+    if [ "${HOTE_SI_SANS_CONTENEUR:-0}" = "1" ]; then
+      hote=1
+      echo "  (exécution sur l'HÔTE : pas de conteneur portfolio-backend — $(python3 --version 2>&1))"
+    else
+      echo "  FAIL conteneur portfolio-backend introuvable : ce test négatif exige l'image de production"
+      exit 1
+    fi
+  fi
 
   local passes=0 ratees=0 m fichier vieux neuf attendu tmp cible out rc bilan rouge
   local mounts extra
@@ -77,10 +96,15 @@ p.write_text(s.replace(vieux, neuf, 1), encoding='utf-8')
       ratees=$((ratees + 1)); rm -rf "$tmp"; continue
     fi
 
-    out=$(docker run --rm --network "$net" "${mounts[@]}" \
-          -w /app -e PYTHONPATH=/app --env-file checks/env.checks "${extra[@]}" \
-          "$img" python "$CHECK" 2>&1)
-    rc=$?
+    if [ "$hote" = "1" ]; then
+      out=$(cd "$tmp/backend" && PYTHONPATH="$tmp/backend" PYTHONDONTWRITEBYTECODE=1 python3 "$CHECK" 2>&1)
+      rc=$?
+    else
+      out=$(docker run --rm --network "$net" "${mounts[@]}" \
+            -w /app -e PYTHONPATH=/app --env-file checks/env.checks "${extra[@]}" \
+            "$img" python "$CHECK" 2>&1)
+      rc=$?
+    fi
     rm -rf "$tmp"
 
     # Bilan reconnu par sa FORME (trois dialectes historiques), comme run_all.sh.

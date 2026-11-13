@@ -373,6 +373,14 @@ L'utilisateur est prêt à jeter ce qu'il faut ; un module marche avant qu'on ou
 | Question 7 | Le système évalue les sources et les ajoute ; l'utilisateur suit et corrige | **Modifie le principe fondateur 2** (l'admission n'est plus un acte humain préalable, mais un acte du système sous contrôle a posteriori). Garde-fous proposés : l'évaluateur n'est jamais le collecteur qui utilise la source (#24) ; critères écrits ; journal daté et motivé ; révocation qui signale les pièces concernées |
 | Question 8 | Oui : NVDA d'abord, RVMD témoin | — |
 
+**Confirmations du soir (2026-11-13, 21 h 04, mêmes commentaires du doc)** : l'ordre des modules M0-M11
+est accepté ; le kit de spécialité aussi (« c'est la logique de modularité qui me convient ; si une
+entreprise n'a pas de kit, elle suit le parcours généraliste, qui doit être suffisamment souple pour bien
+analyser l'entreprise ») ; le contradicteur après le premier comité : accepté ; la sélection des titres :
+« dans un premier temps c'est l'utilisateur qui définit quoi analyser, un module de sélection pourra venir
+ultérieurement ». Restent retenus sans objection exprimée : le contenu du procès-verbal (question 5) et les
+garde-fous de l'admission des sources (question 7).
+
 Non commentés, retenus comme hypothèses de travail : le constat 12, et les six réponses aux questions de
 la proposition du 24/10.
 

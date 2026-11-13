@@ -1,6 +1,6 @@
 ---
 id: plan-avant-comite
-status: plan-d-action-2026-11-13 — PROPOSÉ, ordre des modules à confirmer par l'utilisateur
+status: plan-d-action-2026-11-13 — CONFIRMÉ par l'utilisateur le 2026-11-13 (ordre M0-M11, kit de spécialité, contradicteur après le premier comité)
 created: 2026-10-16
 updated: 2026-11-13 (réécrit après les arbitrages de l'évaluation d'architecture : reconstruction module par module)
 project: portfolio-tracker
@@ -72,17 +72,20 @@ Deux fonctions **transverses** grandissent avec les modules :
   vous relisez une fois (carte + une douzaine de réponses, NVDA et RVMD) ; relecteur indépendant (ne
   voit que la réponse et ses pièces) ; deux passages comparés. Le relecteur signale, il ne bloque pas.
 
-**Spécialité** (ajout issu de la vérification « comme un fonds », arbitrage à confirmer) : un fonds a des
+**Spécialité** (ajout issu de la vérification « comme un fonds », confirmé le 2026-11-13) : un fonds a des
 analystes par secteur, chacun avec ses sources, ses indicateurs et ses gabarits de modèle. Ici, UN
 analyste générique reçoit un **kit de spécialité** tenu en donnée dans les référentiels (sources du
 secteur, famille de comptes, moteurs types, questions propres, étalons). Ajouter un secteur — ou l'UE,
-ou le non coté — ajoute un kit et un adaptateur, sans toucher aux modules.
+ou le non coté — ajoute un kit et un adaptateur, sans toucher aux modules. **Une entreprise sans kit
+suit le parcours généraliste, qui doit rester assez souple pour bien l'analyser** : le kit affine, il
+n'est jamais une condition d'entrée (acceptation de chaque module : il passe aussi SANS kit).
 
 ## Après le premier comité (prévu, non construit)
 
-Suivi d'une position (ce qu'un fait nouveau rouvre) · construction de portefeuille (lit la décision du
-comité et elle seule) · contradicteur avant comité (défend la thèse inverse) · sélection de titres à
-l'entrée (le sous-projet NASDAQ pourra en devenir une partie) · scénarios et probabilités (préalable au
+Sélection des titres : **c'est vous qui dites quoi analyser** ; un module de sélection pourra venir
+plus tard · suivi d'une position (ce qu'un fait nouveau rouvre) · construction de portefeuille (lit la décision du
+comité et elle seule) · contradicteur avant comité (défend la thèse inverse — confirmé : après le
+premier comité) · sélection de titres à l'entrée (le sous-projet NASDAQ pourra en devenir une partie) · scénarios et probabilités (préalable au
 comité de RVMD) · famille de comptes bancaire · émetteurs de l'UE · non coté (documents fournis et/ou
 web : les deux cas arriveront) · MSFT de zéro, banc de dix entreprises.
 
