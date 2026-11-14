@@ -3689,3 +3689,28 @@ chiffres clés, `nombre_de_programmes` et `nombre_de_programmes_non_nommes` ; [S
 décompte EXACT (inventaire = nommés, plateformes = non nommés), refus sinon ; le second absent → l'écart
 et toute plateforme sont SIGNALÉS, jamais refusés (un refus adossé au seul total a fait inventer une
 plateforme). Modèle de l'architecte : `MODELE_ARCHITECTE` (V4-Pro), dans le même module que son prompt.
+
+
+### #144 — les sources sont admises et signées par le système ; l'utilisateur révoque, et sa révocation tient (arbitrage du 2026-11-14)
+
+**Logique de fonds.** Dans un fonds, l'analyste se sert des publications officielles des sociétés —
+la sienne, mais aussi celles d'un concurrent, d'un client, d'un fournisseur — sans demander de
+permission : le communiqué de résultats ou le rapport annuel d'une société est la première main sur
+elle. Le responsable de la recherche, lui, peut écarter une source, et sa décision ne se discute pas
+avec l'outil.
+
+**Règle.** Toute admission au journal des sources est un acte **du système** (`systeme:<rôle>`), daté,
+motivé, citant un critère écrit du référentiel — y compris la reprise de l'ancien code, et les 4
+publications de biotechnologie admises le 2026-09-05 sur décision de l'utilisateur. L'utilisateur
+**révoque** ; le système ne revient jamais sur un couple (source, portée) où l'utilisateur a statué en
+dernier. Les pages de relations investisseurs d'une **autre** société sont admises par le système au
+niveau le plus haut, portée générale, sous le critère `relations_investisseurs_d_une_autre_societe`,
+reconnues à leur adresse dédiée (premier élément du nom : préfixes du référentiel, au moins trois
+éléments) — jamais à un chemin `/investors` d'un site quelconque, qui ne vaut que pour le lieu déclaré
+dans la fiche d'un émetteur.
+
+**Construit (2026-11-14, hors ligne).** `emetteurs.admettre_pages_investisseurs` (contrat) ; référentiel
+1.1.0 ; `check_emetteurs.py` [A16] + 5 mutations de `negatif_emetteurs.sh` ; [R4] de
+`check_emetteurs_reprise.py` (l'écart avec l'ancien code se referme après l'acte du système) ; outil
+`tools/emetteurs.sh pages-investisseurs [--a-blanc]`. À brancher sur la collecte en M2.
+

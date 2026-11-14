@@ -7030,3 +7030,24 @@ délégués ont été coupés par la limite de dépense du compte, leur travail 
 - **PostgreSQL 16 était disponible dans le bac à sable** : la migration, le rangement et leurs tests
   négatifs ont tourné sur une vraie base locale, ce qui n'était pas prévu.
 - Le test négatif `negatif_architecture.sh` exige le conteneur : non joué.
+
+## 2026-11-14 — M1 : arbitrages de l'utilisateur sur les sources, construits hors ligne (sans accès au VPS)
+
+Arbitrages rendus : « les sources sont signées par le système sauf révocation par l'utilisateur » et
+« les pages de concurrents sont ajoutées en source par le système de même ». Construit : critère
+`relations_investisseurs_d_une_autre_societe` (référentiel 1.1.0, niveau A, trois natures) et geste
+`admettre_pages_investisseurs` (signé `systeme:evaluateur_de_sources`, portée générale, écarte ce que
+l'utilisateur a statué en dernier, rejouable sans réécriture) ; les 4 publications de biotechnologie
+du 2026-09-05 passent sous la signature du système dans le fichier de reprise (motif d'origine gardé) ;
+outil `tools/emetteurs.sh pages-investisseurs [--a-blanc]`. Preuves : `check_emetteurs.py` [A16]
+(107/107), `negatif_emetteurs.sh` 32/32, [R4] de `check_emetteurs_reprise.py` (12/12 : l'écart avec
+l'ancien code se referme après l'acte), `check_emetteurs_persist.py` 48/48 sur PostgreSQL 16 local sous
+le rôle `portfolio_user` (en superutilisateur, [B6] « ne se supprime pas » échoue : c'est le rôle qui
+porte le refus), import + `pages-investisseurs` joués sur une base locale (3 pages reconnues sur 5
+adresses fictives, second passage : 0 admise). Test négatif de l'écran écrit
+(`negatif_emetteurs_api.sh`, 8 mutations ; répété sur l'hôte 8/8) : il a trouvé que
+`check_emetteurs_api.py` mourait avant son bilan quand une révocation échouait (indexation sans garde) —
+corrigé. Choix d'implémentation : une page n'est reconnue qu'à son adresse dédiée (premier élément du
+nom `ir`/`investor`/`investors`/`investorrelations`, au moins trois éléments) : `investors.com` (presse)
+n'est plus pris pour une société, contrairement à l'ancien code.
+

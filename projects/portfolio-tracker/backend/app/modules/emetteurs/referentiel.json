@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "natures": ["mesure", "evenement", "interpretation"],
   "niveaux": ["A", "A-", "B+", "B", "C+", "C"],
   "niveau_sans_admission": "C+",
@@ -14,6 +14,7 @@
       "libelle": "Le reste du site de la société : elle y parle d'elle-même, sans l'engagement d'une publication aux actionnaires."
     }
   },
+  "prefixes_relations_investisseurs": ["ir", "investor", "investors", "investorrelations"],
   "roles_qui_utilisent_les_sources": ["collecteur", "analyste", "traducteur", "architecte", "redacteur"],
   "criteres": {
     "autorite_publique": {
@@ -29,6 +30,11 @@
     "organisme_publiant_ses_estimations": {
       "texte": "Organisme ou cabinet d'études qui publie ses propres estimations : première main pour ces estimations, qui restent des estimations.",
       "niveau_max": "B",
+      "natures": ["mesure", "evenement", "interpretation"]
+    },
+    "relations_investisseurs_d_une_autre_societe": {
+      "texte": "Pages de relations investisseurs d'une autre société (concurrent, client, fournisseur), reconnues à leur adresse dédiée (ir., investor., investors.) : ce qu'elle déclare officiellement à ses actionnaires, première main sur elle-même.",
+      "niveau_max": "A",
       "natures": ["mesure", "evenement", "interpretation"]
     },
     "redaction_specialisee": {

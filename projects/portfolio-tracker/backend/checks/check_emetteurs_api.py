@@ -114,8 +114,8 @@ def main() -> int:
     b.check(rev["fiche"]["le"] == date.today().isoformat(), "[P3] fiche : date du serveur")
     r = cl.post("/v2/sources/admettre", json=adm)
     b.check(r.status_code == 200 and r.json() == {"rang": 1}, f"[P5] admettre rend le rang ({r.text[:200]})")
-    acte = cl.get("/v2/emetteurs").json()["journal_des_sources"][0]
-    b.check(acte["auteur"] == "utilisateur" and acte["le"] == date.today().isoformat(),
+    acte = (cl.get("/v2/emetteurs").json()["journal_des_sources"] or [{}])[0]
+    b.check(acte.get("auteur") == "utilisateur" and acte.get("le") == date.today().isoformat(),
             "[P3] journal : auteur « utilisateur », date du serveur")
 
     # [P4]
@@ -128,15 +128,15 @@ def main() -> int:
     # [P5]
     journal = cl.get("/v2/emetteurs").json()["journal_des_sources"]
     b.require(journal, 1, "[P5] journal après admission")
-    b.check(journal[0]["acte"] == "admettre" and journal[0]["en_vigueur"] is True,
+    b.check(bool(journal) and journal[0]["acte"] == "admettre" and journal[0]["en_vigueur"] is True,
             "[P5] l'admission est en vigueur tant qu'elle n'est pas révoquée")
     r = cl.post("/v2/sources/revoquer", json={"source": PRESSE, "portee": "generale", "motif": "ligne éditoriale changée"})
     b.check(r.status_code == 200 and r.json() == {"rang": 2}, f"[P5] révoquer rend le rang ({r.text[:200]})")
     journal = cl.get("/v2/emetteurs").json()["journal_des_sources"]
-    b.require(journal, 2, "[P5] journal après révocation")
-    b.check([a["acte"] for a in journal] == ["admettre", "revoquer"], "[P5] le journal porte les deux actes, dans l'ordre")
-    b.check(journal[0]["en_vigueur"] is False, "[P5] `en_vigueur` est faux sur l'admission révoquée")
-    b.check(journal[1]["motif"] == "ligne éditoriale changée", "[P5] le motif de la révocation est rangé")
+    if b.require(journal, 2, "[P5] journal après révocation"):  # sans les deux actes, rien d'autre à lire
+        b.check([a["acte"] for a in journal] == ["admettre", "revoquer"], "[P5] le journal porte les deux actes, dans l'ordre")
+        b.check(journal[0]["en_vigueur"] is False, "[P5] `en_vigueur` est faux sur l'admission révoquée")
+        b.check(journal[1]["motif"] == "ligne éditoriale changée", "[P5] le motif de la révocation est rangé")
 
     # [P6]
     r = cl.post("/v2/sources/revoquer", json={"source": "jamais-admise.example", "portee": "generale", "motif": "essai"})

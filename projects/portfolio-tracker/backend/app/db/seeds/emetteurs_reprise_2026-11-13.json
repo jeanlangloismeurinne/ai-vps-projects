@@ -1,5 +1,5 @@
 {
- "_lisez_moi": "Reprise des données d'identité et de sources que l'ancien code portait en constantes (roadmap/V3/M1-fiche-emetteur.md §1). Généré le 2026-11-13 en EXÉCUTANT l'ancien code (websearch._ISSUER_DOMAINS, _OFFICIAL_DOMAINS, _EU_REGULATOR_SUFFIXES, _PRESS_DOMAINS, _REPUTABLE_SUFFIXES ; source_registry._ADMISES, _TICKER_SECTEURS). Saisi à la main, À VÉRIFIER sur le VPS : les trois raisons sociales, les trois numéros, les pages de relations investisseurs. Se charge par `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json`.",
+ "_lisez_moi": "Reprise des données d'identité et de sources que l'ancien code portait en constantes (roadmap/V3/M1-fiche-emetteur.md §1). Généré le 2026-11-13 en EXÉCUTANT l'ancien code (websearch._ISSUER_DOMAINS, _OFFICIAL_DOMAINS, _EU_REGULATOR_SUFFIXES, _PRESS_DOMAINS, _REPUTABLE_SUFFIXES ; source_registry._ADMISES, _TICKER_SECTEURS). Saisi à la main, À VÉRIFIER sur le VPS : les trois raisons sociales, les trois numéros, les pages de relations investisseurs. Se charge par `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json`. Arbitrage du 2026-11-14 : TOUTES les admissions sont signées par le système (y compris les 4 publications de biotechnologie admises le 2026-09-05 sur décision de l'utilisateur) ; l'utilisateur les révoque s'il le juge bon, et le système ne peut pas les rétablir.",
  "fiches": [
   {
    "emetteur": "NVDA",
@@ -569,10 +569,10 @@
     "interpretation"
    ],
    "niveau": "B",
-   "auteur": "utilisateur",
+   "auteur": "systeme:reprise_de_l_ancien_code",
    "critere": "redaction_specialisee",
    "le": "2026-09-05",
-   "motif": "Rédaction spécialisée biotech à couverture clinique et réglementaire de fond. Standing sur l'interprétation (lecture concurrentielle d'un résultat d'essai, portée d'une décision d'agence) ; aucun standing sur le chiffre, qui reste au dépôt."
+   "motif": "Admise le 2026-09-05 sur décision de l'utilisateur, reprise sous la signature du système (arbitrage du 2026-11-14 : les sources sont signées par le système, sauf révocation par l'utilisateur). Motif d'origine : Rédaction spécialisée biotech à couverture clinique et réglementaire de fond. Standing sur l'interprétation (lecture concurrentielle d'un résultat d'essai, portée d'une décision d'agence) ; aucun standing sur le chiffre, qui reste au dépôt."
   },
   {
    "source": "statnews.com",
@@ -581,10 +581,10 @@
     "interpretation"
    ],
    "niveau": "B",
-   "auteur": "utilisateur",
+   "auteur": "systeme:reprise_de_l_ancien_code",
    "critere": "redaction_specialisee",
    "le": "2026-09-05",
-   "motif": "Rédaction santé/biotech analysant les données d'essais et leur contexte réglementaire. Admise pour l'interprétation ; les chiffres qu'elle cite sont des reprises, et une reprise n'ajoute rien à la source primaire (elle ajoute un risque de transcription)."
+   "motif": "Admise le 2026-09-05 sur décision de l'utilisateur, reprise sous la signature du système (arbitrage du 2026-11-14 : les sources sont signées par le système, sauf révocation par l'utilisateur). Motif d'origine : Rédaction santé/biotech analysant les données d'essais et leur contexte réglementaire. Admise pour l'interprétation ; les chiffres qu'elle cite sont des reprises, et une reprise n'ajoute rien à la source primaire (elle ajoute un risque de transcription)."
   },
   {
    "source": "fiercebiotech.com",
@@ -593,10 +593,10 @@
     "interpretation"
    ],
    "niveau": "B",
-   "auteur": "utilisateur",
+   "auteur": "systeme:reprise_de_l_ancien_code",
    "critere": "redaction_specialisee",
    "le": "2026-09-05",
-   "motif": "Couverture sectorielle large, plus proche du fil d'actualité que de l'analyse de fond. Utile pour situer un émetteur dans son paysage concurrentiel ; B est le plafond juste, et l'analyste doit le lire dans le tier."
+   "motif": "Admise le 2026-09-05 sur décision de l'utilisateur, reprise sous la signature du système (arbitrage du 2026-11-14 : les sources sont signées par le système, sauf révocation par l'utilisateur). Motif d'origine : Couverture sectorielle large, plus proche du fil d'actualité que de l'analyse de fond. Utile pour situer un émetteur dans son paysage concurrentiel ; B est le plafond juste, et l'analyste doit le lire dans le tier."
   },
   {
    "source": "biopharmadive.com",
@@ -605,10 +605,10 @@
     "interpretation"
    ],
    "niveau": "B",
-   "auteur": "utilisateur",
+   "auteur": "systeme:reprise_de_l_ancien_code",
    "critere": "redaction_specialisee",
    "le": "2026-09-05",
-   "motif": "Analyse sectorielle et concurrentielle — angle « position face aux pairs », qui est l'un des trois champs desserrés B+ → B sans bénéficiaire jusqu'ici."
+   "motif": "Admise le 2026-09-05 sur décision de l'utilisateur, reprise sous la signature du système (arbitrage du 2026-11-14 : les sources sont signées par le système, sauf révocation par l'utilisateur). Motif d'origine : Analyse sectorielle et concurrentielle — angle « position face aux pairs », qui est l'un des trois champs desserrés B+ → B sans bénéficiaire jusqu'ici."
   }
  ]
 }

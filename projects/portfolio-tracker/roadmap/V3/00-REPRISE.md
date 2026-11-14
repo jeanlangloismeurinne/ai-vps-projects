@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-14 (M1 construit et prouvé hors ligne, à accepter sur le VPS ; puis M2)
+updated: 2026-11-14 (arbitrages M1 rendus et construits : signature du système, pages des concurrents ; test négatif de l'écran ; reste l'acceptation sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -28,7 +28,8 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
 1. **Suite de référence avant tout** : `bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md` ;
    `check_emetteurs_persist` y sort en ÉCHEC NOMMÉ tant que la 063 n'est pas appliquée : attendu).
    Puis depuis `backend/` : `bash checks/negatif_chef_de_dossier.sh`, `negatif_charte_modules.sh`,
-   `negatif_architecture.sh` (ce dernier exige le conteneur : jamais joué hors VPS), `negatif_emetteurs.sh`.
+   `negatif_architecture.sh` (ce dernier exige le conteneur : jamais joué hors VPS), `negatif_emetteurs.sh`,
+   `negatif_emetteurs_api.sh` (exige l'image ; seulement répété sur l'hôte : 8/8).
 2. **Migration 063, d'abord en négatif** : `bash checks/negatif_emetteurs_persist.sh` (partie 2 : base
    jetable `db_063_neg`, la 063 n'est pas appliquée à la vraie base par ce script ; la partie 1 exige la
    063 appliquée : la rejouer après). Vérifier que le rôle `portfolio_user` et les droits par défaut
@@ -41,10 +42,14 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
    SEC), les trois numéros (MSFT 789019 n'a aucune trace dans le dépôt), les pages de relations
    investisseurs (`investor.nvidia.com`, `microsoft.com/investor`, `ir.revmed.com`, `revmed.com/investors`).
    Puis `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json --a-blanc`,
-   lire la sortie, rejouer sans `--a-blanc`, `bash tools/emetteurs.sh montrer`.
+   lire la sortie, rejouer sans `--a-blanc`, `bash tools/emetteurs.sh montrer`. Puis **les pages des
+   autres sociétés** (arbitrage du 2026-11-14) : `bash tools/emetteurs.sh pages-investisseurs --a-blanc`,
+   relire la liste (chaque domaine admis doit être la section investisseurs d'une société), rejouer sans
+   `--a-blanc`. À faire AVANT l'étape 4 : sinon les pages des concurrents sortent en écart.
 4. **A14** : `bash tools/emetteurs.sh comparer NVDA NVDA` et `… comparer RVMD RVMD` (lecture seule) —
    chaque écart de niveau entre l'ancien code et la fiche, sur les adresses des pièces réelles, est à
-   expliquer (deux écarts sont voulus : `check_emetteurs_reprise.py` [R4], [R5]). L'outil suppose les
+   expliquer (écarts voulus : [R5] sous-domaines des dépôts officiels ; `investors.com` et semblables ne
+   sont plus pris pour des pages de société — `M1-fiche-emetteur.md`, arbitrages du 2026-11-14). L'outil suppose les
    colonnes `source_url`, `nature`, `ticker_id` de `knowledge_entries` : jamais exécuté sur la vraie base.
 5. **A13, l'écran** : déployer backend puis frontend (`infrastructure/compose-deploy.sh portfolio-backend …`
    — ⚠️ le dépôt porte aussi les lots B4d, #143, B4f, B4g « à ne pas déployer » : vérifier ce que le
@@ -56,23 +61,20 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
    `_ADMISES`, `_TICKER_SECTEURS`, `qualify` et `check_emetteurs_reprise.py` ; suite complète verte ;
    cocher M1 au plan, archiver `M1-fiche-emetteur.md`.
 
-### À trancher avec l'utilisateur (en termes de fonds, avant ou pendant l'acceptation)
+### Tranché le 2026-11-14 (construit hors ligne, conv. #144)
 
-- **Qui signe la reprise ?** Les 33 sources que l'ancien système tenait pour fiables sans date ni motif
-  (régulateurs, presse financière, cabinets d'études) entrent au journal comme admises « par le système,
-  reprise de l'ancien code » : l'utilisateur peut donc les révoquer, et le système ne pourra pas les
-  rétablir. Les 4 publications de biotechnologie du 2026-09-05 y entrent à son nom. Est-ce la bonne lecture ?
-- **Une page « investisseurs » d'une autre société** (un concurrent, un client) valait le niveau le plus
-  haut dans l'ancien système par la seule forme de son adresse ; avec la fiche, elle n'est admise que si
-  on l'inscrit. Plus prudent, mais des pièces déjà collectées chez des concurrents redescendraient.
-- **Le pays** est repris « US » pour les trois titres : l'ancien système ne le portait nulle part.
+Toutes les sources sont signées par le système, sauf révocation par l'utilisateur (qui tient) ; les pages
+de relations investisseurs des concurrents sont admises par le système de même. Détail et écart restant :
+`M1-fiche-emetteur.md`, « Arbitrages rendus le 2026-11-14 ». Le pays « US » des trois titres reste à
+vérifier avec la reprise (étape 3).
 
 ### Ensuite : M2 « Collecte de sources »
 
 Tri de `knowledge/edgar_feed.py`, `websearch.py`, `agents/v2/collecte_executor.py` ; acceptation écrite
 avant. Deux questions arrivent avec lui : **l'évaluateur de sources inconnues** (M1 tient la porte :
 critère écrit, rôle distinct du collecteur, journal ; aucun évaluateur n'existe) et **les pas
-asynchrones** (l'automate du chef de dossier est synchrone : `chef_de_dossier/ARCHITECTURE.md`).
+asynchrones** (l'automate du chef de dossier est synchrone : `chef_de_dossier/ARCHITECTURE.md`) ; et le
+branchement de la reconnaissance des pages investisseurs des autres sociétés sur la collecte.
 
 **M0 « Fondations » : ACCEPTÉ hors ligne le 2026-11-13** (récit : archive, « 2026-11-13 — M0 »).
 
@@ -98,7 +100,8 @@ payante avant le module M6 (carte).**
   accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
 - Chef de dossier : rangement en base écrit (migration 063, non appliquée) ; toujours ni déclencheur ni
   geste à l'écran (lever une pause, enregistrer un acte) ; automate synchrone, à trancher à M2.
-- L'écran de M1 n'a pas de test négatif (`check_emetteurs_api.py`) : à écrire avant l'acceptation.
+- La collecte (M2) devra appeler `emetteurs.admettre_pages_investisseurs` sur chaque adresse rencontrée :
+  aujourd'hui seul l'outil `pages-investisseurs` l'appelle, sur les pièces déjà collectées.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 

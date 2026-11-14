@@ -34,6 +34,11 @@ PORTEE_GENERALE = "generale"
 PREFIXE_PORTEE_SPECIALITE = "specialite:"
 PREFIXE_PORTEE_EMETTEUR = "emetteur:"
 
+# Les pages de relations investisseurs des autres sociétés (concurrents, clients, fournisseurs) :
+# le système les admet lui-même, sous ce critère écrit et cette signature (arbitrage du 2026-11-14).
+CRITERE_PAGES_INVESTISSEURS = "relations_investisseurs_d_une_autre_societe"
+AUTEUR_PAGES_INVESTISSEURS = PREFIXE_SYSTEME + "evaluateur_de_sources"
+
 ADMETTRE = "admettre"
 REVOQUER = "revoquer"
 
@@ -264,6 +269,20 @@ async def revoquer_source(depot: Depot, *, source: str, portee: str, auteur: str
     return await regles.acter_source(
         depot, acte=REVOQUER, source=source, portee=portee, natures=(), niveau="", auteur=auteur,
         motif=motif, le=le, critere="")
+
+
+def page_investisseurs(adresse: str) -> str | None:
+    """Le domaine d'une page de relations investisseurs reconnue à son adresse dédiée, ou `None`."""
+    from . import regles
+    return regles.page_investisseurs(adresse)
+
+
+async def admettre_pages_investisseurs(depot: Depot, adresses: Sequence[str], *, le: str) -> list[dict[str, Any]]:
+    """Le système admet les pages de relations investisseurs des autres sociétés rencontrées dans
+    ces adresses (portée générale, critère écrit, signé du système). Une page que l'utilisateur a
+    révoquée reste révoquée. Rend une ligne par domaine reconnu : admise, déjà admise, écartée."""
+    from . import regles
+    return await regles.admettre_pages_investisseurs(depot, adresses, le=le)
 
 
 # ── L'écran ──────────────────────────────────────────────────────────────────────────────────

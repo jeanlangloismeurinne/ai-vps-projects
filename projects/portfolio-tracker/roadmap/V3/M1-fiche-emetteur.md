@@ -61,7 +61,24 @@ vraie base (`check_emetteurs_persist.py`) ; les lignes « réel » se passent su
 | A12 | **Tout tient en base** : fiches et journal des sources se rangent et se relisent à l'identique ; ni l'un ni l'autre ne se modifie ni ne se supprime. L'état d'un dossier du chef de dossier se range aussi, et deux écritures concurrentes ne s'écrasent pas. | base |
 | A13 | **L'écran** montre la fiche, ses révisions, les sources admises et révoquées avec date, auteur et motif, et permet de corriger, d'admettre et de révoquer. | réel |
 | A14 | **NVDA et RVMD** : la reprise remplit leurs fiches à l'identique de ce que le code dit aujourd'hui. Sur les adresses des pièces déjà collectées, la qualification par le module rend le même niveau que l'ancien code ; chaque écart est listé et expliqué. | réel (`tools/emetteurs.sh comparer`) |
+| A16 | **Les pages de relations investisseurs d'une autre société** (concurrent, client, fournisseur) sont admises par le système lui-même, signées, critère cité, pour toutes les analyses — reconnues à leur adresse dédiée (`ir.`, `investors.`…), jamais à un simple chemin d'un site quelconque. Une page que vous révoquez reste révoquée. (Arbitrage du 2026-11-14.) | société fictive ; réel (`tools/emetteurs.sh pages-investisseurs`) |
 | A15 | **Rien d'autre ne casse** : la suite complète reste verte ; les trois constantes reprises sont supprimées et l'ancien code lit la fiche. | réel |
+
+### Arbitrages rendus le 2026-11-14 (par l'utilisateur)
+
+- **Les sources sont signées par le système, sauf révocation par l'utilisateur.** Toute la reprise
+  entre au journal sous la signature du système — y compris les 4 publications de biotechnologie
+  admises le 2026-09-05 sur décision de l'utilisateur (le motif d'origine est gardé). L'utilisateur
+  les révoque s'il le juge bon ; le système ne les rétablit pas.
+- **Les pages de concurrents sont ajoutées en source par le système, de même** (ligne A16) : niveau
+  le plus haut, comme dans l'ancien système, mais par un acte daté et motivé au journal, que
+  l'utilisateur peut révoquer. Ce que ferait un fonds : le 10-K ou le communiqué de résultats d'un
+  concurrent est la première main sur ce concurrent ; l'analyste s'en sert sans demander la permission,
+  et le responsable de la recherche peut l'écarter.
+- **Écart voulu restant avec l'ancien code** : un domaine entier dont le nom commence par
+  « investors. » (ex. `investors.com`, un site de presse) n'est plus pris pour une page de relations
+  investisseurs ; seule une section d'une société (`investors.<société>.com`) l'est.
+- Le pays « US » des trois titres n'a pas été commenté : il reste à vérifier avec la reprise.
 
 ## 3. Ce que M1 ne fait pas (dit, pas caché)
 

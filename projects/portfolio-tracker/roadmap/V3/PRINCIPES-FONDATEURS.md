@@ -58,6 +58,9 @@ cette situation ?** Et on s'en sert pour orienter la conception.
 - **Admettre une source** (modifié par l'utilisateur le 2026-11-13) : le système évalue les sources et les
   admet lui-même ; chaque admission est datée et motivée dans un registre que l'utilisateur suit et
   corrige. Ce n'est plus un acte humain préalable, c'est un acte du système sous contrôle a posteriori.
+  Précisé le 2026-11-14 : **toutes** les sources sont signées par le système, sauf révocation par
+  l'utilisateur (qui tient) ; les pages de relations investisseurs des concurrents sont ajoutées par le
+  système de même (conv. #144).
 
 **Arbitrages déjà rendus de cette façon** (pour le ton et le niveau, pas pour être relus en détail) :
 - *Le cours coté et sa date* (2026-09-23, conv. #81) : quand le dernier cours manque, un fonds

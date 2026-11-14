@@ -23,6 +23,8 @@ from urllib.parse import urlsplit
 
 from .contrat import (
     ADMETTRE,
+    AUTEUR_PAGES_INVESTISSEURS,
+    CRITERE_PAGES_INVESTISSEURS,
     PORTEE_GENERALE,
     PREFIXE_PORTEE_EMETTEUR,
     PREFIXE_PORTEE_SPECIALITE,
@@ -71,6 +73,11 @@ def referentiel() -> Mapping[str, Any]:
     for genre, g in ref["genres_de_lieu"].items():
         if g["niveau"] not in niveaux:
             defauts.append(f"genre de lieu « {genre} » : niveau hors de l'échelle")
+    prefixes = ref.get("prefixes_relations_investisseurs") or []
+    if not prefixes or any(not _NOM.match(x) for x in prefixes):
+        defauts.append("préfixes des pages de relations investisseurs vides ou mal formés")
+    if CRITERE_PAGES_INVESTISSEURS not in ref["criteres"]:
+        defauts.append(f"critère « {CRITERE_PAGES_INVESTISSEURS} » absent")
     for nom, c in ref["criteres"].items():
         if c["niveau_max"] not in niveaux or not c["natures"] or not set(c["natures"]) <= set(natures) \
                 or not str(c.get("texte", "")).strip():
@@ -382,6 +389,54 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
     await depot.ajouter_acte(rang, {"rang": rang, "acte": acte, "source": source, "portee": portee,
                                     "auteur": auteur, "motif": motif, "le": le, **ligne})
     return rang
+
+
+# ── Les pages de relations investisseurs des autres sociétés ──────────────────────────────────
+
+def page_investisseurs(adresse: str) -> str | None:
+    """Le domaine d'une page de relations investisseurs reconnue à son adresse DÉDIÉE (premier
+    élément du nom de domaine : ir., investor., …), ou `None`. Un simple chemin « /investors » sur
+    un site quelconque ne suffit pas : n'importe quel blog peut en avoir un ; seul le lieu déclaré
+    dans la fiche d'un émetteur fait foi pour un chemin."""
+    hc = _hote_et_chemin(adresse)
+    if hc is None:
+        return None
+    hote = hc[0]
+    if hote.split(".", 1)[0] not in referentiel()["prefixes_relations_investisseurs"]:
+        return None
+    if hote.count(".") < 2:
+        return None  # « investors.com » est un domaine entier, pas une section d'une société
+    return hote
+
+
+async def admettre_pages_investisseurs(depot: Depot, adresses: Sequence[str], *, le: str) -> list[dict[str, Any]]:
+    """Le système admet lui-même, pour toutes les analyses, les pages de relations investisseurs
+    des autres sociétés rencontrées dans ces adresses (arbitrage du 2026-11-14). Chaque admission
+    est un acte du journal, signé du système, qui cite son critère ; l'utilisateur la révoque s'il
+    le juge bon, et le système ne revient pas sur sa décision. Rend une ligne par domaine reconnu :
+    admis (avec son rang), déjà admis, ou écarté (avec la raison)."""
+    regle = referentiel()["criteres"][CRITERE_PAGES_INVESTISSEURS]
+    vus: list[str] = []
+    for a in adresses:
+        d = page_investisseurs(a)
+        if d and d not in vus:
+            vus.append(d)
+    rendu: list[dict[str, Any]] = []
+    for d in vus:
+        admises, _, dernier = etat_des_sources(await depot.actes())
+        cle = (d, PORTEE_GENERALE)
+        if dernier.get(cle) == UTILISATEUR:  # l'utilisateur a statué : on n'y revient pas
+            rendu.append({"source": d, "issue": "ecartee", "raison": "l'utilisateur a statué en dernier"})
+            continue
+        if cle in admises:
+            rendu.append({"source": d, "issue": "deja_admise", "rang": admises[cle].rang})
+            continue
+        rang = await acter_source(
+            depot, acte=ADMETTRE, source=d, portee=PORTEE_GENERALE, natures=regle["natures"],
+            niveau=regle["niveau_max"], auteur=AUTEUR_PAGES_INVESTISSEURS, critere=CRITERE_PAGES_INVESTISSEURS,
+            motif=f"page de relations investisseurs d'une société, reconnue à son adresse dédiée ({d})", le=le)
+        rendu.append({"source": d, "issue": "admise", "rang": rang})
+    return rendu
 
 
 # ── La qualification ─────────────────────────────────────────────────────────────────────────

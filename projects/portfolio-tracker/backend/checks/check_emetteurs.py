@@ -14,6 +14,8 @@ ligne d'acceptation qu'elle prouve, et `negatif_emetteurs.sh` prouve que chacune
   [A9]  une source révoquée signale les pièces qui s'y appuient, et elles seules
   [A10] dans le doute, la source n'est pas admise
   [A11] le chef de dossier s'arrête tant que la fiche n'existe pas
+  [A16] les pages de relations investisseurs d'une AUTRE société (concurrent, client) : le système
+        les admet lui-même, signé, critère cité ; l'utilisateur les révoque, le système ne les rétablit pas
   [A0]  le module n'importe que la bibliothèque standard, lui-même et le contrat du chef de dossier
 
 Les sociétés, domaines et registres ci-dessous sont inventés (`.example` est un domaine réservé).
@@ -352,6 +354,44 @@ def _a11(b: Bilan) -> None:
             "[A11] par défaut, la fiche est relue par un humain avant que la suite s'en serve")
 
 
+def _a16(b: Bilan) -> None:
+    depot = C.DepotMemoire()
+    asyncio.run(_fiche_cotee(depot))
+    concurrent = "https://investors.concurrent.example/resultats/t3.pdf"
+    avant = C.qualifier(asyncio.run(C.lire_fiche(depot, COTEE)), concurrent, "mesure")
+    b.check(not avant.admise and avant.niveau == "C+",
+            "[A16] avant l'acte du système, la page d'un concurrent n'est pas admise (la forme ne suffit pas)")
+    adresses = [concurrent, "https://ir.client.example/communique", "https://www.ir.client.example/autre",
+                "https://blog.quelconque.example/investors/x", "https://investors.example/x",
+                "https://irlande.example/x", "pas une adresse"]
+    rendu = asyncio.run(C.admettre_pages_investisseurs(depot, adresses, le=JOUR))
+    b.check([(r["source"], r["issue"]) for r in rendu]
+            == [("investors.concurrent.example", "admise"), ("ir.client.example", "admise")],
+            "[A16] seules les adresses DÉDIÉES (ir., investors., …) sous le domaine d'une société sont reconnues, "
+            "une fois chacune ; un chemin « /investors » d'un site quelconque, un domaine entier ou un nom qui "
+            "commence pareil ne le sont pas")
+    actes = asyncio.run(C.vue_ecran(depot))["journal_des_sources"]
+    b.check(all(a["auteur"] == C.AUTEUR_PAGES_INVESTISSEURS and a["critere"] == C.CRITERE_PAGES_INVESTISSEURS
+                and a["portee"] == C.PORTEE_GENERALE and a["le"] == JOUR and a["motif"].strip()
+                for a in actes) and len(actes) == 2,
+            "[A16] chaque admission est un acte du journal signé du système, qui cite son critère, daté et motivé")
+    f = asyncio.run(C.lire_fiche(depot, COTEE))
+    q = C.qualifier(f, concurrent, "mesure")
+    b.check(q.admise and q.niveau == "A" and q.source == "investors.concurrent.example",
+            "[A16] après l'acte, la page du concurrent vaut le niveau du critère pour toute analyse")
+    b.check(asyncio.run(C.admettre_pages_investisseurs(depot, [concurrent], le=JOUR))
+            == [{"source": "investors.concurrent.example", "issue": "deja_admise", "rang": 1}]
+            and len(asyncio.run(C.vue_ecran(depot))["journal_des_sources"]) == 2,
+            "[A16] rejouer ne réécrit rien : la page est déjà admise")
+    asyncio.run(C.revoquer_source(depot, source="investors.concurrent.example", portee=C.PORTEE_GENERALE,
+                                  auteur=C.UTILISATEUR, motif="société en litige, déclarations contestées",
+                                  le="2026-11-20"))
+    rendu = asyncio.run(C.admettre_pages_investisseurs(depot, [concurrent], le="2026-11-21"))
+    f = asyncio.run(C.lire_fiche(depot, COTEE))
+    b.check(rendu and rendu[0]["issue"] == "ecartee" and not C.qualifier(f, concurrent, "mesure").admise,
+            "[A16] une page que l'utilisateur a révoquée reste révoquée : le système ne la rétablit pas")
+
+
 def _a0(b: Bilan) -> None:
     permis = {"__future__", "dataclasses", "typing", "json", "re", "datetime", "functools", "pathlib", "urllib"}
     dossier = BACKEND / "app" / "modules" / "emetteurs"
@@ -380,7 +420,7 @@ def main() -> int:
     b = Bilan()
     for nom, section in (("[A1]", _a1), ("[A2]", _a2), ("[A3]", _a3), ("[A4]", _a4), ("[A5]", _a5),
                          ("[A6]", _a6), ("[A7]", _a7), ("[A8]", _a8), ("[A9]", _a9), ("[A10]", _a10),
-                         ("[A11]", _a11), ("[A0]", _a0)):
+                         ("[A11]", _a11), ("[A16]", _a16), ("[A0]", _a0)):
         try:
             section(b)
         except Exception as exc:  # noqa: BLE001 — une section qui plante est un échec NOMMÉ

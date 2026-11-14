@@ -64,6 +64,16 @@ mutations=(
 "$CTR¦        if fiche is None:¦        if False:¦[A11] sans fiche, le chef de dossier s'arrête"
 # [A11] la fiche d'une société fait avancer le dossier d'une autre.
 "$CTR¦        if fiche.emetteur != contexte.dossier:¦        if False:¦[A11] la fiche d'une société ne fait pas avancer"
+# [A16] n'importe quel premier élément de nom de domaine passe pour une page de relations investisseurs.
+"$REG¦    if hote.split(\".\", 1)[0] not in referentiel()[\"prefixes_relations_investisseurs\"]:¦    if False:¦[A16] seules les adresses DÉDIÉES"
+# [A16] un domaine entier (« investors.example ») passe pour la section d'une société.
+"$REG¦    if hote.count(\".\") < 2:¦    if False:¦[A16] seules les adresses DÉDIÉES"
+# [A16] le système rétablit une page que l'utilisateur a révoquée.
+"$REG¦        if dernier.get(cle) == UTILISATEUR:  # l'utilisateur a statué : on n'y revient pas¦        if False:¦[A16]"
+# [A16] le geste ne reconnaît plus une page déjà admise : le second passage tombe sur un refus.
+"$REG¦        if cle in admises:¦        if False:¦[A16] section interrompue"
+# [A16] le geste du système ne cite plus son critère : l'admission serait refusée, rien n'entre.
+"$REG¦critere=CRITERE_PAGES_INVESTISSEURS,¦critere=\"\",¦[A16]"
 # [A0] le module se met à parler au réseau.
 "$REG¦import json¦import json\nimport socket¦[A0] regles.py importe \`socket\`"
 )

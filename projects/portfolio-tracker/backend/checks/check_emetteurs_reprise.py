@@ -6,8 +6,10 @@ code (exécuté, pas recopié), pour les trois titres et les trois natures d'inf
   [R1] le fichier de reprise passe en entier par les gestes du module, sans un refus
   [R2] il reprend TOUT ce que l'ancien code portait (chaque domaine des cinq listes, chaque titre)
   [R3] sur le panel, la fiche rend le même niveau que l'ancien code
-  [R4] écart VOULU : l'ancien code tenait pour « relations investisseurs » toute adresse dont la
-       forme y ressemble, de n'importe quelle société ; la fiche nomme celles de l'émetteur
+  [R4] écart VOULU, et TRANSITOIRE : l'ancien code tenait pour « relations investisseurs » toute
+       adresse dont la forme y ressemble, de n'importe quelle société ; la fiche nomme celles de
+       l'émetteur, et le système admet lui-même celles des autres sociétés (arbitrage du 2026-11-14) :
+       une fois son acte au journal, le niveau redevient celui de l'ancien code
   [R5] écart VOULU : un sous-domaine d'un site de dépôts officiels est couvert, comme pour toute
        autre source ; l'ancien code n'en reconnaissait que trois adresses exactes
 
@@ -141,7 +143,12 @@ def main() -> int:
     t0 = titres[0]
     b.check(ancien_niveau(etranger, t0, "mesure") == "A"
             and C.qualifier(fiches[t0], etranger, "mesure").niveau == "C+",
-            "[R4] une page « investors.* » d'une AUTRE société : niveau A dans l'ancien code, non admise par la fiche")
+            "[R4] une page « investors.* » d'une AUTRE société : niveau A dans l'ancien code, non admise par la fiche "
+            "tant que le système ne l'a pas admise")
+    asyncio.run(C.admettre_pages_investisseurs(depot, [etranger], le="2026-11-14"))
+    apres = asyncio.run(C.lire_fiche(depot, t0))
+    b.check(all(C.qualifier(apres, etranger, n).niveau == ancien_niveau(etranger, t0, n) for n in NATURES),
+            "[R4] une fois admise par le système, la page de l'autre société retrouve le niveau de l'ancien code")
     return b.summary()
 
 

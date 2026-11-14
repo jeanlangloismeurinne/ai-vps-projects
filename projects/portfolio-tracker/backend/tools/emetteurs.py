@@ -9,6 +9,11 @@ par ses tables.
                                  collectées sous TITRE (ancien système), le niveau que rend l'ancien
                                  code et celui que rend la fiche ; liste chaque écart. Lecture seule.
   signaler EMETTEUR TITRE        les pièces déjà collectées qui s'appuient sur une source révoquée.
+  pages-investisseurs [--a-blanc]
+                                 le SYSTÈME admet les pages de relations investisseurs des autres
+                                 sociétés (concurrents, clients…) présentes dans TOUTES les pièces déjà
+                                 collectées (arbitrage du 2026-11-14) ; une page que l'utilisateur a
+                                 révoquée reste révoquée. Datée du jour. `--a-blanc` : rien n'est gardé.
 
 Base : variable `DATABASE_URL`. Lancement sur le VPS : `bash tools/emetteurs.sh …`.
 """
@@ -180,7 +185,33 @@ async def signaler(emetteur: str, titre: str) -> int:
     return 0
 
 
+async def pages_investisseurs(a_blanc: bool) -> int:
+    conn = await _connexion()
+    tr = conn.transaction()
+    await tr.start()
+    try:
+        adresses = [r["source_url"] for r in await conn.fetch(
+            "SELECT DISTINCT source_url FROM knowledge_entries "
+            "WHERE source_url IS NOT NULL AND btrim(source_url) <> '' ORDER BY source_url")]
+        rendu = await C.admettre_pages_investisseurs(C.depot_base(conn), adresses, le=date.today().isoformat())
+    finally:
+        if a_blanc:
+            await tr.rollback()
+        else:
+            await tr.commit()
+        await conn.close()
+    for r in rendu:
+        detail = f"rang {r['rang']}" if "rang" in r else r.get("raison", "")
+        print(f"  {r['issue']:<12} {r['source']:<40} {detail}")
+    admises = sum(r["issue"] == "admise" for r in rendu)
+    etat = "RIEN N'EST GARDÉ (à blanc)" if a_blanc else "enregistré"
+    print(f"\n{len(adresses)} adresse(s) lue(s), {len(rendu)} page(s) reconnue(s), {admises} admise(s) — {etat}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
+    if argv and argv[0] == "pages-investisseurs":
+        return asyncio.run(pages_investisseurs("--a-blanc" in argv[1:]))
     if len(argv) >= 2 and argv[0] == "importer":
         return asyncio.run(importer(argv[1], "--a-blanc" in argv[2:]))
     if argv and argv[0] == "montrer" and len(argv) <= 2:

@@ -27,6 +27,7 @@ est-elle une source admise pour cette nature d'information, à quel niveau, pour
 |---|---|---|
 | `etablir_fiche` | Ajoute un titre, ou corrige sa fiche : une révision de plus | identifiant, adresse ou genre de lieu mal formé ; pas de motif, de date, de signature ; fiche identique |
 | `admettre_source` | Admet un domaine, pour des natures nommées, à un niveau, sur une portée | système sans critère écrit, au-delà du plafond ou hors des natures du critère ; rôle qui utilise les sources ; décision de l'utilisateur déjà rendue |
+| `admettre_pages_investisseurs` | Le **système** admet, pour toutes les analyses, les pages de relations investisseurs d'autres sociétés trouvées dans des adresses (reconnues à leur adresse dédiée, préfixes du référentiel) ; signé `systeme:evaluateur_de_sources`, critère `relations_investisseurs_d_une_autre_societe` | rien : rend admise / déjà admise / écartée (l'utilisateur a statué en dernier) |
 | `revoquer_source` | Retire une admission ; les pièces concernées seront signalées | source non admise ; rôle qui utilise les sources ; admission faite par l'utilisateur (pour le système) |
 
 Tout le vocabulaire (natures, niveaux, genres de lieu, critères d'admission, rôles qui utilisent les
@@ -51,7 +52,8 @@ jouée par `tools/emetteurs.sh importer`.
 | Le chef de dossier s'arrête sans fiche (A11) | `check_emetteurs.py` [A11] | idem |
 | Ni réseau ni modèle : bibliothèque standard | `check_emetteurs.py` [A0] | idem |
 | Tout tient en base ; registres en ajout seul ; pas d'écrasement (A12) | `check_emetteurs_persist.py` [B0]-[B7] | `negatif_emetteurs_persist.sh` (code et migration 063) |
-| L'écran sert la fiche et le journal ; le corps d'un geste ne porte ni auteur ni date (A13) | `check_emetteurs_api.py` [P1]-[P9] | — (à écrire) |
+| L'écran sert la fiche et le journal ; le corps d'un geste ne porte ni auteur ni date (A13) | `check_emetteurs_api.py` [P1]-[P9] | `negatif_emetteurs_api.sh` (exige l'image ; répété sur l'hôte le 2026-11-14 : 8/8) |
+| Les pages de relations investisseurs d'une autre société : admises par le système, révocables, jamais rétablies (A16) | `check_emetteurs.py` [A16] ; `check_emetteurs_reprise.py` [R4] | `negatif_emetteurs.sh` |
 | La reprise est à l'identique de l'ancien code, deux écarts voulus nommés (A14) | `check_emetteurs_reprise.py` [R1]-[R5] (**provisoire** : part avec l'ancien code) | — |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
@@ -64,7 +66,9 @@ jouée par `tools/emetteurs.sh importer`.
 - **L'évaluation d'une source inconnue** : aucun évaluateur n'existe. Le module tient la porte par
   laquelle il passera (critère écrit, rôle distinct, journal) ; il arrive avec la collecte (M2).
 - **Le contenu du kit de spécialité** : la fiche porte un nom de spécialité, rien de plus.
-- **Le test négatif de l'écran** (`check_emetteurs_api.py` n'a pas de `negatif_*.sh`).
+- **La reconnaissance au fil de l'eau** des pages de relations investisseurs : le geste existe, mais
+  seul l'outil (`tools/emetteurs.sh pages-investisseurs`, sur les pièces déjà collectées) l'appelle.
+  La collecte (M2) devra l'appeler sur chaque adresse rencontrée.
 - La **date d'un acte** est donnée par l'appelant : l'écran met la date du jour du serveur ; le
   module ne vérifie pas qu'elle est plausible.
 - Deux actes simultanés sur le journal : le second est refusé (rang déjà pris) et doit être rejoué ;
