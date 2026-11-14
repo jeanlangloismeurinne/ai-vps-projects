@@ -1,6 +1,6 @@
 # Fiche de l'émetteur et sources — `app/modules/emetteurs/`
 
-Module M1 du plan `roadmap/V3/07-avant-comite.md`. **État : construit et prouvé hors ligne et sur une
+Contrat **1.1.0** depuis le 2026-11-14 (sources en suspens). Module M1 du plan `roadmap/V3/07-avant-comite.md`. **État : construit et prouvé hors ligne et sur une
 base locale le 2026-11-13 ; PAS ENCORE ACCEPTÉ** — l'acceptation se passe sur NVDA et RVMD, sur le VPS
 (lignes A13 à A15 de `roadmap/V3/M1-fiche-emetteur.md`, qui porte aussi le tri de l'ancien code).
 
@@ -28,7 +28,8 @@ est-elle une source admise pour cette nature d'information, à quel niveau, pour
 | `etablir_fiche` | Ajoute un titre, ou corrige sa fiche : une révision de plus | identifiant, adresse ou genre de lieu mal formé ; pas de motif, de date, de signature ; fiche identique |
 | `admettre_source` | Admet un domaine, pour des natures nommées, à un niveau, sur une portée | système sans critère écrit, au-delà du plafond ou hors des natures du critère ; rôle qui utilise les sources ; décision de l'utilisateur déjà rendue |
 | `admettre_pages_investisseurs` | Le **système** admet, pour toutes les analyses, les pages de relations investisseurs d'autres sociétés trouvées dans des adresses (reconnues à leur adresse dédiée, préfixes du référentiel) ; signé `systeme:evaluateur_de_sources`, critère `relations_investisseurs_d_une_autre_societe` | rien : rend admise / déjà admise / écartée (l'utilisateur a statué en dernier) |
-| `revoquer_source` | Retire une admission ; les pièces concernées seront signalées | source non admise ; rôle qui utilise les sources ; admission faite par l'utilisateur (pour le système) |
+| `evaluer_source` | Range le jugement de l'évaluateur sur une source inconnue : le code calcule la note (part des « oui » aux questions du référentiel), l'**admet** au seuil (0,80, ≥ 3 publications, critère écrit), la met **en suspens** sinon ; l'évaluation entière part au journal | publication hors de la source, question sans réponse ou sans constat, publication en double ; rôle qui utilise les sources ; source déjà admise ; décision de l'utilisateur déjà rendue |
+| `revoquer_source` | Retire une admission — ou **écarte** une source en suspens (aucune pièce à signaler) ; les pièces concernées seront signalées | source ni admise ni en suspens ; rôle qui utilise les sources ; admission faite par l'utilisateur (pour le système) |
 
 Tout le vocabulaire (natures, niveaux, genres de lieu, critères d'admission, rôles qui utilisent les
 sources) est une donnée : `referentiel.json`. Les sociétés et les sources sont en base ; la reprise de
@@ -54,6 +55,7 @@ jouée par `tools/emetteurs.sh importer`.
 | Tout tient en base ; registres en ajout seul ; pas d'écrasement (A12) | `check_emetteurs_persist.py` [B0]-[B7] | `negatif_emetteurs_persist.sh` (code et migration 063) |
 | L'écran sert la fiche et le journal ; le corps d'un geste ne porte ni auteur ni date (A13) | `check_emetteurs_api.py` [P1]-[P9] | `negatif_emetteurs_api.sh` (exige l'image ; répété sur l'hôte le 2026-11-14 : 8/8) |
 | Les pages de relations investisseurs d'une autre société : admises par le système, révocables, jamais rétablies (A16) | `check_emetteurs.py` [A16] ; `check_emetteurs_reprise.py` [R4] | `negatif_emetteurs.sh` |
+| Une source inconnue : note calculée, admise au seuil, en suspens dessous ; votre arbitrage tient (A17) | `check_emetteurs.py` [A17] ; `check_emetteurs_persist.py` [B1], [B4] | `negatif_emetteurs.sh` (17 mutations [A17]) ; `negatif_emetteurs_persist.sh` |
 | La reprise est à l'identique de l'ancien code, deux écarts voulus nommés (A14) | `check_emetteurs_reprise.py` [R1]-[R5] (**provisoire** : part avec l'ancien code) | — |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
@@ -63,8 +65,9 @@ jouée par `tools/emetteurs.sh importer`.
 - **Le remplacement de l'ancien code** : `websearch._ISSUER_DOMAINS` et ses quatre listes,
   `source_registry._ADMISES` / `_TICKER_SECTEURS` / `qualify` sont toujours là et toujours utilisés
   par l'ancien enchaînement. Ils sont supprimés le jour de l'acceptation.
-- **L'évaluation d'une source inconnue** : aucun évaluateur n'existe. Le module tient la porte par
-  laquelle il passera (critère écrit, rôle distinct, journal) ; il arrive avec la collecte (M2).
+- **L'évaluateur lui-même** (le modèle qui lit les publications et répond à la grille) : la porte
+  est construite (`evaluer_source`, contrat 1.1.0, référentiel 1.2.0), l'évaluateur arrive avec la
+  collecte (M2). Seuil, nombre de publications et questions sont des valeurs de départ, en donnée.
 - **Le contenu du kit de spécialité** : la fiche porte un nom de spécialité, rien de plus.
 - **La reconnaissance au fil de l'eau** des pages de relations investisseurs : le geste existe, mais
   seul l'outil (`tools/emetteurs.sh pages-investisseurs`, sur les pièces déjà collectées) l'appelle.

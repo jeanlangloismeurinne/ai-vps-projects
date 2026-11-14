@@ -62,6 +62,7 @@ vraie base (`check_emetteurs_persist.py`) ; les lignes « réel » se passent su
 | A13 | **L'écran** montre la fiche, ses révisions, les sources admises et révoquées avec date, auteur et motif, et permet de corriger, d'admettre et de révoquer. | réel |
 | A14 | **NVDA et RVMD** : la reprise remplit leurs fiches à l'identique de ce que le code dit aujourd'hui. Sur les adresses des pièces déjà collectées, la qualification par le module rend le même niveau que l'ancien code ; chaque écart est listé et expliqué. | réel (`tools/emetteurs.sh comparer`) |
 | A16 | **Les pages de relations investisseurs d'une autre société** (concurrent, client, fournisseur) sont admises par le système lui-même, signées, critère cité, pour toutes les analyses — reconnues à leur adresse dédiée (`ir.`, `investors.`…), jamais à un simple chemin d'un site quelconque. Une page que vous révoquez reste révoquée. (Arbitrage du 2026-11-14.) | société fictive ; réel (`tools/emetteurs.sh pages-investisseurs`) |
+| A17 | **Une source inconnue est jugée sur quelques publications** par l'évaluateur de sources (rôle distinct de ceux qui s'en servent) : il répond oui ou non, avec ce qu'il a constaté, à cinq questions écrites au référentiel ; le code calcule la note (part des oui). Au seuil (0,80, trois publications au moins, un critère écrit qui convient), le système l'admet ; en dessous, elle est **en suspens** : non admise, montrée à l'écran avec les réponses, elle attend votre arbitrage (admettre ou écarter), et le système ne revient pas sur votre décision. (Arbitrage du 2026-11-14.) | société fictive ; base ; l'évaluateur réel arrive avec M2 |
 | A15 | **Rien d'autre ne casse** : la suite complète reste verte ; les trois constantes reprises sont supprimées et l'ancien code lit la fiche. | réel |
 
 ### Arbitrages rendus le 2026-11-14 (par l'utilisateur)
@@ -79,13 +80,21 @@ vraie base (`check_emetteurs_persist.py`) ; les lignes « réel » se passent su
   « investors. » (ex. `investors.com`, un site de presse) n'est plus pris pour une page de relations
   investisseurs ; seule une section d'une société (`investors.<société>.com`) l'est.
 - Le pays « US » des trois titres n'a pas été commenté : il reste à vérifier avec la reprise.
+- **Une source inconnue est jugée par un évaluateur ad hoc sur quelques exemples** (second arbitrage du
+  2026-11-14, ligne A17) : admise par le système au-dessus d'un seuil, mise **en suspens** en dessous pour
+  votre arbitrage. Ce que ferait un fonds : l'analyste propose une source nouvelle avec quelques articles à
+  l'appui ; le responsable de la recherche l'agrée quand la grille est remplie et tranche lui-même les cas
+  limites ; d'ici là, personne ne s'en sert. Construit hors ligne (la porte, la note, le suspens, l'écran) ;
+  l'évaluateur qui lit réellement les publications arrive avec la collecte (M2). Valeurs de départ, en
+  donnée : seuil 0,80, trois publications, cinq questions — à recaler sur les premières évaluations réelles.
+  Choix par défaut : une source en suspens ne bloque pas le dossier (il avance avec les sources admises) ;
+  admise plus tard, ses pièces remontent d'elles-mêmes (la qualification se calcule à la lecture).
 
 ## 3. Ce que M1 ne fait pas (dit, pas caché)
 
-- **L'évaluation d'une source inconnue par un modèle.** M1 construit la porte (critères écrits,
-  rôle de l'évaluateur, journal, révocation) et les admissions que le code sait motiver seul. Le
-  premier évaluateur qui lit une source nouvelle arrive avec la collecte (M2) et passe par cette
-  porte. D'ici là, une source inconnue n'est pas admise.
+- **L'évaluateur qui lit une source inconnue** (le modèle, le choix des publications) : M1 tient la
+  porte (grille, note, seuil, suspens, arbitrage — A17) ; l'évaluateur lui-même arrive avec la collecte
+  (M2). D'ici là, une source inconnue n'est pas admise.
 - **Le kit de spécialité** : la fiche porte le nom de la spécialité ; le contenu du kit (moteurs
   types, questions propres, étalons) est écrit par les modules qui s'en servent.
 - **Le stade de la société** : décision du comité, hors de la fiche.

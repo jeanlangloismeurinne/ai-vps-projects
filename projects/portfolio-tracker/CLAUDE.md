@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #144) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #146) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Les règles durables (charte d'un module, garde-fous) | `roadmap/V3/principe-directeur.md` |
 > | Le plan (modules M0-M11) et le schéma des blocs | `roadmap/V3/07-avant-comite.md`, `roadmap/V3/ARCHITECTURE-CIBLE.md` |
@@ -196,3 +196,5 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #142 le découpage d'une ventilation : le plus récent fait foi, son historique est publié ou additionné (addition vérifiée), jamais réparti ; détenteur unique `perimetre.py`, lecteurs par `vue_servie`
 - #143 une ligne propre se décide par le marché qu'il faudra estimer (données de marché et de concurrence ad hoc ?) : extension d'indication = ligne nouvelle, génération suivante / nouveau segment de clients = rattachée ; `me_7` déclare total ET non nommés, [S15] exige un décompte exact ; architecte sur V4-Pro
 - #144 les sources sont admises et signées par le système (reprise comprise) ; l'utilisateur révoque et sa révocation tient ; les pages de relations investisseurs d'une autre société sont admises par le système
+- #145 une source inconnue est jugée sur quelques publications (grille au référentiel, note calculée par le code) : admise au seuil, en suspens dessous pour votre arbitrage
+- #146 un dossier avance sur tout ce qui ne dépend pas d'un travail en cours ; ce qui en dépend l'attend, sans limite ; l'arrêt énumère toutes les attentes

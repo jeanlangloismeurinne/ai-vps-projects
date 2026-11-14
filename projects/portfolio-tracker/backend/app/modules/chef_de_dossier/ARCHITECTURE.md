@@ -20,7 +20,19 @@ exécution rend un `contrat.Resultat` : `fait`, `indisponible` (motivé), `acte_
 `echec` (motivé), avec sa `Depense`. Un acte qui vous revient (valider la carte, décider en comité) est
 un pas de nature `humain` : l'automate s'y arrête, il ne l'exécute jamais.
 
-## Les quatre arrêts
+## Pas en cours et parallélisme (contrat 1.1.0, arbitrage du 2026-11-14)
+
+Un pas peut **lancer** un travail qui dure (une collecte) et rendre `en_cours` ; il déclare alors
+`suivre`, que l'automate rappelle **une fois par passage** jusqu'à une autre issue. Pendant ce temps,
+tout ce qui ne dépend pas de ce pas avance ; ce qui en dépend attend, **sans limite de temps** (un
+travail qui échoue en route est relancé une fois, puis arrête le dossier). Plus généralement, un acte
+attendu, une lecture ou un échec répété ne retient que les pas qui en dépendent. L'arrêt énumère toutes
+les attentes (`Arret.attentes`) ; son motif principal est la première chose qui vous revient.
+
+*Ce que ferait un vrai fonds* : l'analyste qui attend des documents avance sur ce qui ne les exige pas ;
+il n'écrit pas la partie qui en a besoin avant de les avoir.
+
+## Les cinq arrêts
 
 | Arrêt | Quand | Se lève par |
 |---|---|---|
@@ -28,6 +40,7 @@ un pas de nature `humain` : l'automate s'y arrête, il ne l'exécute jamais.
 | Pause de dépense | 1 $ consommé depuis la dernière pause levée | `lever_pause` |
 | Échec répété | un pas échoue deux fois de suite | `relancer` |
 | Parcours terminé | plus aucun pas | — |
+| Attente | plus rien ne peut avancer, un travail est en cours | rien : le passage suivant le reprend |
 
 La **lecture humaine** de chaque sortie de module est la règle par défaut ; elle se lève module par
 module (table `lecture_humaine`), quand le taux d'erreur du module est mesuré (principe 3).
@@ -35,7 +48,7 @@ module (table `lecture_humaine`), quand le taux d'erreur du module est mesuré (
 ## Invariant → assert garant
 
 Contrôle : `check_chef_de_dossier.py` ; test négatif : `negatif_chef_de_dossier.sh`
-(14 mutations, toutes détectées sur leur assert — exécuté sur l'hôte le 2026-11-13, le module étant pur
+(25 mutations, toutes détectées sur leur assert — exécuté sur l'hôte le 2026-11-14, le module étant pur
 bibliothèque standard).
 
 | Invariant | Assert |
@@ -50,6 +63,8 @@ bibliothèque standard).
 | Modèles et web comptés à part ; un essai échoué est compté | [D8] |
 | Un arrêt ne se lève que par son geste | [D9] |
 | Aucun modèle, aucun réseau : bibliothèque standard et son contrat | [D10] |
+| Travail en cours : on avance à côté, on attend ce qui en dépend, sans limite ; relancé une fois | [D11] |
+| Plusieurs attentes énumérées ; chaque geste vise l'une d'elles ; une pause reste une pause | [D12] |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
@@ -58,9 +73,9 @@ bibliothèque standard).
   partis de la même lecture : le second est refusé (`EcritureConcurrente`). Table `chef_etats`,
   migration 063 (non appliquée). Prouvé sur une base locale : `check_emetteurs_persist.py` [B5]-[B6],
   rougi par `negatif_emetteurs_persist.sh`.
-- **L'automate est synchrone** : un pas ne fait pas d'entrée-sortie asynchrone. Le pas de M1 reçoit sa
-  fiche déjà lue. Un pas qui collecte (M2) devra soit faire de même, soit faire évoluer le contrat du
-  pas : à trancher à l'ouverture de M2.
+- **L'automate reste synchrone et sans entrée-sortie** : un travail long ne se fait pas DANS un pas, il
+  est lancé par lui et suivi (`en_cours` / `suivre`). Où vit ce travail (une tâche de fond de la collecte)
+  et ce qui rappelle l'automate entre deux passages : à construire avec M2 et le déclencheur.
 - **L'écran** : la page d'un émetteur montre l'état de son dossier en lecture seule ; aucun geste
   (lever une pause, enregistrer un acte) n'est encore offert à l'écran.
 - **Le déclencheur** : rien n'appelle encore `automate.conduire` (ni tâche planifiée, ni route).

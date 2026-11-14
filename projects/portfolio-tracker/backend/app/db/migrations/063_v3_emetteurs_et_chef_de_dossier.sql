@@ -57,17 +57,28 @@ CREATE TABLE public.emetteurs_sources_actes (
     auteur        text        NOT NULL,
     motif         text        NOT NULL,
     le            date        NOT NULL,
+    -- L'évaluation d'une source inconnue (publications lues, une réponse motivée par question, note
+    -- calculée, seuil) : portée par l'admission ou la mise en suspens qu'elle a décidée ; vide sinon.
+    evaluation    jsonb       NOT NULL DEFAULT '{}'::jsonb,
     enregistre_le timestamptz NOT NULL DEFAULT now(),
 
     CONSTRAINT emetteurs_sources_actes_rang CHECK (rang >= 1),
-    CONSTRAINT emetteurs_sources_actes_acte CHECK (acte IN ('admettre', 'revoquer')),
+    -- « suspendre » (ajouté le 2026-11-14, avant toute application) : l'évaluateur a jugé la source
+    -- sous le seuil ; elle n'est pas admise et attend l'arbitrage de l'utilisateur.
+    CONSTRAINT emetteurs_sources_actes_acte CHECK (acte IN ('admettre', 'revoquer', 'suspendre')),
+    CONSTRAINT emetteurs_sources_actes_evaluation CHECK (jsonb_typeof(evaluation) = 'object'),
     CONSTRAINT emetteurs_sources_actes_texte CHECK (
         btrim(source) <> '' AND btrim(portee) <> '' AND btrim(auteur) <> '' AND btrim(motif) <> ''),
     CONSTRAINT emetteurs_sources_actes_natures CHECK (jsonb_typeof(natures) = 'array'),
-    -- Une admission nomme ses natures et son niveau ; une révocation n'en porte aucun.
+    -- Une admission (ou une proposition mise en suspens) nomme ses natures et son niveau ; une
+    -- révocation n'en porte aucun.
     CONSTRAINT emetteurs_sources_actes_forme CHECK (
-        (acte = 'admettre' AND jsonb_array_length(natures) >= 1 AND btrim(niveau) <> '')
-        OR (acte = 'revoquer' AND jsonb_array_length(natures) = 0 AND niveau = '' AND critere = '')),
+        (acte IN ('admettre', 'suspendre') AND jsonb_array_length(natures) >= 1 AND btrim(niveau) <> '')
+        OR (acte = 'revoquer' AND jsonb_array_length(natures) = 0 AND niveau = '' AND critere = ''
+            AND evaluation = '{}'::jsonb)),
+    -- Seul le système met une source en suspens, et toujours sur une évaluation.
+    CONSTRAINT emetteurs_sources_actes_suspens CHECK (
+        acte <> 'suspendre' OR (auteur LIKE 'systeme:%' AND evaluation <> '{}'::jsonb)),
     -- Une admission du système cite le critère écrit qu'elle applique.
     CONSTRAINT emetteurs_sources_actes_critere CHECK (
         NOT (acte = 'admettre' AND auteur LIKE 'systeme:%' AND btrim(critere) = ''))
@@ -133,8 +144,8 @@ COMMENT ON TABLE public.emetteurs_fiches IS
     'Fiches des émetteurs (migration 063, module M1) : une ligne par révision, ajout seul. '
     'Lue par `app/modules/emetteurs/` uniquement ; le reste passe par `contrat.lire_fiche`.';
 COMMENT ON TABLE public.emetteurs_sources_actes IS
-    'Journal des sources (migration 063, module M1) : admissions et révocations, datées, motivées, '
-    'signées, ajout seul. L''état en vigueur se recalcule en relisant le journal dans l''ordre.';
+    'Journal des sources (migration 063, module M1) : admissions, mises en suspens et révocations, '
+    'datées, motivées, signées, ajout seul. L''état en vigueur se recalcule en relisant le journal dans l''ordre.';
 COMMENT ON TABLE public.chef_etats IS
     'État des dossiers du chef de dossier (migration 063, module M0) : une ligne par dossier, '
     'réécrite à chaque avancée sous contrôle de `revision` (deux écritures concurrentes : la '

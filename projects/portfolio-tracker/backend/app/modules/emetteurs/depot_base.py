@@ -48,18 +48,19 @@ class DepotBase:
     async def actes(self) -> Sequence[Mapping[str, Any]]:
         lignes = await self._c.fetch(
             "SELECT rang, acte, source, portee, natures::text AS natures, niveau, critere, auteur, "
-            "motif, le::text AS le FROM emetteurs_sources_actes ORDER BY rang")
-        return [{**dict(l), "natures": json.loads(l["natures"])} for l in lignes]
+            "motif, le::text AS le, evaluation::text AS evaluation FROM emetteurs_sources_actes ORDER BY rang")
+        return [{**dict(l), "natures": json.loads(l["natures"]), "evaluation": json.loads(l["evaluation"])}
+                for l in lignes]
 
     async def ajouter_acte(self, rang: int, acte: Mapping[str, Any]) -> None:
         try:
             await self._c.execute(
                 "INSERT INTO emetteurs_sources_actes "
-                "(rang, acte, source, portee, natures, niveau, critere, auteur, motif, le) "
-                "VALUES ($1, $2, $3, $4, $5::text::jsonb, $6, $7, $8, $9, $10::text::date)",
+                "(rang, acte, source, portee, natures, niveau, critere, auteur, motif, le, evaluation) "
+                "VALUES ($1, $2, $3, $4, $5::text::jsonb, $6, $7, $8, $9, $10::text::date, $11::text::jsonb)",
                 rang, acte["acte"], acte["source"], acte["portee"],
                 json.dumps(list(acte["natures"])), acte["niveau"], acte["critere"], acte["auteur"],
-                acte["motif"], acte["le"])
+                acte["motif"], acte["le"], json.dumps(dict(acte.get("evaluation") or {}), ensure_ascii=False))
         except Exception as exc:  # noqa: BLE001
             if _est_un_doublon(exc):
                 raise EcritureConcurrente(f"journal des sources : le rang {rang} existe déjà") from exc

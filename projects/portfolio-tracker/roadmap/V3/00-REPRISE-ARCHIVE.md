@@ -7051,3 +7051,17 @@ corrigé. Choix d'implémentation : une page n'est reconnue qu'à son adresse d�
 nom `ir`/`investor`/`investors`/`investorrelations`, au moins trois éléments) : `investors.com` (presse)
 n'est plus pris pour une société, contrairement à l'ancien code.
 
+## 2026-11-14 — deux arbitrages de M2, construits hors ligne (#145, #146)
+
+L'utilisateur a tranché les deux questions que M2 apportait. (1) Une source inconnue est jugée par un
+agent ad hoc sur quelques exemples ; admise au-dessus d'un seuil, « en suspens » dessous pour son
+arbitrage. Construit dans M1 : grille de cinq questions au référentiel (1.2.0), note calculée par le code
+(l'évaluateur répond, il ne note pas), acte `suspendre` au journal, `Fiche.en_suspens`, encadré d'arbitrage
+à l'écran (admettre / écarter), migration 063 complétée avant application. (2) Un dossier en cours de
+collecte avance sur ce qui n'en dépend pas et attend, sans limite, ce qui en dépend. Construit dans le
+chef de dossier (contrat 1.1.0) : issue `en_cours` + `suivre`, parallélisme généralisé (une attente ne
+retient que ses dépendants), arrêt `attente`, arrêt qui énumère toutes les attentes. Le nouveau contrôle
+[D11] a trouvé au premier passage un défaut réel : le compteur d'échecs se remettait à zéro à chaque
+relance d'une collecte, qui aurait tourné sans fin. Preuves : chef de dossier 100/0 et 25/25 ; fiche
+136/0 et 49/49 ; base locale 58/0, 7/7 + 16/16. Rien de déployé ni d'appliqué.
+

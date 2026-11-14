@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "natures": ["mesure", "evenement", "interpretation"],
   "niveaux": ["A", "A-", "B+", "B", "C+", "C"],
   "niveau_sans_admission": "C+",
@@ -15,6 +15,18 @@
     }
   },
   "prefixes_relations_investisseurs": ["ir", "investor", "investors", "investorrelations"],
+  "evaluation_des_sources": {
+    "libelle": "Une source inconnue est jugée par l'évaluateur de sources sur quelques-unes de ses publications. Chaque publication répond oui ou non à chaque question, avec ce qui a été constaté ; la note est la part de oui. Au seuil ou au-dessus, la source est admise par le système ; en dessous, elle est mise en suspens et attend votre arbitrage.",
+    "seuil": 0.8,
+    "exemples_min": 3,
+    "questions": {
+      "auteur_identifie": "L'auteur ou la rédaction qui publie est identifié.",
+      "date_de_publication": "La publication porte sa date.",
+      "origine_des_chiffres": "Chaque chiffre avancé renvoie à son origine (document, organisme), ou est recoupé par une source déjà admise.",
+      "premiere_main_ou_citee": "Le contenu est de première main, ou rapporte fidèlement une source qu'il nomme.",
+      "non_promotionnel": "Le contenu n'est ni publicitaire, ni publi-rédactionnel, ni écrit pour le référencement."
+    }
+  },
   "roles_qui_utilisent_les_sources": ["collecteur", "analyste", "traducteur", "architecte", "redacteur"],
   "criteres": {
     "autorite_publique": {

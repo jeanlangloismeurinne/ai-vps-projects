@@ -16,6 +16,9 @@ ligne d'acceptation qu'elle prouve, et `negatif_emetteurs.sh` prouve que chacune
   [A11] le chef de dossier s'arrête tant que la fiche n'existe pas
   [A16] les pages de relations investisseurs d'une AUTRE société (concurrent, client) : le système
         les admet lui-même, signé, critère cité ; l'utilisateur les révoque, le système ne les rétablit pas
+  [A17] une source inconnue est jugée sur quelques publications : au seuil, le système l'admet ;
+        en dessous, elle est mise en suspens et attend votre arbitrage ; la note est calculée par
+        le code, jamais déclarée par l'évaluateur (arbitrage du 2026-11-14)
   [A0]  le module n'importe que la bibliothèque standard, lui-même et le contrat du chef de dossier
 
 Les sociétés, domaines et registres ci-dessous sont inventés (`.example` est un domaine réservé).
@@ -392,6 +395,144 @@ def _a16(b: Bilan) -> None:
             "[A16] une page que l'utilisateur a révoquée reste révoquée : le système ne la rétablit pas")
 
 
+QUESTIONS = ("auteur_identifie", "date_de_publication", "origine_des_chiffres", "premiere_main_ou_citee",
+             "non_promotionnel")
+
+
+def _publication(adresse: str, non: tuple[str, ...] = (), *, sans: str = "", constat: str = "vu") -> C.ExempleEvalue:
+    """Une publication lue : « oui » partout sauf aux questions `non`."""
+    return C.ExempleEvalue(adresse=adresse, reponses=tuple(
+        C.Reponse(q, q not in non, constat) for q in QUESTIONS if q != sans))
+
+
+def _evaluation(source: str, publications, *, critere: str = "presse_financiere", niveau: str = "B+",
+                natures=("mesure", "evenement"), evaluateur: str = C.AUTEUR_EVALUATEUR) -> C.Evaluation:
+    return C.Evaluation(source=source, portee=C.PORTEE_GENERALE, natures=tuple(natures), niveau=niveau,
+                        critere=critere, exemples=tuple(publications), evaluateur=evaluateur)
+
+
+def _a17(b: Bilan) -> None:
+    from app.modules.emetteurs import regles
+    ref = regles.referentiel()["evaluation_des_sources"]
+    b.check(set(ref["questions"]) == set(QUESTIONS) and ref["seuil"] == 0.8 and ref["exemples_min"] == 3,
+            "[A17] le référentiel porte la grille : cinq questions, seuil 0,80, trois publications au moins")
+    depot = C.DepotMemoire()
+    asyncio.run(_fiche_cotee(depot))
+    ev = lambda e: asyncio.run(C.evaluer_source(depot, e, le=JOUR))  # noqa: E731
+    fiche = lambda: asyncio.run(C.lire_fiche(depot, COTEE))  # noqa: E731
+    journal = lambda: asyncio.run(C.vue_ecran(depot))["journal_des_sources"]  # noqa: E731
+
+    # Au-dessus du seuil : admise par le système, sous le critère proposé, l'évaluation au journal.
+    bonne = [_publication(f"https://www.bonne-presse.example/a{i}") for i in range(3)]
+    r = ev(_evaluation("bonne-presse.example", bonne))
+    a = journal()[-1]
+    b.check(r["issue"] == "admise" and r["note"] == 1.0 and a["acte"] == C.ADMETTRE
+            and a["auteur"] == C.AUTEUR_EVALUATEUR and a["critere"] == "presse_financiere" and a["niveau"] == "B+",
+            "[A17] note 1,00 : la source est admise par le système, signée, sous le critère proposé")
+    b.check(len(a["evaluation"].get("exemples", [])) == 3 and a["evaluation"].get("note") == 1.0
+            and a["evaluation"].get("seuil") == 0.8 and "1.00" in a["motif"],
+            "[A17] l'admission garde l'évaluation entière (publications lues, réponses, note, seuil)")
+    q = C.qualifier(fiche(), "https://bonne-presse.example/x", "mesure")
+    b.check(q.admise and q.niveau == "B+", "[A17] admise, elle qualifie ses pièces au niveau accordé")
+
+    # Exactement au seuil : admise (4 « oui » sur 5 partout = 0,80).
+    r = ev(_evaluation("juste.example", [_publication(f"https://juste.example/{i}", ("origine_des_chiffres",))
+                                         for i in range(3)]))
+    b.check(r["issue"] == "admise" and r["note"] == 0.8, "[A17] note égale au seuil : admise")
+
+    # Sous le seuil : en suspens, non admise, et l'arbitrage vous revient.
+    faible = [_publication("https://faible.example/1", ("origine_des_chiffres", "non_promotionnel")),
+              _publication("https://faible.example/2", ("origine_des_chiffres",)),
+              _publication("https://faible.example/3", ("origine_des_chiffres", "auteur_identifie"))]
+    r = ev(_evaluation("faible.example", faible))
+    b.check(r["issue"] == "en_suspens" and r["note"] == round(10 / 15, 4),
+            "[A17] note 0,67 : en suspens ; la note est la part des « oui », calculée par le code")
+    f = fiche()
+    b.check([(x.source, x.niveau, x.critere, x.note, x.seuil) for x in f.en_suspens]
+            == [("faible.example", "B+", "presse_financiere", round(10 / 15, 4), 0.8)],
+            "[A17] la fiche porte la source en suspens, avec ce que l'évaluateur proposait")
+    q = C.qualifier(f, "https://faible.example/article", "mesure")
+    b.check(not q.admise and q.niveau == "C+" and "suspens" in q.motif and "arbitrage" in q.motif,
+            "[A17] en suspens, la source n'est pas admise : ses pièces valent le plancher, le motif le dit")
+    vue = asyncio.run(C.vue_ecran(depot))
+    b.check([x["source"] for x in vue["en_suspens"]] == ["faible.example"]
+            and vue["en_suspens"][0]["evaluation"]["exemples"][0]["reponses"][2]["oui"] is False
+            and "evaluation_des_sources" in vue["referentiel"],
+            "[A17] l'écran montre ce qui attend votre arbitrage, avec les réponses publication par publication")
+
+    # Pas assez de publications lues, ou aucun critère : en suspens, quelle que soit la note.
+    r = ev(_evaluation("rare.example", [_publication("https://rare.example/1"), _publication("https://rare.example/2")]))
+    b.check(r["issue"] == "en_suspens" and r["note"] == 1.0 and "trop peu" in r["motif"],
+            "[A17] deux publications lues sur trois : en suspens même à 1,00 (on ne juge pas sur si peu)")
+    r = ev(_evaluation("inclassable.example", [_publication(f"https://inclassable.example/{i}") for i in range(3)],
+                       critere=""))
+    b.check(r["issue"] == "en_suspens" and "aucun critère" in r["motif"],
+            "[A17] aucun critère écrit ne convient : en suspens, même à 1,00")
+
+    # Une évaluation mal formée n'entre pas au journal.
+    avant = len(journal())
+    refus = [
+        ("une publication d'un autre site", _evaluation("x1.example", [_publication("https://x1.example/1"),
+                                                                       _publication("https://x1.example/2"),
+                                                                       _publication("https://autre.example/3")])),
+        ("un domaine qui ressemble", _evaluation("x2.example", [_publication(f"https://faux-x2.example/{i}")
+                                                                 for i in range(3)])),
+        ("une question sans réponse", _evaluation("x3.example", [_publication("https://x3.example/1"),
+                                                                  _publication("https://x3.example/2"),
+                                                                  _publication("https://x3.example/3",
+                                                                               sans="non_promotionnel")])),
+        ("une réponse sans constat", _evaluation("x4.example", [_publication(f"https://x4.example/{i}", constat=" ")
+                                                                 for i in range(3)])),
+        ("la même publication deux fois", _evaluation("x5.example", [_publication("https://x5.example/1")] * 3)),
+        ("un rôle qui utilise les sources", _evaluation("x6.example", [_publication(f"https://x6.example/{i}")
+                                                                       for i in range(3)],
+                                                        evaluateur="systeme:collecteur")),
+        ("un niveau au-delà du critère", _evaluation("x7.example", [_publication(f"https://x7.example/{i}")
+                                                                     for i in range(3)], niveau="A")),
+    ]
+    for quoi, e in refus:
+        b.check(refuse(C.evaluer_source(depot, e, le=JOUR)) is not None, f"[A17] évaluation refusée : {quoi}")
+    b.check(len(journal()) == avant, "[A17] une évaluation refusée n'écrit rien au journal")
+    b.check(refuse(regles.acter_source(depot, acte=C.SUSPENDRE, source="y.example", portee=C.PORTEE_GENERALE,
+                                       natures=["mesure"], niveau="B", auteur=C.UTILISATEUR, motif="m", le=JOUR,
+                                       critere="", evaluation={"note": 0.1})) is not None,
+            "[A17] seul le système met une source en suspens")
+    mauvaise = [_publication(f"https://bonne-presse.example/b{i}", ("origine_des_chiffres", "non_promotionnel"))
+                for i in range(3)]
+    b.check(refuse(C.evaluer_source(depot, _evaluation("bonne-presse.example", mauvaise, niveau="B"), le=JOUR))
+            is not None
+            and C.qualifier(fiche(), "https://bonne-presse.example/x", "mesure").admise,
+            "[A17] une source admise n'est pas remise en suspens par une évaluation (on la révoque d'abord)")
+
+    # Votre arbitrage tient : admise par vous, ou écartée — le système n'y revient pas.
+    asyncio.run(C.admettre_source(depot, source="faible.example", portee=C.PORTEE_GENERALE,
+                                  natures=["mesure", "evenement"], niveau="B", auteur=C.UTILISATEUR,
+                                  motif="j'accepte la source, au niveau B", le="2026-11-15"))
+    f = fiche()
+    b.check(not f.en_suspens or all(x.source != "faible.example" for x in f.en_suspens),
+            "[A17] admise par vous : elle sort des sources en suspens")
+    b.check(C.qualifier(f, "https://faible.example/a", "mesure").niveau == "B",
+            "[A17] admise par vous : ses pièces valent le niveau que vous avez donné")
+    b.check(refuse(C.evaluer_source(depot, _evaluation("faible.example", faible), le="2026-11-16")) is not None,
+            "[A17] le système ne réévalue pas une source que vous avez arbitrée")
+    asyncio.run(C.revoquer_source(depot, source="rare.example", portee=C.PORTEE_GENERALE, auteur=C.UTILISATEUR,
+                                  motif="blog personnel, pas une source", le="2026-11-15"))
+    f = fiche()
+    b.check(all(x.source != "rare.example" for x in f.en_suspens)
+            and not C.qualifier(f, "https://rare.example/1", "mesure").admise,
+            "[A17] écartée par vous : elle sort des sources en suspens, et n'est pas admise")
+    b.check(C.pieces_a_signaler(f, [C.Origine("p1", "https://rare.example/1", "mesure")]) == (),
+            "[A17] écarter une source en suspens ne signale aucune pièce : aucune ne s'appuyait dessus")
+    b.check(refuse(C.evaluer_source(depot, _evaluation("rare.example", [_publication(f"https://rare.example/{i}")
+                                                                         for i in range(3)]), le="2026-11-16"))
+            is not None, "[A17] le système ne réévalue pas une source que vous avez écartée")
+
+    # Le système peut réévaluer une source qu'il a lui-même mise en suspens (publications nouvelles).
+    r = ev(_evaluation("inclassable.example", [_publication(f"https://inclassable.example/{i}") for i in range(3)]))
+    b.check(r["issue"] == "admise" and all(x.source != "inclassable.example" for x in fiche().en_suspens),
+            "[A17] réévaluée par le système avec un critère : admise, elle sort des sources en suspens")
+
+
 def _a0(b: Bilan) -> None:
     permis = {"__future__", "dataclasses", "typing", "json", "re", "datetime", "functools", "pathlib", "urllib"}
     dossier = BACKEND / "app" / "modules" / "emetteurs"
@@ -420,7 +561,7 @@ def main() -> int:
     b = Bilan()
     for nom, section in (("[A1]", _a1), ("[A2]", _a2), ("[A3]", _a3), ("[A4]", _a4), ("[A5]", _a5),
                          ("[A6]", _a6), ("[A7]", _a7), ("[A8]", _a8), ("[A9]", _a9), ("[A10]", _a10),
-                         ("[A11]", _a11), ("[A16]", _a16), ("[A0]", _a0)):
+                         ("[A11]", _a11), ("[A16]", _a16), ("[A17]", _a17), ("[A0]", _a0)):
         try:
             section(b)
         except Exception as exc:  # noqa: BLE001 — une section qui plante est un échec NOMMÉ

@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-14 (arbitrages M1 rendus et construits : signature du système, pages des concurrents ; test négatif de l'écran ; reste l'acceptation sur le VPS, puis M2)
+updated: 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -33,7 +33,8 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
 2. **Migration 063, d'abord en négatif** : `bash checks/negatif_emetteurs_persist.sh` (partie 2 : base
    jetable `db_063_neg`, la 063 n'est pas appliquée à la vraie base par ce script ; la partie 1 exige la
    063 appliquée : la rejouer après). Vérifier que le rôle `portfolio_user` et les droits par défaut
-   (#15) se comportent comme en local. Puis appliquer (convention #17) :
+   (#15) se comportent comme en local (la 063 a été COMPLÉTÉE le 2026-11-14 avant toute application :
+   colonne `evaluation`, acte `suspendre` — local : 58/0, négatif 7/7 + 16/16). Puis appliquer (#17) :
    `docker cp backend/app/db/migrations/063_v3_emetteurs_et_chef_de_dossier.sql shared-postgres:/tmp/ &&
    docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/063_v3_emetteurs_et_chef_de_dossier.sql`,
    puis `bash checks/avec_base.sh check_emetteurs_persist` et de nouveau le négatif.
@@ -61,20 +62,27 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
    `_ADMISES`, `_TICKER_SECTEURS`, `qualify` et `check_emetteurs_reprise.py` ; suite complète verte ;
    cocher M1 au plan, archiver `M1-fiche-emetteur.md`.
 
-### Tranché le 2026-11-14 (construit hors ligne, conv. #144)
+   Sur l'écran, vérifier aussi l'encadré « Sources en suspens — votre arbitrage » (vide tant qu'aucun
+   évaluateur ne tourne ; rendu vérifié ici sur données fictives).
 
-Toutes les sources sont signées par le système, sauf révocation par l'utilisateur (qui tient) ; les pages
-de relations investisseurs des concurrents sont admises par le système de même. Détail et écart restant :
-`M1-fiche-emetteur.md`, « Arbitrages rendus le 2026-11-14 ». Le pays « US » des trois titres reste à
-vérifier avec la reprise (étape 3).
+### Tranché le 2026-11-14 (construit hors ligne)
+
+- Sources signées par le système, révocation de l'utilisateur qui tient ; pages des concurrents admises
+  par le système (#144). Le pays « US » des trois titres reste à vérifier (étape 3).
+- **Source inconnue** : un évaluateur ad hoc répond à une grille sur quelques publications ; le code note ;
+  admise à 0,80 (≥ 3 publications, critère écrit), **en suspens** dessous pour votre arbitrage (#145 ;
+  ligne A17). Seuil, nombre et questions : valeurs de départ en donnée. Choix par défaut à confirmer : une
+  source en suspens ne bloque pas le dossier.
+- **Dossier pendant une collecte** : ce qui n'en dépend pas avance ; ce qui en dépend l'attend, sans limite
+  de temps ; l'arrêt énumère toutes les attentes (#146, chef de dossier 1.1.0).
 
 ### Ensuite : M2 « Collecte de sources »
 
 Tri de `knowledge/edgar_feed.py`, `websearch.py`, `agents/v2/collecte_executor.py` ; acceptation écrite
-avant. Deux questions arrivent avec lui : **l'évaluateur de sources inconnues** (M1 tient la porte :
-critère écrit, rôle distinct du collecteur, journal ; aucun évaluateur n'existe) et **les pas
-asynchrones** (l'automate du chef de dossier est synchrone : `chef_de_dossier/ARCHITECTURE.md`) ; et le
-branchement de la reconnaissance des pages investisseurs des autres sociétés sur la collecte.
+avant. Les deux questions qu'il ouvrait sont tranchées et leurs portes construites ; restent à M2 :
+**l'évaluateur lui-même** (modèle, choix des publications ; il appelle `emetteurs.evaluer_source`), **la
+collecte comme travail suivi** (un pas qui rend `en_cours` et sait se `suivre` ; où vit la tâche de fond, et
+le déclencheur qui rappelle l'automate) ; et le branchement des pages investisseurs des autres sociétés.
 
 **M0 « Fondations » : ACCEPTÉ hors ligne le 2026-11-13** (récit : archive, « 2026-11-13 — M0 »).
 
@@ -99,7 +107,7 @@ payante avant le module M6 (carte).**
 - `backend/tools/mesure_gate_capacite4.py` ne compile pas (erreur d'indentation, relevée par la garde des
   accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
 - Chef de dossier : rangement en base écrit (migration 063, non appliquée) ; toujours ni déclencheur ni
-  geste à l'écran (lever une pause, enregistrer un acte) ; automate synchrone, à trancher à M2.
+  geste à l'écran (lever une pause, enregistrer un acte, relancer).
 - La collecte (M2) devra appeler `emetteurs.admettre_pages_investisseurs` sur chaque adresse rencontrée :
   aujourd'hui seul l'outil `pages-investisseurs` l'appelle, sur les pièces déjà collectées.
 
@@ -116,7 +124,7 @@ payante avant le module M6 (carte).**
   à la reconstruction (premier passage du test), pas relues d'ici là.
 - **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : dernier déploiement `d504d96` ; lots B4d, #143, B4f, B4g commités et **à ne pas déployer** (remplacés par la reconstruction). Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
-- **Migration 063 ÉCRITE, NON APPLIQUÉE** (fiches des émetteurs, journal des sources, état des dossiers) ; la suivante sera 064 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Migration 063 ÉCRITE, NON APPLIQUÉE** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.

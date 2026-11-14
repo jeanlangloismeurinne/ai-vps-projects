@@ -74,6 +74,40 @@ mutations=(
 "$REG¦        if cle in admises:¦        if False:¦[A16] section interrompue"
 # [A16] le geste du système ne cite plus son critère : l'admission serait refusée, rien n'entre.
 "$REG¦critere=CRITERE_PAGES_INVESTISSEURS,¦critere=\"\",¦[A16]"
+# [A17] la note égale au seuil ne suffit plus : le seuil écrit ne dit plus ce qu'il dit.
+"$REG¦    elif note < seuil:¦    elif note <= seuil:¦[A17] note égale au seuil : admise"
+# [A17] sous le seuil, le système admet quand même : plus d'arbitrage de l'utilisateur.
+"$REG¦    acte = SUSPENDRE if verdict else ADMETTRE¦    acte = ADMETTRE if verdict and note >= 0 else ADMETTRE¦[A17] note 0,67 : en suspens"
+# [A17] la note n'est plus la part des « oui » : un seul chiffre pour toutes les évaluations.
+"$REG¦    note = round(oui / total, 4) if total else 0.0¦    note = 1.0¦[A17] note 0,67 : en suspens"
+# [A17] on juge une source sur une ou deux publications.
+"$REG¦    if n < minimum:¦    if False:¦[A17] deux publications lues sur trois"
+# [A17] aucun critère : le système tente d'admettre quand même.
+"$REG¦    elif not critere:¦    elif False:¦[A17] section interrompue"
+# [A17] une publication d'un autre site compte pour la source évaluée.
+"$REG¦        if hc is None or not _couvre(source, hc[0]):¦        if hc is None:¦[A17] évaluation refusée : une publication d'un autre site"
+# [A17] une question peut rester sans réponse.
+"$REG¦        if sorted(repondues) != sorted(questions):¦        if False:¦[A17] évaluation refusée : une question sans réponse"
+# [A17] une réponse passe sans constat.
+"$REG¦            if not (r.constat or \"\").strip():¦            if False:¦[A17] évaluation refusée : une réponse sans constat"
+# [A17] la même publication compte trois fois.
+"$REG¦        if any(l[\"adresse\"] == ex.adresse for l in lues):¦        if False:¦[A17] évaluation refusée : la même publication deux fois"
+# [A17] une source en suspens se lit comme une source inconnue : le motif ne dit plus qu'elle attend votre arbitrage.
+"$REG¦    for x in fiche.en_suspens:¦    for x in ():¦[A17] en suspens, la source n'est pas admise"
+# [A17] l'utilisateur met lui-même une source « en suspens » (ce n'est pas un arbitrage).
+"$REG¦        if acte == SUSPENDRE and (not _est_systeme(auteur) or not evaluation):¦        if False:¦[A17] seul le système met une source en suspens"
+# [A17] une évaluation faible remet en suspens une source admise.
+"$REG¦        if acte == SUSPENDRE and en_vigueur:¦        if False:¦[A17] une source admise n'est pas remise en suspens"
+# [A17] admise par l'utilisateur, la source reste aussi « en suspens ».
+"$REG¦            suspendues.pop(cle, None)  # admise : plus en suspens¦            pass¦[A17] admise par vous : elle sort des sources en suspens"
+# [A17] l'utilisateur ne peut pas écarter une source en suspens.
+"$REG¦        if cle not in admises and cle not in suspendues:¦        if cle not in admises:¦[A17] section interrompue"
+# [A17] la fiche ne porte plus ce qui est en suspens.
+"$REG¦        en_suspens=tuple(x for x in suspendues.values() if x.portee in portees),¦        en_suspens=(),¦[A17] la fiche porte la source en suspens"
+# [A17] l'évaluation n'est pas gardée au journal : l'admission ne se justifie plus.
+"$REG¦                 \"evaluation\": dict(evaluation or {})}¦                 \"evaluation\": {}}¦[A17] l'admission garde l'évaluation entière"
+# [A17] l'écran ne montre plus ce qui attend votre arbitrage.
+"$REG¦        \"en_suspens\": [asdict(x) for x in sorted(suspendues.values(), key=lambda x: x.rang)],¦        \"en_suspens\": [],¦[A17] l'écran montre ce qui attend votre arbitrage"
 # [A0] le module se met à parler au réseau.
 "$REG¦import json¦import json\nimport socket¦[A0] regles.py importe \`socket\`"
 )

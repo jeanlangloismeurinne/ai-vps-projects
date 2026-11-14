@@ -46,6 +46,8 @@ from app.modules.emetteurs import contrat as C  # noqa: E402
 
 E1, E2 = "FICTIVE-BASE-1", "FICTIVE-BASE-2"
 SYSTEME = "systeme:evaluateur_de_sources"
+QUESTIONS = ("auteur_identifie", "date_de_publication", "origine_des_chiffres", "premiere_main_ou_citee",
+             "non_promotionnel")
 TABLES = ("emetteurs_fiches", "emetteurs_sources_actes", "chef_etats")
 
 
@@ -71,6 +73,17 @@ async def _gestes(depot) -> None:
                             motif="couverture de fond", le="2026-11-14", critere="redaction_specialisee")
     await C.admettre_source(depot, source="client.example", portee=f"emetteur:{E1}", natures=["evenement"],
                             niveau="B+", auteur=C.UTILISATEUR, motif="principal client", le="2026-11-15")
+    # Une source jugée sous le seuil (en suspens) et une au-dessus (admise), constats accentués.
+    def lue(adresse, non=()):
+        return C.ExempleEvalue(adresse, tuple(C.Reponse(q, q not in non, f"constaté : « {q} » — é à ü")
+                                              for q in QUESTIONS))
+    await C.evaluer_source(depot, C.Evaluation(
+        source="faible.example", portee=C.PORTEE_GENERALE, natures=("mesure",), niveau="B", critere="presse_financiere",
+        exemples=tuple(lue(f"https://faible.example/{i}", ("origine_des_chiffres", "auteur_identifie"))
+                       for i in range(3))), le="2026-11-16")
+    await C.evaluer_source(depot, C.Evaluation(
+        source="bonne.example", portee=C.PORTEE_GENERALE, natures=("mesure",), niveau="B", critere="presse_financiere",
+        exemples=tuple(lue(f"https://bonne.example/{i}") for i in range(3))), le="2026-11-16")
     await C.revoquer_source(depot, source="revue.example", portee="specialite:specialite_fictive",
                             auteur=C.UTILISATEUR, motif="information démentie", le="2026-12-02")
 
@@ -108,11 +121,16 @@ async def _sections(conn, etiquette: str) -> None:
     b.check(f1.revision == 2 and f1.motif.endswith("é à ü") and propres == {"autorite.example", "client.example"}
             and [r.natures for r in f1.revocations if r.source == "revue.example"] == [("interpretation",)],
             f"[B1]{etiquette} révision, accents, sources admises et révocation relus")
+    suspens = [x for x in f1.en_suspens if x.source == "faible.example"]
+    b.check(len(suspens) == 1 and suspens[0].note == 0.6 and suspens[0].seuil == 0.8
+            and suspens[0].evaluation["exemples"][0]["reponses"][0]["constat"].endswith("é à ü")
+            and any(s_.source == "bonne.example" and s_.auteur == SYSTEME for s_ in f1.sources),
+            f"[B1]{etiquette} la source en suspens et son évaluation se relisent ; l'admise sur évaluation aussi")
     b.check((await C.vue_ecran(depot, E1)) == (await C.vue_ecran(memoire, E1)),
             f"[B1]{etiquette} la vue de l'écran est la même en base et en mémoire")
     b.check(await conn.fetchval("SELECT count(*) FROM emetteurs_fiches") == fiches_avant + 3
-            and await conn.fetchval("SELECT count(*) FROM emetteurs_sources_actes") == actes_avant + 4,
-            f"[B1]{etiquette} trois révisions et quatre actes sont rangés")
+            and await conn.fetchval("SELECT count(*) FROM emetteurs_sources_actes") == actes_avant + 6,
+            f"[B1]{etiquette} trois révisions et six actes sont rangés")
 
     for table in TABLES[:2]:
         b.check(await _refuse(conn, f"UPDATE {table} SET enregistre_le = now()"),
@@ -131,7 +149,7 @@ async def _sections(conn, etiquette: str) -> None:
             f"[B3]{etiquette} une révision déjà rangée ne s'écrase pas : `EcritureConcurrente`")
     try:
         async with conn.transaction():
-            await depot.ajouter_acte(actes_avant + 4, {**(await depot.actes())[-1], "motif": "écrasé"})
+            await depot.ajouter_acte(actes_avant + 6, {**(await depot.actes())[-1], "motif": "écrasé"})
         doublon = False
     except C.EcritureConcurrente:
         doublon = True
@@ -157,6 +175,16 @@ async def _sections(conn, etiquette: str) -> None:
             f"[B4]{etiquette} une révocation qui porte un niveau est refusée par la base")
     b.check(await _refuse(conn, acte, "admettre", "[]", "B", "", C.UTILISATEUR),
             f"[B4]{etiquette} une admission sans nature est refusée par la base")
+    b.check(await _refuse(conn, acte, "suspendre", '["mesure"]', "B", "", SYSTEME),
+            f"[B4]{etiquette} une mise en suspens sans évaluation est refusée par la base")
+    avec_ev = acte.replace("auteur, motif, le)", "auteur, motif, le, evaluation)").replace(
+        "'2026-11-13')", "'2026-11-13', '{\"note\": 0.1}'::jsonb)")
+    b.check(await _refuse(conn, avec_ev, "suspendre", '["mesure"]', "B", "", C.UTILISATEUR),
+            f"[B4]{etiquette} une mise en suspens par l'utilisateur est refusée par la base")
+    b.check(await _refuse(conn, avec_ev, "revoquer", "[]", "", "", C.UTILISATEUR),
+            f"[B4]{etiquette} une révocation qui porte une évaluation est refusée par la base")
+    b.check(not await _refuse(conn, avec_ev, "suspendre", '["mesure"]', "B", "", SYSTEME),
+            f"[B4]{etiquette} témoin : une mise en suspens du système, sur évaluation, est acceptée")
     b.check(not await _refuse(conn, acte, "admettre", '["mesure"]', "B", "", C.UTILISATEUR),
             f"[B4]{etiquette} témoin : la même ligne, conforme, est acceptée")
 

@@ -50,6 +50,8 @@ mutations=(
 "$CHEF¦\"WHERE dossier = \$1 AND revision = \$3 RETURNING revision\"¦\"WHERE dossier = \$1 AND \$3 > 0 RETURNING revision\"¦[B6] dossier déjà rangé"
 # [B6] un dossier neuf rangé deux fois : le second écrase le premier.
 "$CHEF¦\"ON CONFLICT (dossier) DO NOTHING RETURNING revision\"¦\"ON CONFLICT (dossier) DO UPDATE SET etat = EXCLUDED.etat RETURNING revision\"¦[B6] dossier neuf"
+# [B1] l'évaluation n'est pas rangée : une source en suspens se relit sans ce qui la justifiait.
+"$EME¦\"evaluation\": json.loads(l[\"evaluation\"])}¦\"evaluation\": {}}¦[B1] la source en suspens et son évaluation se relisent"
 # [B5] l'état relu n'est pas celui qu'on a rangé.
 "$CHEF¦            depot.ranger(dossier, json.loads(ligne[\"etat\"]))¦            pass¦[B5] l'état rangé en base se relit identique"
 )
@@ -113,10 +115,14 @@ rougit "contenu->>'emetteur' = emetteur AND (contenu->>'revision')::integer = re
 rougit "        AND btrim(coalesce(contenu->>'motif', '')) <> ''" "" "une révision sans motif est refusée par la base"
 rougit "NOT (acte = 'admettre' AND auteur LIKE 'systeme:%' AND btrim(critere) = '')" "TRUE" \
        "une admission du système sans critère est refusée par la base"
-rougit "(acte = 'revoquer' AND jsonb_array_length(natures) = 0 AND niveau = '' AND critere = '')" "(acte = 'revoquer')" \
+rougit "OR (acte = 'revoquer' AND jsonb_array_length(natures) = 0 AND niveau = '' AND critere = ''" "OR (acte = 'revoquer' AND TRUE" \
        "une révocation qui porte un niveau"
-rougit "(acte = 'admettre' AND jsonb_array_length(natures) >= 1 AND btrim(niveau) <> '')" "(acte = 'admettre')" \
+rougit "(acte IN ('admettre', 'suspendre') AND jsonb_array_length(natures) >= 1 AND btrim(niveau) <> '')" "(acte IN ('admettre', 'suspendre'))" \
        "une admission sans nature est refusée par la base"
+rougit "acte <> 'suspendre' OR (auteur LIKE 'systeme:%' AND evaluation <> '{}'::jsonb)" "TRUE" \
+       "une mise en suspens par l'utilisateur est refusée par la base"
+rougit "            AND evaluation = '{}'::jsonb))," "))," \
+       "une révocation qui porte une évaluation est refusée par la base"
 rougit "    CONSTRAINT emetteurs_fiches_unique UNIQUE (emetteur, revision)," "" "une révision déjà rangée ne s'écrase pas"
 rougit "    rang          integer     PRIMARY KEY," "    rang          integer     NOT NULL," \
        "un rang déjà pris au journal ne s'écrase pas"

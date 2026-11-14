@@ -3714,3 +3714,49 @@ dans la fiche d'un émetteur.
 `check_emetteurs_reprise.py` (l'écart avec l'ancien code se referme après l'acte du système) ; outil
 `tools/emetteurs.sh pages-investisseurs [--a-blanc]`. À brancher sur la collecte en M2.
 
+
+### #145 — une source inconnue est jugée sur quelques publications : admise au seuil, en suspens dessous (arbitrage du 2026-11-14)
+
+**Logique de fonds.** L'analyste qui veut se servir d'une source nouvelle la présente avec quelques
+articles à l'appui ; le responsable de la recherche l'agrée quand la grille est remplie, et tranche
+lui-même les cas limites. D'ici là, personne ne s'en sert.
+
+**Règle.** L'évaluateur de sources (`systeme:evaluateur_de_sources`, jamais un rôle qui utilise les
+sources) lit quelques publications de la source et répond, pour chacune, oui ou non avec ce qu'il a
+constaté, aux questions écrites au référentiel (`evaluation_des_sources` : auteur identifié, date,
+origine des chiffres, première main ou source nommée, non promotionnel). Il PROPOSE le critère écrit, les
+natures et le niveau ; il NE NOTE PAS : le code calcule la note (part des oui) et décide (#68 : le code
+juge la forme, l'évaluateur le sens). Note ≥ seuil (0,80), au moins 3 publications et un critère qui
+convient → **admise** par le système. Sinon → **en suspens** (acte `suspendre` du journal) : non admise,
+montrée à l'écran avec toutes les réponses ; l'utilisateur l'**admet** ou l'**écarte** (révocation d'une
+source en suspens : aucune pièce à signaler), et le système n'y revient plus. Une évaluation mal formée
+(publication hors de la source, question sans réponse ou sans constat) est refusée sans rien écrire. Une
+source admise ne se remet pas en suspens : on la révoque. Choix par défaut, à confirmer à l'usage : une
+source en suspens ne bloque pas le dossier ; admise plus tard, ses pièces remontent d'elles-mêmes (la
+qualification se calcule à la lecture, #53).
+
+**Construit (2026-11-14, hors ligne).** `emetteurs.evaluer_source` (contrat 1.1.0, référentiel 1.2.0),
+`Fiche.en_suspens`, qualification « en suspens », vue de l'écran et encadré d'arbitrage ; migration 063
+(non appliquée) : colonne `evaluation`, acte `suspendre`, contraintes. Preuves : `check_emetteurs.py`
+[A17] + 17 mutations ; `check_emetteurs_persist.py` [B1]/[B4] + 1 mutation de code et 2 de migration.
+L'évaluateur réel (modèle, choix des publications) arrive avec M2. Seuil, nombre et questions : valeurs
+de départ, en donnée, à recaler sur les premières évaluations.
+
+
+### #146 — un dossier avance sur tout ce qui ne dépend pas d'un travail en cours ; ce qui en dépend l'attend (arbitrage du 2026-11-14)
+
+**Logique de fonds.** L'analyste qui attend des documents avance sur ce qui ne les exige pas ; il
+n'écrit pas la partie qui en a besoin avant de les avoir, quitte à attendre.
+
+**Règle.** Un pas du chef de dossier peut lancer un travail qui dure et rendre `en_cours` ; il déclare
+`suivre`, rappelé une fois par passage. Tout ce qui ne dépend pas de ce pas avance ; ce qui en dépend
+attend, sans limite de temps (arrêt `attente`, sans geste : le passage suivant reprend). Un travail qui
+échoue en route est relancé une fois, puis arrête le dossier (le compteur d'échecs ne se remet PAS à
+zéro au lancement : défaut trouvé par [D11] le 2026-11-14, il aurait relancé sans fin). Plus
+généralement, un acte attendu, une lecture ou un échec répété ne retient que les pas qui en dépendent ;
+l'arrêt énumère toutes les attentes, et chaque geste vise l'une d'elles. La pause de dépense reste
+globale : pendant une pause, rien ne se fait, pas même suivre un travail.
+
+**Construit (2026-11-14, hors ligne).** Contrat du chef de dossier 1.1.0 (`en_cours`, `suivre`,
+`Attente`, `ARRET_ATTENTE`) ; `check_chef_de_dossier.py` [D11]-[D12] (100/0) ; `negatif_chef_de_dossier.sh`
+25/25. Où vit le travail long et ce qui rappelle l'automate : avec M2 et le déclencheur.

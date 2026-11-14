@@ -3,8 +3,10 @@ s'importe du dehors : on passe par `contrat.py`).
 
 Trois familles :
   · la FICHE : ce qu'une fiche valide contient, et comment une correction devient une révision ;
-  · le JOURNAL DES SOURCES : ce qu'un acte d'admission ou de révocation doit porter, qui a le
-    droit de le faire, et l'état en vigueur reconstruit en relisant le journal dans l'ordre ;
+  · le JOURNAL DES SOURCES : ce qu'un acte d'admission, de révocation ou de mise en suspens doit
+    porter, qui a le droit de le faire, et l'état en vigueur reconstruit en relisant le journal ;
+  · l'ÉVALUATION d'une source inconnue : la note calculée sur les réponses de l'évaluateur, et la
+    décision (admise / en suspens) prise par le code contre le seuil du référentiel ;
   · la QUALIFICATION : ce que vaut une adresse pour une nature d'information, sur un émetteur.
 
 Aucune horloge : la date d'un acte est donnée par celui qui le fait. Aucun réseau, aucun modèle.
@@ -30,11 +32,13 @@ from .contrat import (
     PREFIXE_PORTEE_SPECIALITE,
     PREFIXE_SYSTEME,
     REVOQUER,
+    SUSPENDRE,
     UTILISATEUR,
     VERSION_CONTRAT,
     ActeRefuse,
     Cotation,
     Depot,
+    Evaluation,
     Fiche,
     FicheAbsente,
     Lieu,
@@ -43,6 +47,7 @@ from .contrat import (
     Reference,
     Signalement,
     SourceAdmise,
+    SourceEnSuspens,
     SourceRevoquee,
 )
 
@@ -82,6 +87,14 @@ def referentiel() -> Mapping[str, Any]:
         if c["niveau_max"] not in niveaux or not c["natures"] or not set(c["natures"]) <= set(natures) \
                 or not str(c.get("texte", "")).strip():
             defauts.append(f"critère « {nom} » mal formé")
+    ev = ref.get("evaluation_des_sources") or {}
+    seuil, minimum, questions = ev.get("seuil"), ev.get("exemples_min"), ev.get("questions") or {}
+    if not isinstance(seuil, (int, float)) or isinstance(seuil, bool) or not 0 < seuil <= 1:
+        defauts.append("évaluation des sources : seuil hors de ]0, 1]")
+    if not isinstance(minimum, int) or isinstance(minimum, bool) or minimum < 1:
+        defauts.append("évaluation des sources : nombre minimal de publications lues < 1")
+    if not questions or any(not _NOM.match(q) or not str(t).strip() for q, t in questions.items()):
+        defauts.append("évaluation des sources : questions vides ou mal formées")
     if defauts:
         raise ValueError("référentiel des émetteurs incohérent : " + " ; ".join(defauts))
     return ref
@@ -223,7 +236,8 @@ async def etablir_fiche(depot: Depot, emetteur: str, *, raison_sociale: str, aut
 
 
 def _fiche_depuis(contenu: Mapping[str, Any], sources: tuple[SourceAdmise, ...] = (),
-                  revocations: tuple[SourceRevoquee, ...] = ()) -> Fiche:
+                  revocations: tuple[SourceRevoquee, ...] = (),
+                  en_suspens: tuple[SourceEnSuspens, ...] = ()) -> Fiche:
     version = contenu.get("version_contrat")
     if version != VERSION_CONTRAT:
         # Une fiche d'une autre version ne se lit pas « au mieux » : elle se refuse, nommément.
@@ -242,6 +256,7 @@ def _fiche_depuis(contenu: Mapping[str, Any], sources: tuple[SourceAdmise, ...] 
         le=contenu["le"],
         sources=sources,
         revocations=revocations,
+        en_suspens=en_suspens,
         version_referentiel=contenu["version_referentiel"],
     )
 
@@ -260,12 +275,13 @@ async def lire_fiche(depot: Depot, emetteur: str) -> Fiche:
     if not rangees:
         raise FicheAbsente(f"aucune fiche n'est établie pour « {emetteur} »")
     contenu = rangees[-1]
-    admises, revoquees, _ = etat_des_sources(await depot.actes())
+    admises, revoquees, _, suspendues = etat_des_sources(await depot.actes())
     portees = _portees_de(contenu)
     return _fiche_depuis(
         contenu,
         sources=tuple(s for s in admises.values() if s.portee in portees),
         revocations=tuple(r for r in revoquees.values() if r.portee in portees),
+        en_suspens=tuple(x for x in suspendues.values() if x.portee in portees),
     )
 
 
@@ -275,13 +291,15 @@ Cle = tuple[str, str]  # (source, portée)
 
 
 def etat_des_sources(actes: Sequence[Mapping[str, Any]]) -> tuple[
-        dict[Cle, SourceAdmise], dict[Cle, SourceRevoquee], dict[Cle, str]]:
+        dict[Cle, SourceAdmise], dict[Cle, SourceRevoquee], dict[Cle, str], dict[Cle, SourceEnSuspens]]:
     """L'état en vigueur, reconstruit en relisant le journal dans l'ordre : ce qui est admis, ce
-    qui est révoqué (avec les natures que la révocation a retirées), et qui a parlé en dernier
-    sur chaque couple (source, portée)."""
+    qui est révoqué (avec les natures que la révocation a retirées), qui a parlé en dernier sur
+    chaque couple (source, portée), et ce qui est en suspens. Un couple est dans UN seul de ces
+    états : admis, révoqué (ou écarté), en suspens."""
     admises: dict[Cle, SourceAdmise] = {}
     revoquees: dict[Cle, SourceRevoquee] = {}
     dernier: dict[Cle, str] = {}
+    suspendues: dict[Cle, SourceEnSuspens] = {}
     for a in sorted(actes, key=lambda x: int(x["rang"])):
         cle = (a["source"], a["portee"])
         if a["acte"] == ADMETTRE:
@@ -290,7 +308,17 @@ def etat_des_sources(actes: Sequence[Mapping[str, Any]]) -> tuple[
                 niveau=a["niveau"], auteur=a["auteur"], critere=a["critere"], motif=a["motif"],
                 le=a["le"], rang=int(a["rang"]))
             revoquees.pop(cle, None)
+            suspendues.pop(cle, None)  # admise : plus en suspens
+        elif a["acte"] == SUSPENDRE:
+            ev = a.get("evaluation") or {}
+            suspendues[cle] = SourceEnSuspens(
+                source=a["source"], portee=a["portee"], natures=tuple(a["natures"]), niveau=a["niveau"],
+                critere=a["critere"], note=float(ev.get("note", 0.0)), seuil=float(ev.get("seuil", 0.0)),
+                motif=a["motif"], le=a["le"], rang=int(a["rang"]), evaluation=ev)
+            admises.pop(cle, None)
+            revoquees.pop(cle, None)
         elif a["acte"] == REVOQUER:
+            suspendues.pop(cle, None)  # écartée : plus en suspens
             retiree = admises.pop(cle, None)
             revoquees[cle] = SourceRevoquee(
                 source=a["source"], portee=a["portee"],
@@ -299,7 +327,7 @@ def etat_des_sources(actes: Sequence[Mapping[str, Any]]) -> tuple[
         else:
             raise ValueError(f"journal des sources : acte inconnu au rang {a['rang']} ({a['acte']!r})")
         dernier[cle] = a["auteur"]
-    return admises, revoquees, dernier
+    return admises, revoquees, dernier, suspendues
 
 
 def _source(source: str) -> str:
@@ -332,7 +360,8 @@ def _refuser_un_role_qui_utilise(auteur: str) -> None:
 
 
 async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, natures: Sequence[str],
-                       niveau: str, auteur: str, motif: str, le: str, critere: str) -> int:
+                       niveau: str, auteur: str, motif: str, le: str, critere: str,
+                       evaluation: Mapping[str, Any] | None = None) -> int:
     ref = referentiel()
     auteur = _auteur(auteur)
     motif = _texte(motif, "motif")
@@ -342,7 +371,7 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
     critere = (critere or "").strip()
 
     actes = list(await depot.actes())
-    admises, _, dernier = etat_des_sources(actes)
+    admises, _, dernier, suspendues = etat_des_sources(actes)
     cle = (source, portee)
 
     if _est_systeme(auteur):
@@ -351,7 +380,7 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
             raise ActeRefuse(f"« {source} » ({portee}) : l'utilisateur a statué en dernier ; "
                              "le système ne revient pas sur sa décision")
 
-    if acte == ADMETTRE:
+    if acte in (ADMETTRE, SUSPENDRE):
         connues = ref["natures"]
         demandees = {(n or "").strip() for n in natures}
         if not demandees:
@@ -364,7 +393,9 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
             raise ActeRefuse(f"niveau inconnu : {niveau!r} (échelle : {', '.join(ref['niveaux'])})")
         if critere and critere not in ref["criteres"]:
             raise ActeRefuse(f"critère d'admission inconnu : {critere!r}")
-        if _est_systeme(auteur):
+        if acte == SUSPENDRE and (not _est_systeme(auteur) or not evaluation):
+            raise ActeRefuse("seul le système met une source en suspens, et sur une évaluation")
+        if _est_systeme(auteur) and (critere or acte == ADMETTRE):
             if not critere:
                 raise ActeRefuse("une admission du système cite le critère écrit qu'elle applique")
             regle = ref["criteres"][critere]
@@ -375,13 +406,16 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
                 raise ActeRefuse(f"le critère « {critere} » n'accorde pas plus que {regle['niveau_max']} ; "
                                  f"demandé : {niveau}")
         en_vigueur = admises.get(cle)
+        if acte == SUSPENDRE and en_vigueur:
+            raise ActeRefuse(f"« {source} » ({portee}) est admise : on ne la suspend pas, on la révoque")
         if en_vigueur and list(en_vigueur.natures) == natures_rangees and en_vigueur.niveau == niveau:
             raise ActeRefuse(f"« {source} » ({portee}) est déjà admise à l'identique")
-        ligne = {"natures": natures_rangees, "niveau": niveau, "critere": critere}
+        ligne = {"natures": natures_rangees, "niveau": niveau, "critere": critere,
+                 "evaluation": dict(evaluation or {})}
     elif acte == REVOQUER:
-        if cle not in admises:
-            raise ActeRefuse(f"« {source} » ({portee}) n'est pas admise : rien à révoquer")
-        ligne = {"natures": [], "niveau": "", "critere": ""}
+        if cle not in admises and cle not in suspendues:
+            raise ActeRefuse(f"« {source} » ({portee}) n'est ni admise ni en suspens : rien à révoquer")
+        ligne = {"natures": [], "niveau": "", "critere": "", "evaluation": {}}
     else:
         raise ActeRefuse(f"acte inconnu : {acte!r}")
 
@@ -389,6 +423,75 @@ async def acter_source(depot: Depot, *, acte: str, source: str, portee: str, nat
     await depot.ajouter_acte(rang, {"rang": rang, "acte": acte, "source": source, "portee": portee,
                                     "auteur": auteur, "motif": motif, "le": le, **ligne})
     return rang
+
+
+# ── L'évaluation d'une source inconnue ────────────────────────────────────────────────────────
+
+def noter(evaluation: Evaluation) -> dict[str, Any]:
+    """Valide la FORME d'une évaluation et calcule sa note : la part des « oui », sur toutes les
+    questions du référentiel, pour toutes les publications lues. Rend l'évaluation telle qu'elle se
+    range au journal. Le code ne juge pas le SENS d'une réponse (convention #68) ; il vérifie
+    qu'elle porte sur une publication de la source, qu'elle répond à chaque question et qu'elle se
+    motive — une forme qui manque ne se « complète » pas, elle se refuse."""
+    regle = referentiel()["evaluation_des_sources"]
+    questions = list(regle["questions"])
+    source = _source(evaluation.source)
+    lues: list[dict[str, Any]] = []
+    for ex in evaluation.exemples:
+        hc = _hote_et_chemin(ex.adresse)
+        if hc is None or not _couvre(source, hc[0]):
+            raise ActeRefuse(f"publication lue hors de la source évaluée ({source}) : {ex.adresse!r}")
+        if any(l["adresse"] == ex.adresse for l in lues):
+            raise ActeRefuse(f"la même publication est lue deux fois : {ex.adresse!r}")
+        repondues = [r.question for r in ex.reponses]
+        if sorted(repondues) != sorted(questions):
+            manque = sorted(set(questions) - set(repondues))
+            de_trop = sorted(set(repondues) - set(questions))
+            raise ActeRefuse(f"{ex.adresse} : chaque question du référentiel reçoit UNE réponse"
+                             + (f" ; sans réponse : {', '.join(manque)}" if manque else "")
+                             + (f" ; inconnues ou en double : {', '.join(de_trop) or 'doublon'}"
+                                if de_trop or len(repondues) != len(set(repondues)) else ""))
+        for r in ex.reponses:
+            if not (r.constat or "").strip():
+                raise ActeRefuse(f"{ex.adresse} — « {r.question} » : une réponse se motive par ce qui a été constaté")
+        lues.append({"adresse": ex.adresse,
+                     "reponses": [{"question": r.question, "oui": bool(r.oui), "constat": r.constat.strip()}
+                                  for r in sorted(ex.reponses, key=lambda r: questions.index(r.question))]})
+    total = len(lues) * len(questions)
+    oui = sum(1 for l in lues for r in l["reponses"] if r["oui"])
+    note = round(oui / total, 4) if total else 0.0
+    return {"note": note, "seuil": float(regle["seuil"]), "exemples_min": int(regle["exemples_min"]),
+            "version_referentiel": referentiel()["version"], "evaluateur": evaluation.evaluateur,
+            "exemples": lues}
+
+
+async def evaluer_source(depot: Depot, evaluation: Evaluation, *, le: str) -> dict[str, Any]:
+    """Arbitrage du 2026-11-14 : une source inconnue est jugée sur quelques publications ; au seuil
+    ou au-dessus, le système l'admet ; en dessous, il la met en suspens pour votre arbitrage. Ce que
+    ferait un vrai fonds : l'analyste propose une source nouvelle avec quelques articles à l'appui ;
+    le responsable de la recherche l'agrée quand la grille est remplie, et tranche lui-même les cas
+    limites — l'analyste ne s'en sert pas d'ici là."""
+    ev = noter(evaluation)
+    note, seuil, minimum = ev["note"], ev["seuil"], ev["exemples_min"]
+    n = len(ev["exemples"])
+    critere = (evaluation.critere or "").strip()
+    if n < minimum:
+        verdict = f"trop peu de publications lues pour juger ({n} sur {minimum} au moins)"
+    elif not critere:
+        verdict = "aucun critère écrit ne convient à cette source"
+    elif note < seuil:
+        verdict = f"note {note:.2f} sous le seuil {seuil:.2f}"
+    else:
+        verdict = ""
+    acte = SUSPENDRE if verdict else ADMETTRE
+    motif = (f"évaluée sur {n} publication(s) : note {note:.2f} (seuil {seuil:.2f})"
+             + (f" — en suspens, {verdict} ; attend votre arbitrage" if verdict else f" — admise sous « {critere} »"))
+    rang = await acter_source(
+        depot, acte=acte, source=evaluation.source, portee=evaluation.portee, natures=evaluation.natures,
+        niveau=evaluation.niveau, auteur=evaluation.evaluateur, motif=motif, le=le, critere=critere,
+        evaluation=ev)
+    return {"issue": "admise" if acte == ADMETTRE else "en_suspens", "rang": rang, "note": note,
+            "seuil": seuil, "motif": motif}
 
 
 # ── Les pages de relations investisseurs des autres sociétés ──────────────────────────────────
@@ -423,7 +526,7 @@ async def admettre_pages_investisseurs(depot: Depot, adresses: Sequence[str], *,
             vus.append(d)
     rendu: list[dict[str, Any]] = []
     for d in vus:
-        admises, _, dernier = etat_des_sources(await depot.actes())
+        admises, _, dernier, _ = etat_des_sources(await depot.actes())
         cle = (d, PORTEE_GENERALE)
         if dernier.get(cle) == UTILISATEUR:  # l'utilisateur a statué : on n'y revient pas
             rendu.append({"source": d, "issue": "ecartee", "raison": "l'utilisateur a statué en dernier"})
@@ -486,6 +589,11 @@ def qualifier(fiche: Fiche, adresse: str, nature: str) -> Qualification:
         s = autres[0]
         return Qualification(False, plancher,
                              f"{s.source} est admise pour {', '.join(s.natures)}, pas pour {nature}", s.source)
+    for x in fiche.en_suspens:
+        if _couvre(x.source, hote):
+            return Qualification(False, plancher,
+                                 f"{x.source} en suspens depuis le {x.le} (note {x.note:.2f} sous le seuil "
+                                 f"{x.seuil:.2f} ou non jugeable) : attend votre arbitrage", x.source)
     for r in fiche.revocations:
         if _couvre(r.source, hote):
             return Qualification(False, plancher,
@@ -518,17 +626,19 @@ async def vue_ecran(depot: Depot, emetteur: str | None) -> dict[str, Any]:
         liste.append({"emetteur": f.emetteur, "raison_sociale": f.raison_sociale,
                       "specialite": f.specialite, "revision": f.revision, "le": f.le})
     actes = sorted((dict(a) for a in await depot.actes()), key=lambda a: int(a["rang"]))
-    admises, _, _ = etat_des_sources(actes)
-    en_vigueur = {s.rang for s in admises.values()}
+    admises, _, _, suspendues = etat_des_sources(actes)
+    en_vigueur = {s.rang for s in admises.values()} | {x.rang for x in suspendues.values()}
     for a in actes:
-        a["en_vigueur"] = a["acte"] == ADMETTRE and int(a["rang"]) in en_vigueur
+        a["en_vigueur"] = a["acte"] in (ADMETTRE, SUSPENDRE) and int(a["rang"]) in en_vigueur
     vue: dict[str, Any] = {
         "version_contrat": VERSION_CONTRAT,
         "emetteurs": liste,
         "journal_des_sources": actes,
+        # Ce qui attend votre arbitrage, toutes portées confondues, le plus ancien d'abord.
+        "en_suspens": [asdict(x) for x in sorted(suspendues.values(), key=lambda x: x.rang)],
         "referentiel": {k: ref[k] for k in ("version", "natures", "niveaux", "niveau_sans_admission",
                                              "niveau_adresse_illisible",
-                                             "genres_de_lieu", "criteres")},
+                                             "genres_de_lieu", "criteres", "evaluation_des_sources")},
     }
     if emetteur is not None:
         vue["fiche"] = asdict(await lire_fiche(depot, emetteur))

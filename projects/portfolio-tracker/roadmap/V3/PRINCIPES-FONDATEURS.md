@@ -60,7 +60,12 @@ cette situation ?** Et on s'en sert pour orienter la conception.
   corrige. Ce n'est plus un acte humain préalable, c'est un acte du système sous contrôle a posteriori.
   Précisé le 2026-11-14 : **toutes** les sources sont signées par le système, sauf révocation par
   l'utilisateur (qui tient) ; les pages de relations investisseurs des concurrents sont ajoutées par le
-  système de même (conv. #144).
+  système de même (conv. #144). Second arbitrage du 2026-11-14 : une source **inconnue** est jugée par un
+  évaluateur ad hoc sur quelques exemples ; au-dessus d'un seuil, le système l'admet ; en dessous, elle est
+  **en suspens** et attend l'arbitrage de l'utilisateur (conv. #145).
+- **Un dossier avance sur ce qui peut avancer** (2026-11-14) : pendant une collecte, ce qui n'en dépend pas
+  continue ; ce qui a besoin de ses informations l'attend, quitte à prendre du temps. On parallélise ce qui
+  peut l'être (conv. #146).
 
 **Arbitrages déjà rendus de cette façon** (pour le ton et le niveau, pas pour être relus en détail) :
 - *Le cours coté et sa date* (2026-09-23, conv. #81) : quand le dernier cours manque, un fonds

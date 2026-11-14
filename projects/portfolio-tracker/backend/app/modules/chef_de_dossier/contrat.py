@@ -9,26 +9,38 @@ Trois familles d'objets :
   · ce qu'un module DÉCLARE (`Pas`) et ce que son pas REND (`Resultat`, `Depense`) ;
   · ce que le chef de dossier REND (`EtatDossier`, avec son `Arret` et son journal) — l'objet de
     sortie versionné, lu par une seule fonction : `lire_etat` ;
-  · où l'état se range (`Depot`) : une interface. Le rangement en base arrivera avec le premier
-    module réel ; le contrat ne change pas ce jour-là.
+  · où l'état se range (`Depot`) : une interface (en mémoire pour les contrôles, en base via
+    `depot_base`).
+
+Version 1.1.0 (2026-11-14, arbitrage de l'utilisateur) : un pas peut LANCER un travail qui dure (une
+collecte) et rendre « en cours ». Le dossier avance alors sur tout ce qui ne dépend pas de ce
+travail ; ce qui en dépend l'attend, sans limite de temps. Ce que ferait un vrai fonds : l'analyste
+qui attend des documents avance sur ce qui ne les exige pas ; il n'écrit pas la partie qui en a
+besoin avant de les avoir. L'arrêt porte donc TOUTES les attentes du dossier, pas seulement la
+première.
 
 Rien ici ne connaît une société, un pays, une place de cotation ni un fournisseur.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Callable, Mapping, Protocol
 
-VERSION_CONTRAT = "1.0.0"
+VERSION_CONTRAT = "1.1.0"
 
 # Issues d'un pas. « indisponible » n'est pas un échec : la source demandée n'existe pas pour ce
 # dossier, le pas le NOMME, et le dossier continue avec cette réserve (une société sans dépôt
 # réglementaire traverse le parcours sans plantage).
+#
+# « en_cours » : le pas a LANCÉ un travail qui se poursuit hors de l'automate (une collecte) ; il
+# n'est pas fait. Le chef de dossier le suit à chaque passage (`Pas.suivre`) jusqu'à une autre issue,
+# et avance en attendant sur ce qui n'en dépend pas.
 FAIT = "fait"
 INDISPONIBLE = "indisponible"
 ACTE_HUMAIN = "acte_humain"
 ECHEC = "echec"
-ISSUES = (FAIT, INDISPONIBLE, ACTE_HUMAIN, ECHEC)
+EN_COURS = "en_cours"
+ISSUES = (FAIT, INDISPONIBLE, ACTE_HUMAIN, ECHEC, EN_COURS)
 
 # Natures d'un pas : « automatique » s'exécute ; « humain » est un acte qui vous revient (valider
 # la carte, décider en comité) — le chef de dossier s'y arrête en le nommant, il ne l'exécute jamais.
@@ -40,7 +52,11 @@ ARRET_ACTE_HUMAIN = "acte_humain"
 ARRET_PAUSE_DEPENSE = "pause_depense"
 ARRET_ECHEC_REPETE = "echec_repete"
 ARRET_PARCOURS_TERMINE = "parcours_termine"
-MOTIFS_ARRET = (ARRET_ACTE_HUMAIN, ARRET_PAUSE_DEPENSE, ARRET_ECHEC_REPETE, ARRET_PARCOURS_TERMINE)
+# Plus rien ne peut avancer, mais un travail est en cours : ce n'est ni une panne ni un acte qui vous
+# revient. Le dossier reprend seul au passage suivant, quand le travail a abouti.
+ARRET_ATTENTE = "attente"
+MOTIFS_ARRET = (ARRET_ACTE_HUMAIN, ARRET_PAUSE_DEPENSE, ARRET_ECHEC_REPETE, ARRET_PARCOURS_TERMINE,
+                ARRET_ATTENTE)
 
 
 def _usd(x: float) -> float:
@@ -103,7 +119,9 @@ class Pas:
 
     `apres` : les pas qui doivent être faits avant. `cout_estime_usd` : ce que le module pense
     dépenser — sert à estimer le coût restant jusqu'au comité à chaque pause. `acte` : pour un pas
-    humain, l'acte attendu, en mots de gérant."""
+    humain, l'acte attendu, en mots de gérant. `suivre` : pour un pas qui peut rendre « en cours »,
+    ce qui dit où en est le travail lancé (rappelé une fois par passage, jusqu'à une autre issue).
+    Un pas qui rend « en cours » sans savoir se suivre échoue : le dossier ne l'attendrait jamais."""
     nom: str
     module: str
     nature: str = AUTOMATIQUE
@@ -111,6 +129,7 @@ class Pas:
     executer: Callable[[Contexte], Resultat] | None = None
     cout_estime_usd: float = 0.0
     acte: str = ""
+    suivre: Callable[[Contexte], Resultat] | None = None
 
     def __post_init__(self) -> None:
         if not self.nom.strip() or not self.module.strip():
@@ -119,10 +138,23 @@ class Pas:
             raise ValueError(f"nature inconnue : {self.nature!r}")
         if self.nature == AUTOMATIQUE and self.executer is None:
             raise ValueError(f"le pas automatique « {self.nom} » n'a rien à exécuter")
-        if self.nature == HUMAIN and (self.executer is not None or not self.acte.strip()):
+        if self.nature == HUMAIN and (self.executer is not None or self.suivre is not None
+                                      or not self.acte.strip()):
             raise ValueError(f"le pas humain « {self.nom} » nomme son acte et n'exécute rien")
         if self.cout_estime_usd < 0:
             raise ValueError("un coût estimé n'est jamais négatif")
+
+
+@dataclass(frozen=True)
+class Attente:
+    """Une chose que le dossier attend : un acte de votre part (`acte_humain`, avec la `cle` à
+    enregistrer), une relance après deux échecs (`echec_repete`), ou un travail en cours (`attente`,
+    sans geste : il aboutira seul)."""
+    motif: str
+    pas: str
+    cle: str = ""
+    acte: str = ""
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -132,7 +164,9 @@ class Arret:
     `cle` identifie l'acte à enregistrer pour lever l'arrêt. `cout_restant_estime_usd` : la somme
     des coûts estimés des pas restants — donnée à CHAQUE arrêt, pour juger du coût total jusqu'au
     comité. `ratio_constate` : dépensé / estimé sur les pas déjà faits (None tant que rien n'était
-    estimé) : il dit de combien les estimations se trompent, sans corriger le chiffre à votre place."""
+    estimé) : il dit de combien les estimations se trompent, sans corriger le chiffre à votre place.
+    `attentes` : TOUT ce que le dossier attend à cet arrêt (le motif principal en est la première
+    chose qui vous revient) — plusieurs branches du parcours peuvent attendre en même temps."""
     motif: str
     pas: str = ""
     cle: str = ""
@@ -141,6 +175,7 @@ class Arret:
     depense_totale_usd: float = 0.0
     cout_restant_estime_usd: float = 0.0
     ratio_constate: float | None = None
+    attentes: tuple[Attente, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -158,10 +193,14 @@ class EtatDossier:
     """L'état d'un dossier : l'objet de sortie du chef de dossier.
 
     Immuable : chaque geste rend un NOUVEL état. Aucune date n'y entre (deux passages sur le même
-    dossier rendent le même état, octet pour octet) ; l'horodatage est l'affaire du dépôt."""
+    dossier rendent le même état, octet pour octet) ; l'horodatage est l'affaire du dépôt.
+    `en_cours` : (pas, motif) des travaux lancés et pas encore aboutis. `demandes` : (pas, clé, acte)
+    des actes qu'un pas a demandés en cours de route et que vous n'avez pas encore accomplis."""
     dossier: str
     faits: tuple[str, ...] = ()
     reserves: tuple[tuple[str, str], ...] = ()
+    en_cours: tuple[tuple[str, str], ...] = ()
+    demandes: tuple[tuple[str, str, str], ...] = ()
     actes_accomplis: tuple[str, ...] = ()
     echecs: tuple[tuple[str, int], ...] = ()
     depense: Depense = field(default_factory=Depense)
@@ -177,13 +216,15 @@ class EtatDossier:
             "dossier": self.dossier,
             "faits": list(self.faits),
             "reserves": [list(r) for r in self.reserves],
+            "en_cours": [list(e) for e in self.en_cours],
+            "demandes": [list(d) for d in self.demandes],
             "actes_accomplis": list(self.actes_accomplis),
             "echecs": [list(e) for e in self.echecs],
             "depense": {"modeles_usd": self.depense.modeles_usd, "web_usd": self.depense.web_usd},
             "depense_par_pas": [list(d) for d in self.depense_par_pas],
             "depense_acquittee_usd": self.depense_acquittee_usd,
             "journal": [vars(ligne).copy() for ligne in self.journal],
-            "arret": None if self.arret is None else vars(self.arret).copy(),
+            "arret": None if self.arret is None else asdict(self.arret),
         }
 
     @staticmethod
@@ -197,13 +238,16 @@ class EtatDossier:
             dossier=d["dossier"],
             faits=tuple(d["faits"]),
             reserves=tuple((p, m) for p, m in d["reserves"]),
+            en_cours=tuple((p, m) for p, m in d["en_cours"]),
+            demandes=tuple((p, c, a) for p, c, a in d["demandes"]),
             actes_accomplis=tuple(d["actes_accomplis"]),
             echecs=tuple((p, int(n)) for p, n in d["echecs"]),
             depense=Depense(**d["depense"]),
             depense_par_pas=tuple((p, float(x)) for p, x in d["depense_par_pas"]),
             depense_acquittee_usd=float(d["depense_acquittee_usd"]),
             journal=tuple(LigneJournal(**ligne) for ligne in d["journal"]),
-            arret=None if arret is None else Arret(**arret),
+            arret=None if arret is None else Arret(
+                **{**arret, "attentes": tuple(Attente(**x) for x in arret["attentes"])}),
         )
 
 

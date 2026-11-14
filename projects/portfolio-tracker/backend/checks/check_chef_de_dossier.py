@@ -17,6 +17,11 @@ que chacune vire au rouge quand on casse la règle.
   [D8] modèles et web comptés à part ; aucun pas exécuté deux fois sans raison
   [D9] un arrêt ne se lève que par le geste qui lui correspond
   [D10] l'automate n'importe que la bibliothèque standard et son propre contrat
+  [D11] un travail en cours (une collecte) : ce qui n'en dépend pas avance, ce qui en dépend
+        l'attend sans limite de temps ; le dossier reprend seul quand il aboutit (arbitrage du
+        2026-11-14 : « on parallélise ce qui peut l'être »)
+  [D12] plusieurs attentes à la fois : l'arrêt les énumère toutes ; chaque geste vise l'une
+        d'elles ; une pause reste une pause
 """
 from __future__ import annotations
 
@@ -351,9 +356,197 @@ def _d10(b: Bilan) -> None:
                         "son contrat ou la bibliothèque standard seulement")
 
 
+class Travail:
+    """Un travail qui dure, hors de l'automate (une collecte simulée) : il répond « en cours » tant
+    qu'on ne l'a pas fait aboutir, et compte les fois où on lui a demandé où il en était."""
+
+    def __init__(self, nom: str, *, web_lancement: float = 0.0, web_fin: float = 0.0) -> None:
+        self.nom = nom
+        self.lancements = 0
+        self.suivis = 0
+        self.issue: C.Resultat | None = None
+        self.web_lancement = web_lancement
+        self.web_fin = web_fin
+
+    def pas(self, module: str, apres: tuple[str, ...] = ()) -> C.Pas:
+        def executer(ctx: C.Contexte) -> C.Resultat:
+            self.lancements += 1
+            return C.Resultat(C.EN_COURS, C.Depense(web_usd=self.web_lancement),
+                              motif=f"{self.nom} lancée, documents en route")
+
+        def suivre(ctx: C.Contexte) -> C.Resultat:
+            self.suivis += 1
+            if self.issue is None:
+                return C.Resultat(C.EN_COURS, motif="toujours en route")
+            return self.issue
+
+        return C.Pas(nom=self.nom, module=module, apres=apres, executer=executer, suivre=suivre,
+                     cout_estime_usd=self.web_lancement + self.web_fin)
+
+    def aboutir(self, issue: C.Resultat | None = None) -> None:
+        self.issue = issue or C.Resultat(C.FAIT, C.Depense(web_usd=self.web_fin))
+
+
+def parcours_parallele(sim: Simulateur, collecte: Travail) -> list[C.Pas]:
+    """fiche → collecte (dure) → pièces → comptes ; fiche → filtres préliminaires (n'en dépend pas)."""
+    return [
+        sim.pas("fiche", "fiche_emetteur"),
+        collecte.pas("collecte", ("fiche",)),
+        sim.pas("preliminaire", "filtres", ("fiche",), modeles=0.02),
+        sim.pas("pieces", "base_de_connaissance", ("collecte",)),
+        sim.pas("comptes", "comptes", ("pieces", "preliminaire")),
+    ]
+
+
+def _d11(b: Bilan) -> None:
+    """un travail en cours : on avance à côté, on attend ce qui en dépend."""
+    sim, col = Simulateur(), Travail("collecte", web_lancement=0.01, web_fin=0.04)
+    parcours = parcours_parallele(sim, col)
+    kw = dict(palier_usd=100.0, lecture_humaine={m: False for m in ("fiche_emetteur", "collecte", "filtres",
+                                                                     "base_de_connaissance", "comptes")})
+    etat = A.avancer(C.EtatDossier(DOSSIER), parcours, **kw)
+    a = etat.arret
+    b.check(col.lancements == 1 and etat.en_cours == (("collecte", "collecte lancée, documents en route"),),
+            "[D11] la collecte est lancée et le dossier la sait en cours")
+    b.check("preliminaire" in etat.faits, "[D11] ce qui ne dépend pas de la collecte avance pendant qu'elle dure")
+    b.check("pieces" not in sim.appels and "comptes" not in sim.appels,
+            "[D11] ce qui dépend de la collecte n'est pas lancé avant qu'elle aboutisse")
+    b.check(a.motif == C.ARRET_ATTENTE and a.pas == "collecte" and "en route" in a.detail,
+            "[D11] arrêt « attente » qui nomme le travail en cours, sans geste demandé")
+    b.check("collecte" not in etat.faits and dict(etat.echecs) == {},
+            "[D11] en cours n'est ni fait ni un échec")
+
+    # Le temps passe : chaque passage demande où en est la collecte, une fois, et ne change rien.
+    for _ in range(50):
+        encore = A.avancer(etat, parcours, **kw)
+        if encore is not etat:
+            break
+    b.check(encore is etat and col.suivis == 50,
+            "[D11] cinquante passages sans fin de collecte : même état, ni journal qui grossit ni abandon")
+    b.check(col.lancements == 1, "[D11] une collecte en cours n'est jamais relancée")
+
+    col.aboutir()
+    etat = A.avancer(etat, parcours, **kw)
+    b.check(etat.arret.motif == C.ARRET_PARCOURS_TERMINE and etat.faits[-2:] == ("pieces", "comptes"),
+            "[D11] la collecte aboutie, le dossier reprend seul jusqu'au bout dans le même passage")
+    b.check(etat.en_cours == () and abs(etat.depense.web_usd - 0.05) < 1e-9,
+            "[D11] la dépense du lancement et celle de la fin de collecte sont comptées")
+
+    # Une collecte qui échoue en route : relancée une fois, puis arrêt nommé.
+    sim, col = Simulateur(), Travail("collecte")
+    parcours = parcours_parallele(sim, col)
+    etat = A.avancer(C.EtatDossier(DOSSIER), parcours, **kw)
+    col.aboutir(C.Resultat(C.ECHEC, motif="le dépôt ne répond plus"))
+    etat = A.avancer(etat, parcours, **kw)
+    b.check(col.lancements == 2 and etat.arret.motif == C.ARRET_ATTENTE,
+            "[D11] une collecte échouée en route est relancée une fois")
+    etat = A.avancer(etat, parcours, **kw)
+    b.check(etat.arret.motif == C.ARRET_ECHEC_REPETE and etat.arret.pas == "collecte"
+            and "ne répond plus" in etat.arret.detail and col.lancements == 2,
+            "[D11] deuxième échec de la collecte : arrêt qui la nomme, pas de troisième essai")
+
+    # Une collecte sans objet pour cette société : réserve, le dossier continue.
+    sim, col = Simulateur(), Travail("collecte")
+    parcours = parcours_parallele(sim, col)
+    etat = A.avancer(C.EtatDossier(DOSSIER), parcours, **kw)
+    col.aboutir(C.Resultat(C.INDISPONIBLE, motif="aucun dépôt réglementaire pour cet émetteur"))
+    etat = A.avancer(etat, parcours, **kw)
+    b.check(etat.arret.motif == C.ARRET_PARCOURS_TERMINE
+            and etat.reserves == (("collecte", "aucun dépôt réglementaire pour cet émetteur"),),
+            "[D11] collecte « indisponible » à son terme : réserve nommée, le dossier va au bout")
+
+    # Un pas qui rend « en cours » sans savoir se suivre ne serait jamais attendu : échec.
+    muet = [C.Pas(nom="x", module="m",
+                  executer=lambda ctx: C.Resultat(C.EN_COURS, motif="lancé"))]
+    e = A.avancer(C.EtatDossier(DOSSIER), muet, lecture_humaine={"m": False})
+    b.check(e.arret.motif == C.ARRET_ECHEC_REPETE and "suivre" in e.arret.detail and e.en_cours == (),
+            "[D11] « en cours » sans moyen de suivre : échec motivé, jamais une attente éternelle")
+    b.check(refuse(lambda: C.Pas(nom="h", module="m", nature=C.HUMAIN, acte="décider",
+                                 suivre=lambda ctx: None), ValueError),
+            "[D11] un acte qui vous revient ne se « suit » pas")
+
+    # L'état d'un dossier en attente se range et se relit à l'identique.
+    sim, col = Simulateur(), Travail("collecte")
+    depot = C.DepotMemoire()
+    e1 = A.conduire(depot, DOSSIER, parcours_parallele(sim, col), **kw)
+    relu = C.lire_etat(depot, DOSSIER)
+    b.check(relu == e1 and relu.arret.attentes == e1.arret.attentes and relu.en_cours == e1.en_cours,
+            "[D11] un dossier en attente se range et se relit à l'identique (attentes comprises)")
+    col.aboutir()
+    e2 = A.conduire(depot, DOSSIER, parcours_parallele(sim, col), **kw)
+    b.check(e2.arret.motif == C.ARRET_PARCOURS_TERMINE, "[D11] le passage suivant, relu du dépôt, reprend")
+
+
+def _d12(b: Bilan) -> None:
+    """plusieurs attentes : un acte d'un côté, une collecte de l'autre."""
+    sim, col = Simulateur(), Travail("collecte", web_lancement=0.01)
+    parcours = [
+        sim.pas("fiche", "fiche_emetteur"),
+        collecte_pas := col.pas("collecte", ("fiche",)),
+        sim.pas("pieces", "base_de_connaissance", ("collecte",)),
+        sim.pas("profil", "filtres", ("fiche",)),
+        C.Pas(nom="valider_profil", module="filtres", nature=C.HUMAIN, apres=("profil",),
+              acte="valider le profil de la société"),
+    ]
+    del collecte_pas
+    kw = dict(palier_usd=100.0, lecture_humaine={"fiche_emetteur": False, "collecte": False,
+                                                  "base_de_connaissance": False, "filtres": False})
+    etat = A.avancer(C.EtatDossier(DOSSIER), parcours, **kw)
+    a = etat.arret
+    b.check(a.motif == C.ARRET_ACTE_HUMAIN and a.cle == "valider_profil",
+            "[D12] l'acte qui vous revient est le motif principal de l'arrêt")
+    b.check([(x.motif, x.pas) for x in a.attentes] == [(C.ARRET_ACTE_HUMAIN, "valider_profil"),
+                                                        (C.ARRET_ATTENTE, "collecte")],
+            "[D12] l'arrêt énumère TOUT ce qui est attendu : votre acte et la collecte en cours")
+    b.check("attend aussi — travail en cours : collecte" in A.afficher(etat),
+            "[D12] l'affichage montre aussi la collecte en cours")
+
+    # Vous n'avez pas encore agi, mais la collecte aboutit : le dossier avance quand même.
+    col.aboutir()
+    etat = A.avancer(etat, parcours, **kw)
+    b.check("pieces" in etat.faits and etat.arret.motif == C.ARRET_ACTE_HUMAIN
+            and [x.pas for x in etat.arret.attentes] == ["valider_profil"],
+            "[D12] un acte en attente ne retient pas la branche qui n'en dépend pas")
+    etat = A.avancer(A.enregistrer_acte(etat, "valider_profil"), parcours, **kw)
+    b.check(etat.arret.motif == C.ARRET_PARCOURS_TERMINE, "[D12] l'acte accompli, le parcours se termine")
+
+    # Une pause pendant qu'un acte est attendu : l'acte peut être fait, la pause reste.
+    sim, col = Simulateur(), Travail("collecte", web_lancement=1.5)
+    parcours2 = [sim.pas("fiche", "fiche_emetteur"), col.pas("collecte", ("fiche",)),
+                 C.Pas(nom="trancher", module="m", nature=C.HUMAIN, apres=("fiche",), acte="trancher"),
+                 sim.pas("suite", "m", ("fiche",))]
+    kw2 = dict(lecture_humaine={"fiche_emetteur": False, "collecte": False, "m": False})
+    etat = A.avancer(C.EtatDossier(DOSSIER), parcours2, **kw2)
+    b.check(etat.arret.motif == C.ARRET_PAUSE_DEPENSE and "suite" not in sim.appels
+            and {x.pas for x in etat.arret.attentes} == {"trancher", "collecte"},
+            "[D12] pause dès 1 $ : rien ne se lance de plus, et les autres attentes restent listées")
+    etat = A.enregistrer_acte(etat, "trancher")
+    b.check(etat.arret is not None and etat.arret.motif == C.ARRET_PAUSE_DEPENSE
+            and [x.pas for x in etat.arret.attentes] == ["collecte"],
+            "[D12] un acte fait pendant une pause est enregistré, la pause reste")
+    suivis = col.suivis
+    col.aboutir(C.Resultat(C.FAIT, C.Depense(web_usd=0.30)))
+    b.check(A.avancer(etat, parcours2, **kw2) is etat and "suite" not in sim.appels and col.suivis == suivis,
+            "[D12] toujours en pause : avancer ne fait rien, pas même demander où en est la collecte")
+    b.check(refuse(lambda: A.enregistrer_acte(etat, "valider_profil"), A.GesteRefuse),
+            "[D12] un acte qui n'est pas dans les attentes est refusé")
+
+    # Deux échecs répétés sur deux branches : chacun se relance par son nom.
+    sim = Simulateur()
+    sim.scenarios["a"] = [C.Resultat(C.ECHEC, motif="a1"), C.Resultat(C.ECHEC, motif="a2")]
+    sim.scenarios["b"] = [C.Resultat(C.ECHEC, motif="b1"), C.Resultat(C.ECHEC, motif="b2")]
+    p3 = [sim.pas("a", "m"), sim.pas("b", "m"), sim.pas("c", "m", ("a",))]
+    e = A.avancer(C.EtatDossier(DOSSIER), p3, lecture_humaine={"m": False})
+    b.check([x.pas for x in e.arret.attentes] == ["a", "b"],
+            "[D12] deux branches en échec répété : les deux sont nommées")
+    e = A.avancer(A.relancer(e, "b"), p3, lecture_humaine={"m": False})
+    b.check("b" in e.faits and "a" not in e.faits and [x.pas for x in e.arret.attentes] == ["a"],
+            "[D12] la relance vise le pas nommé, et lui seul")
+
+
 def main() -> int:
     b = Bilan()
-    for nom, section in (("[D1]", _d1), ("[D2]", _d2), ("[D3]", _d3), ("[D4]", _d4), ("[D5]", _d5), ("[D6]", _d6), ("[D7]/[D8]", _d7_d8), ("[D9]", _d9), ("[D10]", _d10)):
+    for nom, section in (("[D1]", _d1), ("[D2]", _d2), ("[D3]", _d3), ("[D4]", _d4), ("[D5]", _d5), ("[D6]", _d6), ("[D7]/[D8]", _d7_d8), ("[D9]", _d9), ("[D10]", _d10), ("[D11]", _d11), ("[D12]", _d12)):
         # Une section qui plante (un geste refusé parce que la règle gardée est cassée) ne doit
         # jamais tuer le script avant son bilan : c'est un échec NOMMÉ, et les suivantes tournent.
         try:

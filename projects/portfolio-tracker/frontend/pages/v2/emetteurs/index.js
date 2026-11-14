@@ -205,7 +205,9 @@ function Journal({ actes, onFait }) {
                 <td className="py-2 px-3">
                   {a.acte === 'admettre'
                     ? <Badge variant={a.en_vigueur ? 'emerald' : 'gray'}>{a.en_vigueur ? 'admission en vigueur' : 'admission'}</Badge>
-                    : <Badge variant="red">révocation</Badge>}
+                    : a.acte === 'suspendre'
+                      ? <Badge variant={a.en_vigueur ? 'amber' : 'gray'}>{a.en_vigueur ? 'en suspens' : 'mise en suspens'}</Badge>
+                      : <Badge variant="red">révocation</Badge>}
                 </td>
                 <td className="py-2 px-3 font-mono text-gray-200">{a.source}</td>
                 <td className="py-2 px-3 text-gray-400">{a.portee}</td>
@@ -216,7 +218,9 @@ function Journal({ actes, onFait }) {
                 <td className="py-2 px-3 text-gray-400">{a.motif}</td>
                 <td className="py-2 px-3">
                   {a.en_vigueur && (
-                    <button className="text-red-400 hover:text-red-300 underline" onClick={() => revoquer(a)}>Révoquer</button>
+                    <button className="text-red-400 hover:text-red-300 underline" onClick={() => revoquer(a)}>
+                      {a.acte === 'suspendre' ? 'Écarter' : 'Révoquer'}
+                    </button>
                   )}
                 </td>
               </tr>
@@ -224,6 +228,86 @@ function Journal({ actes, onFait }) {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+// Les sources que l'évaluateur a jugées sous le seuil : non admises, elles attendent votre arbitrage.
+// Admettre reprend ce que l'évaluateur proposait (natures, niveau) ; écarter les retire. Dans les deux
+// cas, le système ne revient plus dessus.
+function EnSuspens({ sources, referentiel, onFait }) {
+  const [err, setErr] = useState(null)
+  const [ouvert, setOuvert] = useState(null)
+  const questions = referentiel?.evaluation_des_sources?.questions || {}
+
+  async function arbitrer(x, admettre) {
+    const motif = window.prompt(admettre
+      ? `Motif de l'admission de ${x.source} (${x.natures.join(', ')}, niveau ${x.niveau}) :`
+      : `Motif pour écarter ${x.source} :`)
+    if (!motif || !motif.trim()) return
+    setErr(null)
+    const r = admettre
+      ? await envoyer('/v2/sources/admettre', 'POST', {
+          source: x.source, portee: x.portee, natures: x.natures, niveau: x.niveau, critere: x.critere, motif })
+      : await envoyer('/v2/sources/revoquer', 'POST', { source: x.source, portee: x.portee, motif })
+    if (!r.ok) { setErr(r.detail); return }
+    onFait()
+  }
+
+  if (!sources.length) {
+    return <EmptyState title="Rien à arbitrer"
+      description="Une source inconnue jugée sous le seuil par l'évaluateur apparaîtra ici." />
+  }
+  return (
+    <div className="space-y-2">
+      {err && <ErrorState detail={err} />}
+      {sources.map(x => (
+        <Card key={x.rang}>
+          <CardBody>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-200">
+                  <span className="font-mono">{x.source}</span>
+                  <span className="text-gray-500"> · {x.portee} · le {x.le}</span>
+                </p>
+                <p className="text-xs text-gray-400">
+                  Note <span className="text-amber-300 font-semibold">{x.note.toFixed(2)}</span> pour un
+                  seuil de {x.seuil.toFixed(2)} · proposée pour {x.natures.join(', ')} au niveau {x.niveau}
+                  {x.critere ? ` (critère « ${x.critere} »)` : ' (aucun critère écrit ne convient)'}
+                </p>
+                <p className="text-xs text-gray-500">{x.motif}</p>
+              </div>
+              <div className="flex gap-2">
+                <button className={BTN} onClick={() => arbitrer(x, true)}>Admettre</button>
+                <button className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-800 hover:bg-gray-700 text-red-300"
+                  onClick={() => arbitrer(x, false)}>Écarter</button>
+              </div>
+            </div>
+            <button className="mt-2 text-xs text-emerald-400 hover:text-emerald-300 underline"
+              onClick={() => setOuvert(ouvert === x.rang ? null : x.rang)}>
+              {ouvert === x.rang ? 'Masquer' : 'Voir'} les {(x.evaluation?.exemples || []).length} publications lues
+            </button>
+            {ouvert === x.rang && (
+              <div className="mt-2 space-y-3">
+                {(x.evaluation?.exemples || []).map(ex => (
+                  <div key={ex.adresse} className="text-xs">
+                    <p className="font-mono text-gray-300 break-all">{ex.adresse}</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {ex.reponses.map(r => (
+                        <li key={r.question} className="text-gray-400">
+                          <span className={r.oui ? 'text-emerald-400' : 'text-red-400'}>{r.oui ? 'oui' : 'non'}</span>
+                          {' — '}{questions[r.question] || r.question}
+                          <span className="text-gray-500"> : {r.constat}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      ))}
     </div>
   )
 }
@@ -289,6 +373,10 @@ export default function EmetteursV2() {
           </Section2>
 
           <AjouterEmetteur onFait={charger} />
+
+          <Section2 titre={`Sources en suspens — votre arbitrage (${(vue.en_suspens || []).length})`}>
+            <EnSuspens sources={vue.en_suspens || []} referentiel={vue.referentiel} onFait={charger} />
+          </Section2>
 
           <Section2 titre="Journal des sources">
             <Journal actes={vue.journal_des_sources} onFait={charger} />

@@ -8,8 +8,8 @@ Ce fichier est le SEUL que le reste du système a le droit d'importer. Il porte 
   · l'objet de sortie versionné (`Fiche`) et LA fonction qui le lit : `lire_fiche` ;
   · ce qu'on peut demander à une fiche, sans rien lire d'autre : `qualifier` (cette adresse
     est-elle une source admise pour cette nature d'information ?) et `pieces_a_signaler` ;
-  · les gestes qui écrivent (`etablir_fiche`, `admettre_source`, `revoquer_source`) : ce sont des
-    actes datés, motivés et signés, jamais une retouche ;
+  · les gestes qui écrivent (`etablir_fiche`, `admettre_source`, `revoquer_source`,
+    `evaluer_source`) : ce sont des actes datés, motivés et signés, jamais une retouche ;
   · la vue de l'écran (`vue_ecran`) et le pas déclaré au chef de dossier (`pas_fiche`).
 
 Une référence externe (numéro d'un régulateur, code d'une place) est TOUJOURS facultative, et son
@@ -23,7 +23,7 @@ from typing import Any, Mapping, Protocol, Sequence
 
 from app.modules.chef_de_dossier.contrat import ACTE_HUMAIN, FAIT, Contexte, Pas, Resultat
 
-VERSION_CONTRAT = "1.0.0"
+VERSION_CONTRAT = "1.1.0"   # 1.1.0 (2026-11-14) : sources en suspens, évaluation des sources inconnues
 NOM_DU_MODULE = "emetteurs"
 NOM_DU_PAS = "fiche_emetteur"
 
@@ -39,8 +39,13 @@ PREFIXE_PORTEE_EMETTEUR = "emetteur:"
 CRITERE_PAGES_INVESTISSEURS = "relations_investisseurs_d_une_autre_societe"
 AUTEUR_PAGES_INVESTISSEURS = PREFIXE_SYSTEME + "evaluateur_de_sources"
 
+# Une source inconnue est jugée par l'évaluateur de sources (arbitrage du 2026-11-14) : admise par le
+# système au-dessus du seuil écrit au référentiel, mise EN SUSPENS en dessous pour votre arbitrage.
+AUTEUR_EVALUATEUR = PREFIXE_SYSTEME + "evaluateur_de_sources"
+
 ADMETTRE = "admettre"
 REVOQUER = "revoquer"
+SUSPENDRE = "suspendre"
 
 
 class FicheAbsente(LookupError):
@@ -105,12 +110,62 @@ class SourceRevoquee:
 
 
 @dataclass(frozen=True)
+class SourceEnSuspens:
+    """Une source que l'évaluateur a jugée sous le seuil : ni admise ni écartée, elle attend votre
+    arbitrage. Elle porte ce que l'évaluateur proposait (natures, niveau, critère), la note calculée,
+    le seuil, et l'évaluation entière (les publications lues, une réponse motivée par question)."""
+    source: str
+    portee: str
+    natures: tuple[str, ...]
+    niveau: str
+    critere: str
+    note: float
+    seuil: float
+    motif: str
+    le: str
+    rang: int
+    evaluation: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class Reponse:
+    """La réponse de l'évaluateur à une question du référentiel, sur une publication : oui ou non,
+    et ce qu'il a constaté (jamais vide : une réponse se motive)."""
+    question: str
+    oui: bool
+    constat: str
+
+
+@dataclass(frozen=True)
+class ExempleEvalue:
+    """Une publication de la source, lue par l'évaluateur. Son adresse doit relever de la source."""
+    adresse: str
+    reponses: tuple[Reponse, ...]
+
+
+@dataclass(frozen=True)
+class Evaluation:
+    """Ce que l'évaluateur de sources rend sur une source inconnue. Il PROPOSE (critère écrit, natures,
+    niveau) et RÉPOND aux questions du référentiel sur quelques publications ; il ne note pas : la
+    note, le seuil et la décision sont calculés par le code. `critere` vide : aucun critère écrit ne
+    convient — la source va en suspens."""
+    source: str
+    portee: str
+    natures: tuple[str, ...]
+    niveau: str
+    critere: str
+    exemples: tuple[ExempleEvalue, ...]
+    evaluateur: str = AUTEUR_EVALUATEUR
+
+
+@dataclass(frozen=True)
 class Fiche:
     """La fiche d'un émetteur : l'objet de sortie du module.
 
     `emetteur` est l'identifiant MAISON : il ne dépend d'aucun registre extérieur. `sources` et
     `revocations` sont celles qui valent pour CET émetteur (portée générale, sa spécialité s'il en
-    a une, lui-même). `specialite` vide : la société suit le parcours généraliste."""
+    a une, lui-même). `en_suspens` : celles qui attendent votre arbitrage (non admises d'ici là).
+    `specialite` vide : la société suit le parcours généraliste."""
     emetteur: str
     raison_sociale: str
     pays: str = ""
@@ -124,6 +179,7 @@ class Fiche:
     le: str = ""
     sources: tuple[SourceAdmise, ...] = ()
     revocations: tuple[SourceRevoquee, ...] = ()
+    en_suspens: tuple[SourceEnSuspens, ...] = ()
     version_referentiel: str = ""
     version_contrat: str = VERSION_CONTRAT
 
@@ -264,11 +320,23 @@ async def admettre_source(depot: Depot, *, source: str, portee: str, natures: Se
 
 async def revoquer_source(depot: Depot, *, source: str, portee: str, auteur: str, motif: str,
                           le: str) -> int:
-    """Révoque une source admise. Les pièces qui s'y appuient seront signalées à la lecture."""
+    """Révoque une source admise — ou écarte une source en suspens. Les pièces qui s'appuyaient sur
+    une source admise seront signalées à la lecture ; une source en suspens n'en fondait aucune."""
     from . import regles
     return await regles.acter_source(
         depot, acte=REVOQUER, source=source, portee=portee, natures=(), niveau="", auteur=auteur,
         motif=motif, le=le, critere="")
+
+
+async def evaluer_source(depot: Depot, evaluation: Evaluation, *, le: str) -> dict[str, Any]:
+    """Range le jugement de l'évaluateur sur une source inconnue. Le code calcule la note (part des
+    « oui ») et la compare au seuil du référentiel : au-dessus, le système ADMET la source sous le
+    critère proposé ; en dessous (ou trop peu de publications lues, ou aucun critère), il la met EN
+    SUSPENS pour votre arbitrage. Rend l'issue (`admise` / `en_suspens`), le rang, la note, le seuil
+    et le motif. Une évaluation mal formée (publication d'un autre site, question sans réponse ou
+    sans constat) est refusée : elle n'entre pas au journal."""
+    from . import regles
+    return await regles.evaluer_source(depot, evaluation, le=le)
 
 
 def page_investisseurs(adresse: str) -> str | None:
