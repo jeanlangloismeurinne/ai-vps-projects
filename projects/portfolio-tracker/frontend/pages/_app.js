@@ -76,6 +76,7 @@ function V2Nav() {
       <NavLink href="/v2/tickers">Tickers</NavLink>
       <NavLink href="/v2/theses">Thèses</NavLink>
       <NavLink href="/v2/calibration">Calibration</NavLink>
+      <NavLink href="/v2/emetteurs">Émetteurs</NavLink>
       <div className="ml-auto flex items-center gap-3">
         <Link href="/" className="px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors">
           V1 / V2

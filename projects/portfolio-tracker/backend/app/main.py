@@ -58,12 +58,13 @@ app.include_router(portfolio_v2.router)
 app.include_router(calendar_v2.router)
 
 # V2 routers (flow_version='v2', espace disjoint — chaîne d'analyse curator→research→bull/bear→synthèse)
-from app.api import analysis_v2, knowledge_v2, modele_entreprise_v2, parcours_v2, valorisation_v2, nasdaq as nasdaq_api
+from app.api import analysis_v2, emetteurs_v2, knowledge_v2, modele_entreprise_v2, parcours_v2, valorisation_v2, nasdaq as nasdaq_api
 app.include_router(analysis_v2.router)
 app.include_router(knowledge_v2.router)
 app.include_router(parcours_v2.router)
 app.include_router(valorisation_v2.router)
 app.include_router(modele_entreprise_v2.router)
+app.include_router(emetteurs_v2.router)
 app.include_router(nasdaq_api.router)
 
 

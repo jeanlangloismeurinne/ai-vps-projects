@@ -7012,3 +7012,21 @@ délégués ont été coupés par la limite de dépense du compte, leur travail 
 
 - **Production** : B4d COMMITÉ (`7d08a6d`) mais NON DÉPLOYÉ (déploiement refusé par le classifieur le 2026-10-23 — à lancer par l’utilisateur, puis `docker exec portfolio-backend grep -c "architecture-1.3.0" /app/app/contracts/modele_entreprise_schema.py`) ; dernier déploiement `d504d96` (correctif DEF 14A) ; avant, P1 complet (`f6b5659`) ; avant, M3 bis (`1f9a364`) ; avant, `1d5dfbf` (M3) ; avant, `67f7e87` (M2) ; `4c6d37e` (M1), vérifié dans le conteneur (référentiel 1.0.0 chargé, 21 fiches, seuil 10). Migration 061 appliquée. Mandats : 1 manager ouvert (2918).
 - **Porte de l'architecte NVDA — mesurée le 2026-10-21** (`montrer_parcours.sh NVDA`) : les 12 questions sources d'une rentable (me_2-me_5, mo_4, mo_6, qf_1, qf_3, qf_7, se_2-se_4) ont toutes une première réponse instruite (mo_4 recherche épuisée, mo_6/se_2 pièces insuffisantes = information, 09 §11.2) → ouverte ; 22 manques au total, inchangés.
+
+## 2026-11-13 — M1 « Fiche de l'émetteur et sources » construit hors ligne (sans accès au VPS)
+
+- **Tri** (recherche déléguée à Sonnet, faits seulement) : l'identité d'un émetteur n'existait que par le
+  téléchargement du registre de la SEC gardé en mémoire ; le site (3 titres), la spécialité (1 titre) et
+  les sources admises (4) étaient des constantes ; aucune révocation, aucun pays, aucun journal.
+- **Acceptation écrite avant** (commit `599ac31`), 15 lignes ; puis construction : contrat, règles,
+  rangement en base, migration 063, écran (délégué à Sonnet sur spec, revu), outil `tools/emetteurs.sh`.
+- **Mesures qui ont corrigé la conception** : (1) une ligne de code « adresse avec espaces » ne gardait
+  rien — la mutation restait verte, la ligne a été supprimée ; (2) la confrontation à l'ancien code
+  EXÉCUTÉ (`check_emetteurs_reprise.py`) a trouvé trois écarts que la lecture n'avait pas vus : les
+  pages « investors.* » de toute société valaient A, un sous-domaine de la SEC n'était pas reconnu, une
+  adresse illisible valait C et non C+ (le dernier corrigé dans le module, les deux premiers nommés) ;
+  (3) le contrôle en base, d'abord écrit pour une base vide, aurait rougi à jamais après la reprise des
+  données : il part désormais de ce que la base contient.
+- **PostgreSQL 16 était disponible dans le bac à sable** : la migration, le rangement et leurs tests
+  négatifs ont tourné sur une vraie base locale, ce qui n'était pas prévu.
+- Le test négatif `negatif_architecture.sh` exige le conteneur : non joué.

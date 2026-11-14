@@ -1,0 +1,614 @@
+{
+ "_lisez_moi": "Reprise des données d'identité et de sources que l'ancien code portait en constantes (roadmap/V3/M1-fiche-emetteur.md §1). Généré le 2026-11-13 en EXÉCUTANT l'ancien code (websearch._ISSUER_DOMAINS, _OFFICIAL_DOMAINS, _EU_REGULATOR_SUFFIXES, _PRESS_DOMAINS, _REPUTABLE_SUFFIXES ; source_registry._ADMISES, _TICKER_SECTEURS). Saisi à la main, À VÉRIFIER sur le VPS : les trois raisons sociales, les trois numéros, les pages de relations investisseurs. Se charge par `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json`.",
+ "fiches": [
+  {
+   "emetteur": "NVDA",
+   "raison_sociale": "NVIDIA CORP",
+   "pays": "US",
+   "cotations": [
+    [
+     "NASDAQ",
+     "NVDA"
+    ]
+   ],
+   "references": [
+    [
+     "sec_cik",
+     "1045810"
+    ]
+   ],
+   "lieux": [
+    [
+     "site",
+     "nvidia.com"
+    ],
+    [
+     "relations_investisseurs",
+     "investor.nvidia.com"
+    ]
+   ],
+   "specialite": "",
+   "auteur": "utilisateur",
+   "le": "2026-11-13",
+   "motif": "Reprise de l'ancien code : site et spécialité tels qu'ils y étaient écrits ; raison sociale et numéro tels que l'ancien système les téléchargeait."
+  },
+  {
+   "emetteur": "MSFT",
+   "raison_sociale": "MICROSOFT CORP",
+   "pays": "US",
+   "cotations": [
+    [
+     "NASDAQ",
+     "MSFT"
+    ]
+   ],
+   "references": [
+    [
+     "sec_cik",
+     "789019"
+    ]
+   ],
+   "lieux": [
+    [
+     "site",
+     "microsoft.com"
+    ],
+    [
+     "relations_investisseurs",
+     "microsoft.com/investor"
+    ]
+   ],
+   "specialite": "",
+   "auteur": "utilisateur",
+   "le": "2026-11-13",
+   "motif": "Reprise de l'ancien code : site et spécialité tels qu'ils y étaient écrits ; raison sociale et numéro tels que l'ancien système les téléchargeait."
+  },
+  {
+   "emetteur": "RVMD",
+   "raison_sociale": "Revolution Medicines, Inc.",
+   "pays": "US",
+   "cotations": [
+    [
+     "NASDAQ",
+     "RVMD"
+    ]
+   ],
+   "references": [
+    [
+     "sec_cik",
+     "1628171"
+    ]
+   ],
+   "lieux": [
+    [
+     "site",
+     "revmed.com"
+    ],
+    [
+     "relations_investisseurs",
+     "ir.revmed.com"
+    ],
+    [
+     "relations_investisseurs",
+     "revmed.com/investors"
+    ]
+   ],
+   "specialite": "biotech_clinique",
+   "auteur": "utilisateur",
+   "le": "2026-11-13",
+   "motif": "Reprise de l'ancien code : site et spécialité tels qu'ils y étaient écrits ; raison sociale et numéro tels que l'ancien système les téléchargeait."
+  }
+ ],
+ "sources": [
+  {
+   "source": "efts.sec.gov",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des dépôts officiels) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "sec.gov",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des dépôts officiels) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "amf-france.org",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A-",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des régulateurs européens) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "esma.europa.eu",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A-",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des régulateurs européens) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "bafin.de",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A-",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des régulateurs européens) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "fca.org.uk",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A-",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des régulateurs européens) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "consob.it",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "A-",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "autorite_publique",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des régulateurs européens) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "barrons.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "bloomberg.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "cnbc.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "economist.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "fool.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "ft.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "handelsblatt.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "latribune.fr",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "lesechos.fr",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "marketwatch.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "morningstar.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "nikkei.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "reuters.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "seekingalpha.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "wsj.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B+",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "presse_financiere",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste de la presse financière) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "arxiv.org",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "iea.org",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "oecd.org",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "worldbank.org",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "srgresearch.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "canalys.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "gartner.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "idc.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "omdia.tech.informa.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "counterpointresearch.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "techinsights.com",
+   "portee": "generale",
+   "natures": [
+    "mesure",
+    "evenement",
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "systeme:reprise_de_l_ancien_code",
+   "critere": "organisme_publiant_ses_estimations",
+   "le": "2026-11-13",
+   "motif": "Reprise à l'identique de l'ancien code (liste des organismes et cabinets d'études) : y était tenue pour fiable sans date ni motif écrit."
+  },
+  {
+   "source": "endpts.com",
+   "portee": "specialite:biotech_clinique",
+   "natures": [
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "utilisateur",
+   "critere": "redaction_specialisee",
+   "le": "2026-09-05",
+   "motif": "Rédaction spécialisée biotech à couverture clinique et réglementaire de fond. Standing sur l'interprétation (lecture concurrentielle d'un résultat d'essai, portée d'une décision d'agence) ; aucun standing sur le chiffre, qui reste au dépôt."
+  },
+  {
+   "source": "statnews.com",
+   "portee": "specialite:biotech_clinique",
+   "natures": [
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "utilisateur",
+   "critere": "redaction_specialisee",
+   "le": "2026-09-05",
+   "motif": "Rédaction santé/biotech analysant les données d'essais et leur contexte réglementaire. Admise pour l'interprétation ; les chiffres qu'elle cite sont des reprises, et une reprise n'ajoute rien à la source primaire (elle ajoute un risque de transcription)."
+  },
+  {
+   "source": "fiercebiotech.com",
+   "portee": "specialite:biotech_clinique",
+   "natures": [
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "utilisateur",
+   "critere": "redaction_specialisee",
+   "le": "2026-09-05",
+   "motif": "Couverture sectorielle large, plus proche du fil d'actualité que de l'analyse de fond. Utile pour situer un émetteur dans son paysage concurrentiel ; B est le plafond juste, et l'analyste doit le lire dans le tier."
+  },
+  {
+   "source": "biopharmadive.com",
+   "portee": "specialite:biotech_clinique",
+   "natures": [
+    "interpretation"
+   ],
+   "niveau": "B",
+   "auteur": "utilisateur",
+   "critere": "redaction_specialisee",
+   "le": "2026-09-05",
+   "motif": "Analyse sectorielle et concurrentielle — angle « position face aux pairs », qui est l'un des trois champs desserrés B+ → B sans bénéficiaire jusqu'ici."
+  }
+ ]
+}

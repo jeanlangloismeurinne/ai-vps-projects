@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "natures": ["mesure", "evenement", "interpretation"],
+  "niveaux": ["A", "A-", "B+", "B", "C+", "C"],
+  "niveau_sans_admission": "C+",
+  "niveau_adresse_illisible": "C",
+  "genres_de_lieu": {
+    "relations_investisseurs": {
+      "niveau": "A",
+      "libelle": "Pages de relations investisseurs de la société : ce qu'elle déclare officiellement à ses actionnaires."
+    },
+    "site": {
+      "niveau": "B",
+      "libelle": "Le reste du site de la société : elle y parle d'elle-même, sans l'engagement d'une publication aux actionnaires."
+    }
+  },
+  "roles_qui_utilisent_les_sources": ["collecteur", "analyste", "traducteur", "architecte", "redacteur"],
+  "criteres": {
+    "autorite_publique": {
+      "texte": "Autorité de marché, registre officiel ou organisme public : fait foi pour ce qu'il publie lui-même.",
+      "niveau_max": "A",
+      "natures": ["mesure", "evenement", "interpretation"]
+    },
+    "presse_financiere": {
+      "texte": "Rédaction financière identifiée, à comité de rédaction : rapporte et recoupe, ne produit pas le chiffre d'origine.",
+      "niveau_max": "B+",
+      "natures": ["mesure", "evenement", "interpretation"]
+    },
+    "organisme_publiant_ses_estimations": {
+      "texte": "Organisme ou cabinet d'études qui publie ses propres estimations : première main pour ces estimations, qui restent des estimations.",
+      "niveau_max": "B",
+      "natures": ["mesure", "evenement", "interpretation"]
+    },
+    "redaction_specialisee": {
+      "texte": "Rédaction spécialisée dans un secteur, à couverture de fond : éclaire l'interprétation ; le chiffre reste à la publication d'origine.",
+      "niveau_max": "B",
+      "natures": ["interpretation"]
+    }
+  }
+}

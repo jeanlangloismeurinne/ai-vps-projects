@@ -8,4 +8,6 @@ Ce fichier est **réécrit par `checks/run_all.sh`** à chaque passage. Aucun au
 - Origine : **recopié à la main le 2026-11-13** — à réécrire par le premier passage du lanceur sur le VPS.
 
 Depuis, hors ligne et sans base (2026-11-13) : `check_chef_de_dossier.py` 68, `check_charte_modules.py` 16,
-à ajouter au prochain passage complet.
+à ajouter au prochain passage complet. Module M1 (2026-11-13, hôte et PostgreSQL local) :
+`check_emetteurs.py` 99, `check_emetteurs_persist.py` 48, `check_emetteurs_api.py` 37,
+`check_emetteurs_reprise.py` 11 ; `check_chef_de_dossier.py` 73, `check_charte_modules.py` 19.

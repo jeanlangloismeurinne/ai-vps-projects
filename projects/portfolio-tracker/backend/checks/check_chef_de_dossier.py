@@ -332,10 +332,12 @@ def _d9(b: Bilan) -> None:
 
 def _d10(b: Bilan) -> None:
     """aucun modèle, aucun réseau : imports."""
-    permis = {"__future__", "dataclasses", "typing"}
+    # `json` : le rangement en base (`depot_base.py`) écrit l'état en texte. Toujours ni réseau ni
+    # modèle, et aucun pilote de base importé : la connexion est reçue de l'appelant.
+    permis = {"__future__", "dataclasses", "typing", "json"}
     dossier_module = BACKEND / "app" / "modules" / "chef_de_dossier"
     sources = sorted(dossier_module.glob("*.py"))
-    b.require(sources, 3, "[D10] trois fichiers source dans le module")
+    b.require(sources, 4, "[D10] quatre fichiers source dans le module")
     for src in sources:
         for noeud in ast.walk(ast.parse(src.read_text(encoding="utf-8"))):
             if isinstance(noeud, ast.Import):
@@ -343,7 +345,7 @@ def _d10(b: Bilan) -> None:
                     b.check(alias.name.split(".")[0] in permis,
                             f"[D10] {src.name} importe `{alias.name}` : bibliothèque standard permise seulement")
             elif isinstance(noeud, ast.ImportFrom):
-                interne = noeud.level == 1 and noeud.module == "contrat"
+                interne = noeud.level == 1 and noeud.module in ("contrat", "depot_base")
                 b.check(interne or (noeud.level == 0 and (noeud.module or "").split(".")[0] in permis),
                         f"[D10] {src.name} importe depuis `{'.' * noeud.level}{noeud.module}` : "
                         "son contrat ou la bibliothèque standard seulement")

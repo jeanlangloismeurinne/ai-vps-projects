@@ -70,7 +70,8 @@ comptes**.
 | Module | Rôle | Contrôle | `ARCHITECTURE.md` |
 |---|---|---|---|
 | (charte) | Registre des modules et garde des accès entre eux | `check_charte_modules.py` | `app/modules/ARCHITECTURE.md` |
-| `chef_de_dossier` (M0) | État du dossier → pas suivant | `check_chef_de_dossier.py` | `app/modules/chef_de_dossier/ARCHITECTURE.md` |
+| `chef_de_dossier` (M0) | État du dossier → pas suivant ; rangé en base (migration 063) | `check_chef_de_dossier.py`, `check_emetteurs_persist.py` [B5]-[B6] | `app/modules/chef_de_dossier/ARCHITECTURE.md` |
+| `emetteurs` (M1, construit, non accepté) | Fiche de l'émetteur, journal des sources admises et révoquées | `check_emetteurs.py`, `check_emetteurs_persist.py`, `check_emetteurs_api.py`, `check_emetteurs_reprise.py` | `app/modules/emetteurs/ARCHITECTURE.md` |
 
 ## Registre 2 — ancien code (la carrière)
 

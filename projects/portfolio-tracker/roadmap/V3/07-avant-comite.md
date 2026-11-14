@@ -50,7 +50,7 @@ règle simple, l'automatisation son raffinement).
 | # | Module | Rend | Acceptation (résumé) | Dépense |
 |---|---|---|---|---|
 | M0 ✅ | **Fondations** (accepté hors ligne le 2026-11-13, voir journal) | Documents de cadre à jour (une constitution, un schéma des blocs, une seule ligne de base de la suite) ; documents inutiles supprimés ou archivés ; charte et garde des accès entre modules ; squelette du chef de dossier (état → pas suivant, pause tous les 1 $) ; NASDAQ sorti du chantier | Aucun document ne décrit un mécanisme supprimé ; le contrôle d'accès rougit sur un accès interdit ; le chef de dossier conduit une société fictive à travers des modules simulés et s'arrête à 1 $ | 0 |
-| M1 | **Fiche de l'émetteur et sources** | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
+| M1 🔨 | **Fiche de l'émetteur et sources** (construit et prouvé hors ligne le 2026-11-13 ; acceptation sur NVDA et RVMD à passer sur le VPS : `M1-fiche-emetteur.md`) | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
 | M2 | **Collecte de sources** | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
 | M3 | **Base de connaissance** | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
 | M4 | **Comptes et segments** | Comptes reconstitués, ratios maison, ventilation, périmètre, par famille de comptes | Les comptes de NVDA et RVMD bouclent avec les totaux publiés ; deux découpages superposés (Apple, cas fictif) sont séparés | 0 |
@@ -112,6 +112,12 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | 2026-11-13 | M0 | Chef de dossier : société fictive conduite de « titre entré » à la fin, arrêt aux deux actes déclarés, pause à 1 $ avec coût restant | `check_chef_de_dossier.py` 68/0 ; `negatif_chef_de_dossier.sh` 14/14 (hôte) |
 | 2026-11-13 | M0 | Charte et garde des accès entre modules (`app/modules/registre.py`) | `check_charte_modules.py` 16/0 ; `negatif_charte_modules.sh` 27 mutations détectées, 7 cas permis verts (hôte) |
 | 2026-11-13 | M0 | Documents de cadre : constitution réécrite, schéma des blocs, 12 documents archivés, ligne de base unique, NASDAQ sorti | `check_architecture.py` vert (hôte) |
+| 2026-11-13 | M1 | Tri de l'ancien code et acceptation écrite AVANT la construction (15 lignes) | `M1-fiche-emetteur.md`, commit `599ac31` |
+| 2026-11-13 | M1 | Module construit : fiche, journal des sources (admettre, révoquer), qualification, signalement des pièces, pas au chef de dossier ; écran ; migration 063 ; reprise des données de l'ancien code | `check_emetteurs.py` 99/0, `negatif_emetteurs.sh` 27/27 (hôte) ; `check_emetteurs_persist.py` 48/0 et `negatif_emetteurs_persist.sh` 6/6 + 14/14 (PostgreSQL 16 local) ; `check_emetteurs_api.py` 37/0 ; `check_emetteurs_reprise.py` 11/0 |
+| 2026-11-13 | M0 | Rangement en base de l'état d'un dossier (table `chef_etats`, refus de deux écritures concurrentes) | `check_emetteurs_persist.py` [B5]-[B6] (local) |
+
+**Réserve sur M1** : rien n'a tourné sur le VPS. M1 n'est PAS accepté tant que les lignes A13 à A15 ne
+sont pas passées sur NVDA et RVMD (liste dans `00-REPRISE.md`, « À vérifier sur le VPS »).
 
 **Réserve sur M0** : tout a été prouvé sur l'hôte d'un bac à sable (Python 3.13, sans Docker ni base). À
 rejouer une fois sur le VPS : `bash checks/run_all.sh` (réécrit la ligne de base) et les deux négatifs.

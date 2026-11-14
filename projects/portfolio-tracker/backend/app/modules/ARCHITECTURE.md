@@ -42,7 +42,10 @@ app/modules/
 
 Un préfixe de tables se choisit en **mesurant** d'abord qu'il ne percute rien dans l'ancien code ;
 s'il percute, on change le préfixe, pas la règle. (`chef_` : 0 occurrence dans `app/` et `tools/`
-au 2026-11-13.)
+au 2026-11-13 ; `emetteurs_` : 0 ; `fiche_` écarté : il percutait des noms de fonctions.)
+
+Un module qui offre un écran : la route vit dans `app/api/` et n'importe que `contrat` ; les gestes
+qui écrivent sont donc exposés PAR le contrat (qui délègue à l'intérieur), jamais importés à côté.
 
 ## Invariant → assert garant
 

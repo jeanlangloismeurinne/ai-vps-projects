@@ -207,6 +207,11 @@ class EtatDossier:
         )
 
 
+class EcritureConcurrente(RuntimeError):
+    """Deux passages ont voulu ranger l'état du même dossier depuis la même lecture : le second est
+    refusé, rien n'est écrasé."""
+
+
 class Depot(Protocol):
     """Où l'état d'un dossier se range. Le chef de dossier possède ce rangement, personne d'autre
     n'y lit : on passe par `lire_etat`."""
@@ -227,6 +232,13 @@ class DepotMemoire:
 
     def ranger(self, dossier: str, etat: Mapping) -> None:
         self._etats[dossier] = dict(etat)
+
+
+def depot_base(connexion):
+    """Le rangement en base, sur une connexion que l'appelant possède : `ouvrir` charge l'état dans
+    un `DepotMemoire`, `refermer` le range (refus si la base a bougé entre-temps)."""
+    from .depot_base import DepotBase
+    return DepotBase(connexion)
 
 
 def lire_etat(depot: Depot, dossier: str) -> EtatDossier:

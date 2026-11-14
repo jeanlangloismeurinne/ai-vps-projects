@@ -34,7 +34,7 @@ module (table `lecture_humaine`), quand le taux d'erreur du module est mesuré (
 
 ## Invariant → assert garant
 
-Contrôle : `check_chef_de_dossier.py` (68 vérifications) ; test négatif : `negatif_chef_de_dossier.sh`
+Contrôle : `check_chef_de_dossier.py` ; test négatif : `negatif_chef_de_dossier.sh`
 (14 mutations, toutes détectées sur leur assert — exécuté sur l'hôte le 2026-11-13, le module étant pur
 bibliothèque standard).
 
@@ -53,9 +53,16 @@ bibliothèque standard).
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **Le rangement en base** : `contrat.Depot` est une interface, seul `DepotMemoire` existe. La table
-  (préfixe `chef_`) et sa migration arrivent avec le premier module réel (M1), sans changer le contrat.
-- **L'écran** : `automate.afficher` rend l'état en texte. L'écran web arrive avec le rangement en base.
+- **Le rangement en base est écrit, pas encore en production** : `contrat.depot_base(connexion)` →
+  `ouvrir` charge l'état dans un `DepotMemoire`, l'automate avance, `refermer` range ; deux passages
+  partis de la même lecture : le second est refusé (`EcritureConcurrente`). Table `chef_etats`,
+  migration 063 (non appliquée). Prouvé sur une base locale : `check_emetteurs_persist.py` [B5]-[B6],
+  rougi par `negatif_emetteurs_persist.sh`.
+- **L'automate est synchrone** : un pas ne fait pas d'entrée-sortie asynchrone. Le pas de M1 reçoit sa
+  fiche déjà lue. Un pas qui collecte (M2) devra soit faire de même, soit faire évoluer le contrat du
+  pas : à trancher à l'ouverture de M2.
+- **L'écran** : la page d'un émetteur montre l'état de son dossier en lecture seule ; aucun geste
+  (lever une pause, enregistrer un acte) n'est encore offert à l'écran.
 - **Le déclencheur** : rien n'appelle encore `automate.conduire` (ni tâche planifiée, ni route).
 - **L'estimation** du coût restant est la somme de ce que les modules déclarent : elle ne vaut que ce
   que valent leurs estimations. L'arrêt donne l'écart constaté, il ne corrige pas le chiffre.

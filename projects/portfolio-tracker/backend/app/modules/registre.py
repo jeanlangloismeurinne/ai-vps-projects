@@ -39,6 +39,13 @@ MODULES: tuple[Module, ...] = (
         prefixe_tables="chef_",
         lit_tous_les_contrats=True,
     ),
+    Module(
+        nom="emetteurs",
+        rend="La fiche d'un émetteur : qui il est, où il publie, sa spécialité, et les sources "
+             "admises ou révoquées qui valent pour lui.",
+        prefixe_tables="emetteurs_",
+        lit=("chef_de_dossier",),  # pour déclarer son pas (charte, point 8)
+    ),
 )
 
 
