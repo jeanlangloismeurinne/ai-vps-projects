@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Card, CardHeader, CardBody, Badge, KeyValue, Dl, EmptyState, ErrorState } from '../../../components/v2'
+import { Card, CardHeader, CardBody, Badge, KeyValue, Dl, EmptyState, ErrorState, MotifLigne } from '../../../components/v2'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -161,12 +161,13 @@ function SourcesAdmises({ sources }) {
         <div className="overflow-x-auto rounded-xl border border-gray-800">
           <table className="w-full text-xs">
             <thead className="bg-gray-900 text-gray-400">
-              <tr>{['Source', 'Portée', 'Natures', 'Niveau', 'Date', 'Auteur', 'Critère', 'Motif'].map(h =>
+              <tr>{['Source', 'Portée', 'Natures', 'Niveau', 'Date', 'Auteur', 'Critère'].map(h =>
                 <th key={h} className="py-2 px-3 text-left font-medium">{h}</th>)}</tr>
             </thead>
             <tbody>
               {sources.map(s => (
-                <tr key={s.rang} className="border-t border-gray-800 align-top">
+                <Fragment key={s.rang}>
+                <tr className="border-t border-gray-800 align-top">
                   <td className="py-2 px-3 font-mono text-gray-200">{s.source}</td>
                   <td className="py-2 px-3 text-gray-400">{s.portee}</td>
                   <td className="py-2 px-3 text-gray-400">{s.natures.join(', ')}</td>
@@ -174,8 +175,9 @@ function SourcesAdmises({ sources }) {
                   <td className="py-2 px-3 text-gray-400 whitespace-nowrap">{s.le}</td>
                   <td className="py-2 px-3 text-gray-400">{s.auteur}</td>
                   <td className="py-2 px-3 text-gray-400">{s.critere || '—'}</td>
-                  <td className="py-2 px-3 text-gray-400">{s.motif}</td>
                 </tr>
+                <MotifLigne colSpan={7} motif={s.motif} />
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -193,19 +195,21 @@ function SourcesRevoquees({ revocations }) {
       <div className="overflow-x-auto rounded-xl border border-gray-800">
         <table className="w-full text-xs">
           <thead className="bg-gray-900 text-gray-400">
-            <tr>{['Source', 'Portée', 'Natures retirées', 'Date', 'Auteur', 'Motif'].map(h =>
+            <tr>{['Source', 'Portée', 'Natures retirées', 'Date', 'Auteur'].map(h =>
               <th key={h} className="py-2 px-3 text-left font-medium">{h}</th>)}</tr>
           </thead>
           <tbody>
             {revocations.map(s => (
-              <tr key={s.rang} className="border-t border-gray-800 align-top">
+              <Fragment key={s.rang}>
+              <tr className="border-t border-gray-800 align-top">
                 <td className="py-2 px-3 font-mono text-gray-200">{s.source}</td>
                 <td className="py-2 px-3 text-gray-400">{s.portee}</td>
                 <td className="py-2 px-3 text-gray-400">{(s.natures || []).join(', ') || '—'}</td>
                 <td className="py-2 px-3 text-gray-400 whitespace-nowrap">{s.le}</td>
                 <td className="py-2 px-3 text-gray-400">{s.auteur}</td>
-                <td className="py-2 px-3 text-gray-400">{s.motif}</td>
               </tr>
+              <MotifLigne colSpan={5} motif={s.motif} />
+              </Fragment>
             ))}
           </tbody>
         </table>

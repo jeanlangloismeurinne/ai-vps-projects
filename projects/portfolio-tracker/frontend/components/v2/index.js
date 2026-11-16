@@ -124,3 +124,16 @@ export function Dl({ children, cols = 2 }) {
   }[cols] || 'grid-cols-2'
   return <dl className={`grid ${gridCls} gap-x-6 gap-y-4`}>{children}</dl>
 }
+
+// Le motif d'un acte est de la prose : il prend sa propre ligne, sur toute la largeur du tableau,
+// sous la ligne qu'il motive — dans une colonne, il serait écrasé par les identifiants voisins.
+export function MotifLigne({ colSpan, motif }) {
+  if (!motif) return null
+  return (
+    <tr className="align-top">
+      <td colSpan={colSpan} className="pb-3 px-3 text-gray-400 leading-relaxed">
+        <span className="text-gray-500">Motif : </span>{motif}
+      </td>
+    </tr>
+  )
+}

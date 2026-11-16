@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Card, CardHeader, CardBody, Badge, EmptyState, ErrorState } from '../../../components/v2'
+import { Card, CardHeader, CardBody, Badge, EmptyState, ErrorState, MotifLigne } from '../../../components/v2'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -192,17 +192,18 @@ function Journal({ actes, onFait }) {
         <table className="w-full text-xs">
           <thead className="bg-gray-900 text-gray-400">
             <tr>
-              {['Rang', 'Date', 'Acte', 'Source', 'Portée', 'Natures', 'Niveau', 'Auteur', 'Critère', 'Motif', ''].map(h => (
+              {['Rang', 'Date', 'Acte', 'Source', 'Portée', 'Natures', 'Niveau', 'Auteur', 'Critère', ''].map(h => (
                 <th key={h} className="py-2 px-3 text-left font-medium">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {actes.map(a => (
-              <tr key={a.rang} className="border-t border-gray-800 align-top">
+              <Fragment key={a.rang}>
+              <tr className="border-t border-gray-800 align-top">
                 <td className="py-2 px-3 text-gray-400">{a.rang}</td>
                 <td className="py-2 px-3 text-gray-400 whitespace-nowrap">{a.le}</td>
-                <td className="py-2 px-3">
+                <td className="py-2 px-3 whitespace-nowrap">
                   {a.acte === 'admettre'
                     ? <Badge variant={a.en_vigueur ? 'emerald' : 'gray'}>{a.en_vigueur ? 'admission en vigueur' : 'admission'}</Badge>
                     : a.acte === 'suspendre'
@@ -215,7 +216,6 @@ function Journal({ actes, onFait }) {
                 <td className="py-2 px-3 text-gray-300">{a.niveau || '—'}</td>
                 <td className="py-2 px-3 text-gray-400">{a.auteur}</td>
                 <td className="py-2 px-3 text-gray-400">{a.critere || '—'}</td>
-                <td className="py-2 px-3 text-gray-400">{a.motif}</td>
                 <td className="py-2 px-3">
                   {a.en_vigueur && (
                     <button className="text-red-400 hover:text-red-300 underline" onClick={() => revoquer(a)}>
@@ -224,6 +224,8 @@ function Journal({ actes, onFait }) {
                   )}
                 </td>
               </tr>
+              <MotifLigne colSpan={10} motif={a.motif} />
+              </Fragment>
             ))}
           </tbody>
         </table>
