@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-16 (acceptation de M1 sur le VPS : étapes 1-4 passées, 063 appliquée, reprise importée, A14 0 écart ; reste le rebuild et l'écran) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -23,7 +23,20 @@ l'émetteur et sources » est construit (`backend/app/modules/emetteurs/`, son `
 qu'il fait et ce qui manque) et prouvé hors ligne et sur une base PostgreSQL locale, **pas accepté** :
 les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base.
 
-### À vérifier sur le VPS (dans cet ordre ; rien n'a été déployé ni appliqué)
+### À vérifier sur le VPS — ÉTAPES 1 À 4 PASSÉES LE 2026-11-16 (reste 5 et 6)
+
+**Fait le 2026-11-16** : suite 6 480 assertions, rouges `check_emetteurs_persist` (063, levé depuis :
+58/0) et `check_signature_modele_persist` (données de l'ancien enchaînement : 29 réponses RVMD périmées
+par les comptes du T3 — hors M1) ; négatifs chef de dossier 25/25, charte 27/27, architecture 6/6
+(première exécution), émetteurs 49/49, API 8/8, persistance 7/7 + 16/16. **063 APPLIQUÉE** (tables vides
+après les checks). Reprise relue et **importée** (40 actes) : CIK confirmés par `notes_flash` ; pays US ;
+**MSFT : deuxième lieu `microsoft.com/en-us/investor`** (adresse réellement servie — sinon niveau B du
+site, `554ffac`). Pages investisseurs d'autres sociétés : 8 admises (Lilly, NVIDIA, Amgen, TSMC,
+Verastem, AMD, Immuneering, Revolution Medicines ; 321 adresses lues). **A14 : 0 écart** (NVDA 161 couples,
+RVMD 168, MSFT 23) ; le comparateur discrimine (fiche MSFT sur pièces NVDA : 5 écarts). Branche fusionnée
+dans `main` et poussée. **Rebuild refusé par le classifieur** : à lancer par l'utilisateur
+(`infrastructure/compose-deploy.sh portfolio-backend --rebuild-only`, puis `portfolio-frontend`).
+
 
 1. **Suite de référence avant tout** : `bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md` ;
    `check_emetteurs_persist` y sort en ÉCHEC NOMMÉ tant que la 063 n'est pas appliquée : attendu).
@@ -53,8 +66,8 @@ les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base
    sont plus pris pour des pages de société — `M1-fiche-emetteur.md`, arbitrages du 2026-11-14). L'outil suppose les
    colonnes `source_url`, `nature`, `ticker_id` de `knowledge_entries` : jamais exécuté sur la vraie base.
 5. **A13, l'écran** : déployer backend puis frontend (`infrastructure/compose-deploy.sh portfolio-backend …`
-   — ⚠️ le dépôt porte aussi les lots B4d, #143, B4f, B4g « à ne pas déployer » : vérifier ce que le
-   déploiement embarquerait avant de le lancer, et arbitrer avec l'utilisateur s'il les embarque).
+   — les lots B4d, #143, B4f, B4g sont DÉJÀ en production depuis le rebuild de sécurité du 31/10 ;
+   l'utilisateur ne s'en soucie pas : la reconstruction reprend module par module).
    Ouvrir `/v2/emetteurs` et `/v2/emetteurs/RVMD` ; essayer une admission, une révocation, « tester une
    adresse ». L'écran n'a été ouvert qu'ici, contre une base locale (rendu correct, lignes du journal hautes).
 6. **A15, le jour de l'acceptation** : faire lire la fiche à l'ancien code (`websearch`, `source_registry`,
@@ -95,8 +108,8 @@ payante avant le module M6 (carte).**
 ## Reste ouvert (ne s'archive pas)
 
 - L'ancien chantier « découpage » (B4g) est **clos sans suite** : ses acquis (inventaire, arbre, premier niveau
-  par les segments) seront triés à l'ouverture de M6-M7. Lots B4d, #143, B4f, B4g commités, jamais déployés :
-  **ne pas les déployer** (remplacés par la reconstruction). Récit : archive, « 2026-11-13 — arbitrages ».
+  par les segments) seront triés à l'ouverture de M6-M7. Lots B4d, #143, B4f, B4g en production depuis le
+  rebuild du 31/10 (vérifié le 2026-11-16) ; sans importance : remplacés par la reconstruction. Récit : archive, « 2026-11-13 — arbitrages ».
 - Dettes de l'ancien plan rattachées à leur module : plan 07, « Dettes reprises ».
 - Orientations de l'utilisateur à reprendre en M6 : une ligne par source de cash-flow ; finesse selon la
   maturité ; probabilité de succès hors du découpage ; vocabulaire standard dans tous les prompts ; molécules
@@ -123,8 +136,8 @@ payante avant le module M6 (carte).**
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
 - **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
-- **Production** : dernier déploiement `d504d96` ; lots B4d, #143, B4f, B4g commités et **à ne pas déployer** (remplacés par la reconstruction). Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
-- **Migration 063 ÉCRITE, NON APPLIQUÉE** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Production** : rebuild de sécurité du 31/10 (`46a663f`) — embarque B4d, #143, B4f, B4g et le maillon 1 (vérifié fichier par fichier le 2026-11-16) ; M1 pas encore déployé. Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
+- **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.
