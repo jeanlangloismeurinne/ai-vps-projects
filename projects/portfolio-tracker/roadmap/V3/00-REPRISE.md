@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,12 +18,22 @@ role: >
 
 ## ➜ Prochain pas
 
-**OUVRIR M2 « COLLECTE DE SOURCES » : tri de l'ancien code et acceptation écrite AVANT la construction**
-(même patron que `M1-fiche-emetteur.md`). M1 est **accepté sur le VPS le 2026-11-16** (journal du plan 07 ;
-`M1-fiche-emetteur.md` § 4) : 063 appliquée, reprise importée, A14 0 écart, l'ancien code lit la fiche
-(`knowledge/fiche_emetteur.py`, seul lecteur ; `source_registry` et les listes de `websearch` supprimés),
-production = `main`. **Reste à l'utilisateur** : les gestes d'écriture à l'écran (`/v2/emetteurs`) sur
-de vraies décisions (registre indélébile) ; puis archiver `M1-fiche-emetteur.md`.
+**M2 « COLLECTE DE SOURCES » OUVERT le 2026-11-16 : tri et acceptation écrits (`M2-collecte-sources.md`,
+B1-B14), AVANT le code. Attendre les trois réponses de l'utilisateur (§ 3 du fichier), puis construire
+hors ligne (société fictive) avant tout passage réel.** Questions : (1) qui signe la complétion d'une
+fiche depuis le registre officiel (recommandé : le système, révocable) ; (2) prospectus d'introduction =
+« derniers comptes annuels » tant qu'aucun rapport annuel n'existe ; (3) SpaceX troisième cas
+d'acceptation.
+
+**SpaceX** (ajoutée par l'utilisateur à l'écran le 2026-11-16, fiche révision 1 minimale : raison
+sociale « SPCX », rien d'autre — donc aucune source admise) : Nasdaq SPCX depuis juin 2026, numéro SEC
+1181412, **aucun 10-K** ; comptes annuels 2025 seulement dans le prospectus (424B4 du 2026-06-12), données
+structurées SEC trimestrielles seulement. L'ancien code plante à `traducteur.py:580` : ne pas le
+réparer, M2 le remplace. Ne PAS corriger la fiche avant la réponse à la question 1.
+
+M1 est **accepté sur le VPS le 2026-11-16** ; premier geste d'écriture joué par l'utilisateur (création
+de la fiche SpaceX). Restent à l'écran : admettre, révoquer, corriger sur de vraies décisions ; puis
+archiver `M1-fiche-emetteur.md`.
 
 Écarts voulus constatés en A15 : une adresse à la seule FORME d'une page investisseurs (`ir.`, `investor.`)
 n'est plus devinée (admise par le système quand elle est vue, A16) ; **un émetteur sans fiche n'a aucune
@@ -42,13 +52,7 @@ l'utilisateur) ; la collecte (M2) devra donc établir la fiche d'abord et appele
 - **Dossier pendant une collecte** : ce qui n'en dépend pas avance ; ce qui en dépend l'attend, sans limite
   de temps ; l'arrêt énumère toutes les attentes (#146, chef de dossier 1.1.0).
 
-### Ensuite : M2 « Collecte de sources »
-
-Tri de `knowledge/edgar_feed.py`, `websearch.py`, `agents/v2/collecte_executor.py` ; acceptation écrite
-avant. Les deux questions qu'il ouvrait sont tranchées et leurs portes construites ; restent à M2 :
-**l'évaluateur lui-même** (modèle, choix des publications ; il appelle `emetteurs.evaluer_source`), **la
-collecte comme travail suivi** (un pas qui rend `en_cours` et sait se `suivre` ; où vit la tâche de fond, et
-le déclencheur qui rappelle l'automate) ; et le branchement des pages investisseurs des autres sociétés.
+### M2 : le détail (tri, acceptation, ce qui reste ouvert) est dans `M2-collecte-sources.md`.
 
 **M0 « Fondations » : ACCEPTÉ** (hors ligne le 2026-11-13, rejoué sur le VPS le 2026-11-16).
 
