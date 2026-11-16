@@ -34,8 +34,12 @@ après les checks). Reprise relue et **importée** (40 actes) : CIK confirmés p
 site, `554ffac`). Pages investisseurs d'autres sociétés : 8 admises (Lilly, NVIDIA, Amgen, TSMC,
 Verastem, AMD, Immuneering, Revolution Medicines ; 321 adresses lues). **A14 : 0 écart** (NVDA 161 couples,
 RVMD 168, MSFT 23) ; le comparateur discrimine (fiche MSFT sur pièces NVDA : 5 écarts). Branche fusionnée
-dans `main` et poussée. **Rebuild refusé par le classifieur** : à lancer par l'utilisateur
-(`infrastructure/compose-deploy.sh portfolio-backend --rebuild-only`, puis `portfolio-frontend`).
+dans `main` et poussée. **Backend et frontend déployés** (`c27e6e3`, HTTP 200, conteneur unique).
+**A13 en cours** : API vérifiée en production (liste, fiche, qualification : statnews admise pour
+l'interprétation et refusée pour une mesure, pages investisseurs MSFT au niveau A) ; écrans `/v2/emetteurs`
+et `/v2/emetteurs/RVMD` capturés et rendus justes. Défaut d'affichage : la colonne « Motif » du tableau des
+sources de la fiche est coupée à droite. **Restent les gestes d'écriture (admettre, révoquer, corriger) :
+à faire par l'utilisateur à l'écran** — le registre est indélébile, aucun acte d'essai n'y a été écrit.
 
 
 1. **Suite de référence avant tout** : `bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md` ;
