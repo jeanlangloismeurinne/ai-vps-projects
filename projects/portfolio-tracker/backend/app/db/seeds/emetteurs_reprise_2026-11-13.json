@@ -56,6 +56,10 @@
     [
      "relations_investisseurs",
      "microsoft.com/investor"
+    ],
+    [
+     "relations_investisseurs",
+     "microsoft.com/en-us/investor"
     ]
    ],
    "specialite": "",
