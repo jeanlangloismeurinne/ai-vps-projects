@@ -20,6 +20,7 @@ from app.agents.v2.common import FIELD_PROFILES  # noqa: E402
 from app.agents.v2.curator import _tier_ge  # noqa: E402
 from app.agents.v2.tools import RetrievalLog, canonical_url  # noqa: E402
 from app.agents.v2.worker import _cited_documents, _normalise_entry, _verify_provenance  # noqa: E402
+from _fiches_reprise import fiche  # noqa: E402
 from app.contracts import WorkerRequest  # noqa: E402
 from app.db.migrations._gen_025 import PROMPTS, SEARCH_WORKER_TOOLS  # noqa: E402
 from app.knowledge import document_search  # noqa: E402
@@ -116,7 +117,7 @@ raw_edgar = {
 _EXTRAIT = "Two direct customers accounted for 22% and 14% of total revenue"
 raw_edgar["extraits"] = [_EXTRAIT]
 
-e = _normalise_entry(dict(raw_edgar), req, log)
+e = _normalise_entry(dict(raw_edgar), req, log, fiche(req.ticker_id))
 # #126 (2026-10-15) : une citation dont le document n'a pas été lu n'est plus rétrogradée en
 # `llm_memory` — elle est REFUSÉE, parce que ses extraits ne se retrouvent dans aucun texte rapporté.
 # La protection de #28 tient toujours, plus strictement : une adresse plausible n'entre plus du tout.
@@ -127,7 +128,7 @@ log2 = RetrievalLog()
 log2.record(EDGAR, "full")
 log2.record_text(EDGAR, f"Concentration of revenue. {_EXTRAIT}, primarily attributable to the "
                         "Compute & Networking segment.")
-e = _normalise_entry(dict(raw_edgar), req, log2) or {}
+e = _normalise_entry(dict(raw_edgar), req, log2, fiche(req.ticker_id)) or {}
 check("URL réellement récupérée, extrait retrouvé → edgar_official conservé",
       e.get("source_type") == "edgar_official")
 check("score plein rendu", e.get("reliability_score", 0) > 0.90, f"→ {e.get('reliability_score')}")
@@ -138,12 +139,12 @@ check("aucune revue humaine imposée", e.get("requires_human_review") is False)
 # garde plus que la restitution de mémoire, dont la prose est le seul contenu.
 renvoi = dict(raw_edgar, extraits=[f"{_EXTRAIT}"],
               content="Le 10-K FY2026 et la mise à jour Q1 FY2027 (10-Q) indiquent la concentration.")
-e = _normalise_entry(renvoi, req, log2) or {}
+e = _normalise_entry(renvoi, req, log2, fiche(req.ticker_id)) or {}
 check("fiche à extraits vérifiés → jamais marquée multi-documents",
       e.get("requires_human_review") is False, f"→ {e.get('reliability_note')}")
 multi = dict(raw_edgar, source_type="llm_memory", extraits=[], model_cutoff="2026-01",
              content="Le 10-K FY2026 et la mise à jour Q1 FY2027 (10-Q) indiquent : 'Some of our customers…'")
-e = _normalise_entry(multi, req, log2) or {}
+e = _normalise_entry(multi, req, log2, fiche(req.ticker_id)) or {}
 check("restitution de mémoire multi-documents → revue humaine", e.get("requires_human_review") is True)
 check("désignations listées dans la note",
       "10-K" in e.get("reliability_note", "") and "10-Q" in e.get("reliability_note", ""))
@@ -206,16 +207,16 @@ print("\n8. classify_source_type — un cabinet d'études atteint le plancher de
 # (`curator.FIELD_PLANCHER_OVERRIDES`, la seconde table, a été supprimée — #46).
 _PLANCHER_MARCHE = FIELD_PROFILES["marche.croissance_marche_historique"]["plancher"]
 for dom in ("srgresearch.com", "canalys.com", "gartner.com", "idc.com", "techinsights.com"):
-    st = classify_source_type(f"https://www.{dom}/articles/cloud-market-q2-2026")
+    st = classify_source_type(f"https://www.{dom}/articles/cloud-market-q2-2026", fiche("MSFT"))
     score, tier, _ = compute_reliability(st, entry_type="fact_qualitative")
     check(f"{dom} → {st} ({tier}) ≥ plancher {_PLANCHER_MARCHE}",
           st == "web_search_reputable" and _tier_ge(tier, _PLANCHER_MARCHE),
           f"→ {st}/{tier}/{score}")
 check("un blog quelconque reste generic (la liste n'est pas un passe-droit)",
-      classify_source_type("https://cloudblogexample.io/2026/cloud-market") == "web_search_generic")
+      classify_source_type("https://cloudblogexample.io/2026/cloud-market", fiche("MSFT")) == "web_search_generic")
 check("la presse financière garde la priorité sur la liste réputée",
-      classify_source_type("https://www.reuters.com/technology/cloud") == "financial_press")
-check("un dépôt EDGAR reste au-dessus de tout", classify_source_type(EDGAR) == "edgar_official")
+      classify_source_type("https://www.reuters.com/technology/cloud", fiche("MSFT")) == "financial_press")
+check("un dépôt EDGAR reste au-dessus de tout", classify_source_type(EDGAR, fiche("MSFT")) == "edgar_official")
 
 print("\n9. select_relevant — `focus` : chercher DANS le document par ses propres mots (#27, §12)")
 # Document synthétique calqué en FORME sur le cas réel (circulaire DEF 14A NVIDIA, 2026-10-16) :
@@ -306,7 +307,7 @@ print("\n11. exec_fetch_url / fetch_url / _finalise — `chercher` transmis de b
 _captures_11: dict = {}
 
 
-async def _stub_fetch_url_g(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
+async def _stub_fetch_url_g(url, *, query=None, chercher=None, fiche=None, max_chars=None):
     _captures_11["chercher"] = chercher
     return {"url": url, "final_url": url, "status": 200, "title": "", "text": "x", "via": "direct"}
 
@@ -327,7 +328,7 @@ finally:
     tools_mod.fetch_url = _reel_fetch
 
 
-async def _stub_direct_h(url, ticker_id=None):
+async def _stub_direct_h(url, fiche=None):
     return {
         "url": url, "final_url": url, "status": 200, "content_type": "text/html",
         "title": "Titre", "text": _DOC_9, "source_type_max": "web_search_generic", "via": "direct",

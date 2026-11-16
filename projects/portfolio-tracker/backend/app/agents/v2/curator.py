@@ -40,7 +40,7 @@ _TIER_RANK = {t: i for i, t in enumerate(TIER_ORDER)}  # 0 = meilleur (A) … pl
 # Il portait un seul champ (`marche.croissance_marche_historique: B`) et vivait à côté de
 # `FIELD_PROFILES`, qui porte le plancher des 19 champs depuis la capacité 0. Deux tables pour une
 # seule règle : c'est le motif de #46, et l'écart était déjà nommé dans `_DESSERRAGE_NON_CABLE`
-# (`check_source_registry.py` §1bis). Sa conséquence était mesurable — le desserrage B+ → B de #50
+# (`check_fiche_lue.py` [F1], ex-`check_source_registry.py` §1bis). Sa conséquence était mesurable — le desserrage B+ → B de #50
 # sur `positionnement.moat_preuves`, `positionnement.position_vs_pairs` et
 # `marche.structure_5forces` vivait dans la doctrine sans jamais atteindre la porte : une entry B
 # admise par le registre nominatif (#52) était **encore refusée** ici. La porte lit désormais

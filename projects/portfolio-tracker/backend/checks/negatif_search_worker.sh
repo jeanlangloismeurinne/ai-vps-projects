@@ -44,7 +44,7 @@ mutations=(
 "$W¦        \"content_structured\": None if extraits else (¦        \"content_structured\": raw.get(\"content_structured\") if True else (¦valeurs structurées du collecteur ne sont PAS"
 "$W¦        \"source_type\": \"agent_synthesis\",¦        \"source_type\": fiche[\"source_type\"],¦la lecture est une synthèse d'agent"
 "$W¦        if lecture is not None and lecture[\"reliability_score\"] >= req.reliability_min:¦        if lecture is not None:¦lecture sous le plancher du mandat"
-"$W¦    raw: Any, req: WorkerRequest, log: RetrievalLog¦    raw: Any, req: WorkerRequest, log: RetrievalLog = None¦\`_normalise_entry\` exige le journal"
+"$W¦    raw: Any, req: WorkerRequest, log: RetrievalLog, fiche: Fiche¦    raw: Any, req: WorkerRequest, log: RetrievalLog = None, fiche: Fiche = None¦\`_normalise_entry\` exige le journal"
 "$W¦        log=retrieval_log,¦        log=RetrievalLog(),¦en production, le journal du run"
 "$W¦        \"title\": titre_de_fiche(url),¦        \"title\": (raw.get(\"title\") or \"\").strip() or None,  # mutation: repli sur le titre du modèle¦le titre de la fiche NOMME le document"
 # Arbitrage du 2026-10-18 : la « lecture du collecteur » redevient titrée par le modèle (son propre
@@ -69,10 +69,11 @@ mutations=(
 "$WS¦    ouvert = await backend.search(q, n)¦    ouvert = []¦et le web ouvert l'est aussi"
 "$WS¦    hits = origine + [h for h in ouvert if h.url not in vus]¦    hits = [h for h in ouvert if h.url not in vus] + origine¦passent EN TÊTE"
 "$WS¦    hits = origine + [h for h in ouvert if h.url not in vus]¦    hits = origine + ouvert¦n'est pas répétée"
-"$WS¦    domaines = issuer_domains_for(ticker_id)¦    domaines = (\"nvidia.com\",)¦aucun domaine deviné"
-"$WS¦            \"site_emetteur\": est_site_emetteur(self.url, ticker_id),¦            \"site_emetteur\": True,¦et qu'une reprise n'en vient pas"
-"$WS¦    return bool(host) and any(host == d or host.endswith(\".\" + d) for d in issuer_domains_for(ticker_id))¦    return bool(host) and any(host.endswith(d) for d in issuer_domains_for(ticker_id))¦notnvidia.com"
-"$T¦        hits = await web_search(query, n, ticker_id=ticker_id)¦        hits = await web_search(query, n)¦le site de l'émetteur est interrogé"
+"$WS¦    domaines = fiche_emetteur.domaines_de_la_societe(fiche) if fiche is not None else ()¦    domaines = (\"nvidia.com\",)¦aucun domaine deviné"
+"$WS¦            \"site_emetteur\": est_site_emetteur(self.url, fiche),¦            \"site_emetteur\": True,¦et qu'une reprise n'en vient pas"
+# le site de la société se lit dans la fiche (le suffixe de domaine est gardé chez le module : negatif_emetteurs)
+"app/knowledge/fiche_emetteur.py¦    return any(lieu.adresse == q.source for lieu in fiche.lieux)¦    return q.admise¦nvidia.com n'est pas le site de l'émetteur d'une analyse MSFT"
+"$T¦        hits = await web_search(query, n, fiche=fiche)¦        hits = await web_search(query, n)¦le site de l'émetteur est interrogé"
 # le détenteur unique, partagé avec la note flash
 "$NF¦_normaliser = normaliser¦_normaliser = lambda t: normaliser(t)¦détenteur unique : la note flash"
 # #128 — lecture tolérante entry par entry, DÉLÉGUÉE à runner.lecture_tolerante_liste (partagée

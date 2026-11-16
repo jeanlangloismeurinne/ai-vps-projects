@@ -18,9 +18,9 @@ absence de source. Un `uncovered_fields` fondé sur une recherche qui n'a pas eu
 readiness et le garde-fou A2 n'y voit rien : les refs citées existent, ce sont les refs manquantes
 qui sont fausses.
 
-`classify_source_type()` fixe, à partir du **domaine**, le plafond de `source_type` défendable pour
-une URL (sec.gov → edgar_official, ir.nvidia.com → company_ir_official, blog inconnu →
-web_search_generic). Il est appliqué côté Python dans le worker : le score de fiabilité découle du
+`classify_source_type()` fixe, à partir de la **fiche de l'émetteur** (module M1), le plafond de
+`source_type` défendable pour une URL (sec.gov → edgar_official, ir.nvidia.com →
+company_ir_official, blog inconnu → web_search_generic). Il est appliqué côté Python dans le worker : le score de fiabilité découle du
 source_type, donc laisser le modèle qualifier lui-même sa source reviendrait à lui laisser fixer son
 propre score — exactement ce que le plafond de source (§6.3) interdit.
 """
@@ -37,6 +37,8 @@ from urllib.parse import urlparse
 import httpx
 
 from app.config import settings
+from app.knowledge import fiche_emetteur
+from app.modules.emetteurs.contrat import Fiche
 from app.knowledge.document_search import select_relevant
 
 logger = logging.getLogger(__name__)
@@ -62,161 +64,51 @@ class SearchHit:
     published_date: Optional[str] = None   # ISO date si le backend la donne
     text: Optional[str] = None             # contenu extrait si le backend le fournit (Exa)
 
-    def to_dict(self, ticker_id: Optional[str] = None) -> dict[str, Any]:
+    def to_dict(self, fiche: Fiche) -> dict[str, Any]:
         d = {
             "title": self.title,
             "url": self.url,
             "snippet": self.snippet,
             "published_date": self.published_date,
             "domain": urlparse(self.url).netloc.lower().removeprefix("www."),
-            "source_type_max": source_type_max(self.url, ticker_id),
-            "site_emetteur": est_site_emetteur(self.url, ticker_id),
+            "source_type_max": source_type_max(self.url, fiche),
+            "site_emetteur": est_site_emetteur(self.url, fiche),
         }
         if self.text:
             d["text"] = self.text
         return d
 
 
-# ── Qualification de source par domaine (plafond opposable au modèle) ────────
+# ── Qualification de source (plafond opposable au modèle) ─────────────────────
 # Un domaine ne PROUVE pas la qualité d'un contenu, mais il la BORNE : un PDF sur sec.gov peut
 # légitimement porter edgar_official, un billet Medium ne le peut jamais. On borne, on ne promeut pas.
-_OFFICIAL_DOMAINS = {
-    "sec.gov": "edgar_official",
-    "www.sec.gov": "edgar_official",
-    "efts.sec.gov": "edgar_official",
-}
-_EU_REGULATOR_SUFFIXES = ("amf-france.org", "esma.europa.eu", "bafin.de", "fca.org.uk", "consob.it")
-_PRESS_DOMAINS = {
-    "reuters.com", "bloomberg.com", "ft.com", "wsj.com", "cnbc.com", "barrons.com",
-    "lesechos.fr", "latribune.fr", "handelsblatt.com", "nikkei.com", "economist.com",
-    "marketwatch.com", "morningstar.com", "seekingalpha.com", "fool.com",
-}
-# Un domaine « réputé » sans être de la presse financière primaire : plafond B (0.65).
-# Deux familles y cohabitent, pour la même raison : un organisme qui publie SES PROPRES chiffres est
-# primaire pour ce chiffre-là, sans être pour autant une source d'émetteur ni de presse financière.
-# Les cabinets d'études de marché (2ᵉ ligne) sont ajoutés le 2026-08-30 : sans eux,
-# `marche.croissance_marche_historique` était structurellement infondable. Son plancher avait déjà été
-# abaissé à B (`curator.FIELD_PLANCHER_OVERRIDES`), reconnaissant qu'une taille de marché n'est jamais
-# une donnée d'émetteur — mais AUCUNE source ne pouvait atteindre ce B, faute d'être classée ici : sur
-# MSFT, deux mandats ont rapporté 35 puis 15 URL (Synergy, Canalys, Omdia) et tout est tombé
-# sous-plancher en `web_search_generic` (0.50). Le plancher B était la bonne idée appliquée à une table
-# incapable de produire un B ; c'est ici que le trou se bouche, pas par une dispense par émetteur.
-# B est le bon plafond et pas davantage : ce sont des ESTIMATIONS, l'analyste doit le lire dans le tier.
-_REPUTABLE_SUFFIXES = (
-    "arxiv.org", "iea.org", "oecd.org", "worldbank.org",
-    "srgresearch.com", "canalys.com", "gartner.com", "idc.com",
-    "omdia.tech.informa.com", "counterpointresearch.com", "techinsights.com",
-)
+# Ce que vaut une adresse se lit dans la FICHE de l'émetteur analysé (module M1, acceptation A15) :
+# ses lieux de publication et le journal des sources, datés, motivés et signés. Les listes de domaines
+# écrites ici jusqu'au 2026-11-16 y ont été reprises à l'identique ; `fiche_emetteur` est le seul
+# lecteur de la fiche dans l'ancien code.
 
-# ── Domaines d'émetteur, clefés PAR ÉMETTEUR (#31) ───────────────────────────
-# `nvidia.com` vivait dans `_REPUTABLE_SUFFIXES` : un fait sur UN émetteur dans une constante
-# globale, soit exactement le bug que la convention #31 dit d'attendre au 2ᵉ ticker. Il est arrivé :
-# `microsoft.com/en-us/investor/…` était classé `web_search_generic` (0.50) au lieu de
-# `company_ir_official` (0.90), parce que Microsoft publie son IR sur un CHEMIN et non sur un
-# sous-domaine `ir.` — `_IR_HOST_PATTERN` ne pouvait pas le voir.
-#
-# Pourquoi un registre écrit à la main plutôt qu'une résolution automatique : EDGAR expose bien
-# `website` et `investorWebsite` dans `submissions`, mais les deux sont **vides** — vérifié le
-# 2026-08-31 sur NVDA, AAPL, MSFT, GOOGL, AMZN, cinq fois la chaîne vide. Deviner le domaine depuis
-# la raison sociale promouvrait un homonyme ou un squatteur à 0.90, soit la sur-qualification que
-# #24 retire précisément au modèle. On préfère une entrée à écrire pour chaque émetteur.
-#
-# Défaut = tuple vide, donc AUCUNE promotion par héritage : un ticker non enregistré n'a pas de
-# domaine d'émetteur, ses pages corporate restent `web_search_generic` (même politique que
-# `nonblocking_gaps_for` — on refuse un privilège de trop, on n'en accorde pas par défaut).
-_ISSUER_DOMAINS: dict[str, tuple[str, ...]] = {
-    "NVDA": ("nvidia.com",),
-    "MSFT": ("microsoft.com",),
-    # Revolution Medicines : IR servi À LA FOIS en sous-domaine (`ir.revmed.com`, que
-    # `_IR_HOST_PATTERN` couvre déjà sans registre) et en CHEMIN (`revmed.com/investors`, vérifié
-    # 200 le 2026-09-04). C'est ce second cas — le motif Microsoft de #33 — qui rend l'entrée
-    # nécessaire : sans elle il tombe en `web_search_generic` 0.50, donc sous plancher, et le champ
-    # paraît infondable alors que la source est la meilleure possible.
-    "RVMD": ("revmed.com",),
-}
-
-_IR_HOST_PATTERN = re.compile(r"^(ir|investor|investors|investorrelations)\.", re.IGNORECASE)
-# Segment de chemin dédié à l'information actionnaire. N'est JAMAIS consulté seul : uniquement sur un
-# domaine déjà reconnu comme celui de l'émetteur analysé, sans quoi `unblogquelconque.com/investor/`
-# monterait à 0.90.
-_IR_PATH_PATTERN = re.compile(
-    r"(^|/)(ir|investor|investors|investor-relations|investorrelations|shareholder|shareholders)(/|$)",
-    re.IGNORECASE,
-)
+def classify_source_type(url: Optional[str], fiche: Fiche) -> str:
+    """`source_type` que l'adresse justifie quelle que soit la nature de l'information. Sans URL →
+    llm_memory. `fiche` est celle de l'émetteur ANALYSÉ, pas de celui que la page mentionne :
+    `microsoft.com` n'est le site de la société que pour une analyse MSFT."""
+    return fiche_emetteur.source_type_generique(url, fiche)
 
 
-def issuer_domains_for(ticker_id: Optional[str]) -> tuple[str, ...]:
-    """Domaines propres à CET émetteur. Ticker inconnu → tuple vide (aucune promotion héritée)."""
-    return _ISSUER_DOMAINS.get((ticker_id or "").strip().upper(), ())
+def source_type_max(url: Optional[str], fiche: Fiche) -> str:
+    """Plafond affiché au modèle : le meilleur cas sur les natures d'information.
 
-
-def est_site_emetteur(url: Optional[str], ticker_id: Optional[str]) -> bool:
-    """Vrai si l'URL est sur un domaine (ou sous-domaine) enregistré pour CET émetteur."""
-    host = (urlparse(url or "").netloc or "").lower().removeprefix("www.")
-    return bool(host) and any(host == d or host.endswith("." + d) for d in issuer_domains_for(ticker_id))
-
-
-def classify_source_type(url: Optional[str], ticker_id: Optional[str] = None) -> str:
-    """`source_type` le plus favorable qu'un domaine puisse justifier. Sans URL → llm_memory.
-
-    `ticker_id` est l'émetteur ANALYSÉ, pas celui que la page mentionne : `microsoft.com` n'est le
-    site d'émetteur que d'une analyse MSFT. Sur une analyse MSFT, une page `nvidia.com` est le site
-    marketing d'un concurrent, pas une source primaire — d'où la clef par émetteur plutôt qu'une
-    table globale. Omettre `ticker_id` ne fait jamais monter une source à tort : on retombe sur les
-    règles génériques, strictement.
+    ⚠️ Distinct de `classify_source_type`, et la séparation est load-bearing : une URL dans une liste
+    de résultats n'a pas encore de nature — seule l'entrée qu'on en tirera en aura une. Le chemin
+    d'écriture appelle `classify_source_type` PUIS `fiche_emetteur.qualifier`, qui applique la fiche
+    pour la nature de l'entrée : une source admise pour l'interprétation n'y gagne aucun standing sur
+    une mesure chiffrée.
     """
-    if not url:
-        return "llm_memory"
-    parsed = urlparse(url)
-    host = (parsed.netloc or "").lower()
-    if not host:
-        return "llm_memory"
-    bare = host.removeprefix("www.")
-    is_issuer_site = est_site_emetteur(url, ticker_id)
-
-    if host in _OFFICIAL_DOMAINS or bare in _OFFICIAL_DOMAINS:
-        return _OFFICIAL_DOMAINS.get(host) or _OFFICIAL_DOMAINS[bare]
-    if any(bare == s or bare.endswith("." + s) for s in _EU_REGULATOR_SUFFIXES):
-        return "regulator_filing_eu"
-    # Sous-domaine `ir.`/`investor.` : convention assez forte pour valoir sans registre, et on la
-    # garde GÉNÉRIQUE à dessein. La restreindre aux émetteurs enregistrés ferait TOMBER
-    # `ir.<concurrent>.com` de 0.90 à 0.50 sur toute analyse — un faux trou de couverture créé par un
-    # correctif censé en boucher un (#32).
-    if _IR_HOST_PATTERN.match(host):
-        return "company_ir_official"
-    # Chemin IR sur le site de l'émetteur analysé : le cas Microsoft.
-    if is_issuer_site and _IR_PATH_PATTERN.search(parsed.path or ""):
-        return "company_ir_official"
-    if bare in _PRESS_DOMAINS or any(bare.endswith("." + d) for d in _PRESS_DOMAINS):
-        return "financial_press"
-    # Site de l'émetteur hors section IR (page produit, salle de presse) : réputé sans être de l'IR.
-    # C'est le plafond qu'avait `nvidia.com` en dur ; il est désormais rendu au seul émetteur NVDA.
-    if is_issuer_site:
-        return "web_search_reputable"
-    if any(bare == s or bare.endswith("." + s) for s in _REPUTABLE_SUFFIXES):
-        return "web_search_reputable"
-    return "web_search_generic"
+    return fiche_emetteur.source_type_max(url, fiche)
 
 
-def source_type_max(url: Optional[str], ticker_id: Optional[str] = None) -> str:
-    """Plafond affiché au modèle : qualification par domaine, PLUS le registre nominatif.
-
-    ⚠️ Distincte de `classify_source_type`, et la séparation est load-bearing. Le registre accorde
-    un standing au couple (source × nature) ; ici la nature n'existe pas encore — une URL dans une
-    liste de résultats n'a pas de nature, seule l'entry qu'on en tirera en aura une. On rend donc le
-    MEILLEUR cas, ce qui est la définition d'un plafond.
-
-    Replier cette promotion dans `classify_source_type` casserait la règle : le chemin d'écriture
-    appelle `classify_source_type` PUIS `source_registry.qualify`, et `qualify` ne promeut que
-    depuis `web_search_generic`. Une source déjà promue en amont traverserait `qualify` sans que la
-    condition de nature s'applique — une source admise pour l'interprétation gagnerait un standing
-    sur la mesure chiffrée, exactement ce que la capacité 2 refuse.
-    """
-    generique = classify_source_type(url, ticker_id)
-    if generique != "web_search_generic":
-        return generique  # #33 : une règle spécifique ne resserre jamais la générique au passage
-    from .source_registry import plafond_registre  # import tardif : le registre importe common.py
-    return plafond_registre(url, ticker_id) or generique
+def est_site_emetteur(url: Optional[str], fiche: Fiche) -> bool:
+    """Vrai si l'adresse relève d'un lieu où la société analysée publie elle-même."""
+    return fiche_emetteur.est_lieu_de_la_societe(url, fiche)
 
 
 # ── Backends ─────────────────────────────────────────────────────────────────
@@ -393,7 +285,7 @@ def search_is_configured() -> bool:
 
 
 async def web_search(
-    query: str, max_results: int = 5, ticker_id: Optional[str] = None
+    query: str, max_results: int = 5, fiche: Optional[Fiche] = None
 ) -> list[SearchHit]:
     """Recherche web via le backend courant. Lève `SearchUnavailable` (jamais une liste vide muette).
 
@@ -406,7 +298,7 @@ async def web_search(
     """
     backend = get_search_backend()
     q, n = query.strip(), max(1, min(max_results, 10))
-    domaines = issuer_domains_for(ticker_id)
+    domaines = fiche_emetteur.domaines_de_la_societe(fiche) if fiche is not None else ()
     origine = await backend.search(q, n, include_domains=domaines) if domaines else []
     ouvert = await backend.search(q, n)
     vus = {h.url for h in origine}
@@ -506,7 +398,7 @@ class _DirectFetchFailed(RuntimeError):
         self.recoverable = recoverable
 
 
-async def _fetch_url_direct(url: str, ticker_id: Optional[str] = None) -> dict[str, Any]:
+async def _fetch_url_direct(url: str, fiche: Fiche) -> dict[str, Any]:
     """Récupération directe depuis ce VPS. Lève `_DirectFetchFailed` en qualifiant l'échec.
 
     Rend le texte **entier** (borné par `_RETRIEVAL_MAX_CHARS`) : la réduction est décidée plus haut,
@@ -563,7 +455,7 @@ async def _fetch_url_direct(url: str, ticker_id: Optional[str] = None) -> dict[s
         "content_type": ctype,
         "title": title,
         "text": text[:_RETRIEVAL_MAX_CHARS],
-        "source_type_max": classify_source_type(str(r.url), ticker_id),
+        "source_type_max": classify_source_type(str(r.url), fiche),
         "via": "direct",
     }
 
@@ -630,7 +522,7 @@ async def fetch_url(
     max_chars: Optional[int] = None,
     query: Optional[str] = None,
     chercher: Optional[str] = None,
-    ticker_id: Optional[str] = None,
+    fiche: Optional[Fiche] = None,
 ) -> dict[str, Any]:
     """Récupère une URL et en extrait les passages qui répondent à `query`. Renvoie {url, final_url,
     status, title, text, truncated, content_type, via, extract, note}. Lève RuntimeError sur échec —
@@ -659,18 +551,19 @@ async def fetch_url(
     `via` dit lequel des deux chemins a rendu le texte : le modèle doit pouvoir distinguer une page
     lue à l'instant d'un extrait de cache, et le champ remonte jusqu'au log du worker.
 
-    `ticker_id` obéit à la même règle que `query` — c'est l'émetteur du mandat, fermé dans
-    l'exécuteur, jamais un argument que le modèle pourrait choisir : il décide quel domaine vaut
-    `company_ir_official`, donc le score (§6.3), et le laisser au modèle rouvrirait exactement le
-    contournement que #28 a fermé sur les URL.
+    `fiche` obéit à la même règle que `query` — c'est celle de l'émetteur du mandat, fermée dans
+    l'exécuteur, jamais un argument que le modèle pourrait choisir : elle décide quelle adresse vaut
+    `company_ir_official`, donc le score (§6.3), et la laisser au modèle rouvrirait exactement le
+    contournement que #28 a fermé sur les URL. Sans fiche, aucune source n'est admise.
     """
+    fiche = fiche if fiche is not None else fiche_emetteur.fiche_vide(None)
     limit = max_chars or settings.FETCH_URL_MAX_CHARS
     if not re.match(r"^https?://", url or "", re.IGNORECASE):
         raise ValueError(f"URL invalide (http/https attendu) : {url!r}")
 
     try:
         return await _finalise(
-            await _fetch_url_direct(url, ticker_id), query=query, limit=limit, chercher=chercher
+            await _fetch_url_direct(url, fiche), query=query, limit=limit, chercher=chercher
         )
     except _DirectFetchFailed as direct_error:
         if not direct_error.recoverable:
@@ -707,7 +600,7 @@ async def fetch_url(
                 "content_type": "text/plain",
                 "title": hit.get("title") or "",
                 "text": text,
-                "source_type_max": classify_source_type(url, ticker_id),
+                "source_type_max": classify_source_type(url, fiche),
                 "via": "search_backend_cache",
                 "direct_fetch_error": str(direct_error),
             },

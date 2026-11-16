@@ -85,11 +85,12 @@ from app.knowledge.standard_collecte import PREFIXE_FICHE
 from app.knowledge.datation import Datation, DatationInvalide
 from app.knowledge.material_events import MaterialEventLookup, material_anchor_for_ticker
 from app.knowledge.service import compute_reliability, store_knowledge
-from app.knowledge.source_registry import qualify
+from app.knowledge.fiche_emetteur import charger as charger_fiche, qualifier
 from app.knowledge.websearch import SearchUnavailable, classify_source_type, search_is_configured
 
 from .runner import AgentOutputInvalid, lecture_tolerante_liste, run_tool_json_agent
 from .tools import RetrievalLog, build_tool_executors
+from app.modules.emetteurs.contrat import Fiche
 
 logger = logging.getLogger(__name__)
 
@@ -144,9 +145,7 @@ def _baseline(source_type: str) -> float:
     return SOURCE_RELIABILITY_BASELINE.get(source_type, (None, 0.0))[1]
 
 
-def _resolve_source_type(
-    declared: Any, url: Optional[str], ticker_id: Optional[str] = None
-) -> str:
+def _resolve_source_type(declared: Any, url: Optional[str], fiche: Fiche) -> str:
     """Qualification finale de la source : le **domaine** tranche, sauf aveu de mémoire modèle.
 
     `source_type` n'est pas un jugement mais un **fait sur la source**, que le domaine détermine
@@ -162,7 +161,7 @@ def _resolve_source_type(
     """
     if declared == "llm_memory":
         return "llm_memory"
-    return classify_source_type(url, ticker_id)
+    return classify_source_type(url, fiche)
 
 
 # ⚠️ `_resolve_covers()` a été SUPPRIMÉ le 2026-09-10 (migration 036) — cf. le paragraphe « ce que ce
@@ -260,7 +259,7 @@ def titre_de_fiche(url: Optional[str]) -> str:
 
 
 def _normalise_entry(
-    raw: Any, req: WorkerRequest, log: RetrievalLog
+    raw: Any, req: WorkerRequest, log: RetrievalLog, fiche: Fiche
 ) -> Optional[dict[str, Any]]:
     """La FICHE de document d'une entry brute du modèle, ou None si elle est irrécupérable (rejet tracé).
 
@@ -281,7 +280,7 @@ def _normalise_entry(
         return None
 
     url = (raw.get("source_url") or "").strip() or None
-    source_type = _resolve_source_type(raw.get("source_type"), url, req.ticker_id)
+    source_type = _resolve_source_type(raw.get("source_type"), url, fiche)
     # La datation est construite ICI, donc VALIDÉE ici (#79) : une entry mal datée est rejetée
     # avant d'avoir coûté un embedding et une transaction, et le motif du refus est journalisé au
     # lieu de disparaître. `source_date` n'est plus lue de `raw` — elle n'existe plus côté modèle.
@@ -345,8 +344,8 @@ def _normalise_entry(
     # décision du filtre `reliability_min` juste dessous. L'omettre ferait qualifier le worker sur
     # une nature que `store_knowledge` ne retiendra pas — exactement la divergence que le fait
     # d'avoir UNE seule fonction était censé rendre impossible (#46).
-    source_type, _nature, motif_qualif = qualify(
-        source_type=source_type, url=url, ticker_id=req.ticker_id, entry_type=want,
+    source_type, _nature, motif_qualif = qualifier(
+        source_type=source_type, url=url, fiche=fiche, entry_type=want,
         content=releve,
     )
     logger.debug("search-worker: qualification %s → %s (%s)", url, source_type, motif_qualif)
@@ -472,10 +471,12 @@ def _apply_deterministic_overrides(
     tokens_out: int,
     cost_usd: float,
     log: RetrievalLog,
+    fiche: Fiche,
 ) -> dict[str, Any]:
     """Recalcule tout ce qui est dérivable de la requête et des sources. Cf. docstring du module.
 
-    `log` est REQUIS (#126) : c'est contre lui que se vérifient les extraits des fiches."""
+    `log` est REQUIS (#126) : c'est contre lui que se vérifient les extraits des fiches. `fiche`
+    aussi (celle de l'émetteur du mandat, module M1) : c'est elle qui qualifie chaque source."""
     raw_entries = data.get("entries") if isinstance(data.get("entries"), list) else []
 
     kept: list[tuple[dict[str, Any], dict[str, Any]]] = []
@@ -483,7 +484,7 @@ def _apply_deterministic_overrides(
     n_rejected = n_below_floor = n_dup = 0
 
     for raw in raw_entries:
-        entry = _normalise_entry(raw, req, log)
+        entry = _normalise_entry(raw, req, log, fiche)
         if entry is None:
             n_rejected += 1
             continue
@@ -785,19 +786,22 @@ async def run_search_worker(
     # Le journal est propre à CE run : une URL récupérée lors d'un run précédent ne justifie pas une
     # citation dans celui-ci, et le worker doit pouvoir tourner en parallèle sans état partagé.
     retrieval_log = RetrievalLog()
-    executors = build_tool_executors(
-        ticker_id=req.ticker_id, query=req.query, log=retrieval_log
-    )
 
     # L'ancre est lue AVANT l'appel : elle conditionne le message, donc la dépense. La lire après
     # coûterait un appel complet pour apprendre ce qu'on savait déjà (#40, transposé à l'amont).
+    # La fiche de l'émetteur (module M1) est lue une fois par exécution : elle qualifie chaque source
+    # que les outils rapportent et chaque entrée produite.
     async with get_db_session() as conn:
+        fiche = await charger_fiche(conn, req.ticker_id)
         ancre = await ancre_temporelle(conn, req.ticker_id)
         # Seconde horloge : le dernier ÉVÉNEMENT matériel (8-K/6-K). Elle ne se lit PAS dans le
         # corpus — un émetteur dont aucun mandat n'a encore vu l'annonce n'en porte aucune trace,
         # et c'est précisément le cas qu'on veut couvrir. Un appel EDGAR, zéro token de modèle.
         materiel = await material_anchor_for_ticker(conn, req.ticker_id)
 
+    executors = build_tool_executors(
+        ticker_id=req.ticker_id, fiche=fiche, query=req.query, log=retrieval_log
+    )
     messages = [{"role": "user", "content": _build_user_message(req, ancre, materiel)}]
     entries1, uncovered1, model_used1, tin1, tout1, cost1, raw1 = await _executer_tour(
         agent, messages, executors, req, max_iterations=max_iterations, timeout=timeout,
@@ -805,7 +809,7 @@ async def run_search_worker(
     corrected = _apply_deterministic_overrides(
         {"entries": entries1, "uncovered_fields": uncovered1},
         req, model_used=model_used1, tokens_in=tin1, tokens_out=tout1, cost_usd=cost1,
-        log=retrieval_log,
+        log=retrieval_log, fiche=fiche,
     )
 
     # §B : un `not_found` (zéro entry retenue) sans AUCUN appel web pendant ce tour est une
@@ -829,7 +833,7 @@ async def run_search_worker(
         corrected = _apply_deterministic_overrides(
             {"entries": entries2, "uncovered_fields": uncovered2},
             req, model_used=model_used2, tokens_in=tin1 + tin2, tokens_out=tout1 + tout2,
-            cost_usd=cost1 + cost2, log=retrieval_log,
+            cost_usd=cost1 + cost2, log=retrieval_log, fiche=fiche,
         )
 
     logger.info(

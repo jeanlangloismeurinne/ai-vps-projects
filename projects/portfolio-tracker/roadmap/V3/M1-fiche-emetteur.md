@@ -99,6 +99,17 @@ vraie base (`check_emetteurs_persist.py`) ; les lignes « réel » se passent su
   types, questions propres, étalons) est écrit par les modules qui s'en servent.
 - **Le stade de la société** : décision du comité, hors de la fiche.
 
-## 4. À faire sur le VPS
+## 4. Acceptation sur le VPS — passée le 2026-11-16
 
-Tenu à jour dans `00-REPRISE.md`, section « À vérifier sur le VPS ».
+A1-A12, A16, A17 : suite et négatifs rejoués sur le VPS ; A12 sur la vraie base (063 appliquée).
+A14 : 0 écart de niveau sur les pièces réelles (NVDA 161 couples, RVMD 168, MSFT 23), puis 0 écart de
+`source_type` sur 4 815 comparaisons. A15 : l'ancien code lit la fiche (`knowledge/fiche_emetteur.py`),
+les constantes et l'ancien registre sont supprimés, `check_fiche_lue.py` 180/0 (négatif 9/9).
+A13 : écran déployé, lectures vérifiées en production ; **reste : les gestes d'écriture** (admettre,
+révoquer, corriger), prouvés par `check_emetteurs_api.py`, à jouer par l'utilisateur sur une vraie
+décision — le registre est indélébile. Ce fichier s'archive une fois ces gestes faits.
+
+Écarts voulus avec l'ancien code, constatés : une adresse qui a seulement la FORME d'une page
+investisseurs (`ir.`, `investor.`) n'est plus devinée — elle vaut A une fois admise (A16) ; un émetteur
+**sans fiche n'a aucune source admise**, pas même les dépôts officiels (A10, A11 ; les producteurs qui
+déclarent eux-mêmes leur `source_type` ne sont pas touchés).

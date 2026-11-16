@@ -54,17 +54,16 @@ jouée par `tools/emetteurs.sh importer`.
 | Ni réseau ni modèle : bibliothèque standard | `check_emetteurs.py` [A0] | idem |
 | Tout tient en base ; registres en ajout seul ; pas d'écrasement (A12) | `check_emetteurs_persist.py` [B0]-[B7] | `negatif_emetteurs_persist.sh` (code et migration 063) |
 | L'écran sert la fiche et le journal ; le corps d'un geste ne porte ni auteur ni date (A13) | `check_emetteurs_api.py` [P1]-[P9] | `negatif_emetteurs_api.sh` (exige l'image ; répété sur l'hôte le 2026-11-14 : 8/8) |
-| Les pages de relations investisseurs d'une autre société : admises par le système, révocables, jamais rétablies (A16) | `check_emetteurs.py` [A16] ; `check_emetteurs_reprise.py` [R4] | `negatif_emetteurs.sh` |
+| Les pages de relations investisseurs d'une autre société : admises par le système, révocables, jamais rétablies (A16) | `check_emetteurs.py` [A16] | `negatif_emetteurs.sh` |
 | Une source inconnue : note calculée, admise au seuil, en suspens dessous ; votre arbitrage tient (A17) | `check_emetteurs.py` [A17] ; `check_emetteurs_persist.py` [B1], [B4] | `negatif_emetteurs.sh` (17 mutations [A17]) ; `negatif_emetteurs_persist.sh` |
-| La reprise est à l'identique de l'ancien code, deux écarts voulus nommés (A14) | `check_emetteurs_reprise.py` [R1]-[R5] (**provisoire** : part avec l'ancien code) | — |
+| La reprise est à l'identique de l'ancien code (A14) : 0 écart de niveau sur les pièces réelles NVDA/RVMD/MSFT, et 0 écart de `source_type` sur 4 815 comparaisons (2026-11-16) | mesure unique, sur la vraie base ; son témoin (l'ancien code) est supprimé | — |
+| L'ancien code lit la fiche (A15) : `knowledge/fiche_emetteur.py`, seul lecteur ; les listes de domaines et l'ancien registre sont supprimés | `check_fiche_lue.py` [F1]-[F8] | `negatif_fiche_lue.sh` |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **L'acceptation réelle** (A13-A15) : migration 063 non appliquée en production, reprise non jouée,
-  comparaison sur les pièces réelles non faite, écran jamais ouvert contre le vrai service.
-- **Le remplacement de l'ancien code** : `websearch._ISSUER_DOMAINS` et ses quatre listes,
-  `source_registry._ADMISES` / `_TICKER_SECTEURS` / `qualify` sont toujours là et toujours utilisés
-  par l'ancien enchaînement. Ils sont supprimés le jour de l'acceptation.
+- **Un émetteur sans fiche n'a aucune source admise**, pas même les dépôts officiels : l'ancien
+  code les qualifie alors `web_search_generic`. Voulu (A10, A11) : on établit la fiche d'abord. Les
+  producteurs qui déclarent eux-mêmes leur `source_type` (`edgar_feed`…) ne sont pas touchés.
 - **L'évaluateur lui-même** (le modèle qui lit les publications et répond à la grille) : la porte
   est construite (`evaluer_source`, contrat 1.1.0, référentiel 1.2.0), l'évaluateur arrive avec la
   collecte (M2). Seuil, nombre de publications et questions sont des valeurs de départ, en donnée.

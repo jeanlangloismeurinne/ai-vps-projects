@@ -21,8 +21,8 @@ from app.contracts import OutputSchema, WorkerExchange, WorkerRequest, WorkerRes
 from app.contracts.worker_delegation_schema import TAG_LECTURE, est_lecture_du_collecteur
 from app.knowledge.websearch import (
     SearchUnavailable, classify_source_type, get_search_backend, html_to_text,
-    issuer_domains_for,
 )
+from _fiches_reprise import fiche
 
 ok = fail = 0
 
@@ -37,76 +37,67 @@ def check(label, cond, detail=""):
         print(f"  FAIL {label} {detail}")
 
 
-print("\n1. classify_source_type — plafond par domaine")
+print("\n1. classify_source_type — plafond lu dans la fiche de l'émetteur (module M1)")
+# Les fiches sont celles de la reprise RÉELLE (`_fiches_reprise`), jouées par les gestes du module.
+F_MSFT, F_NVDA, F_AAPL = fiche("MSFT"), fiche("NVDA"), fiche("AAPL")
 cases = {
     "https://www.sec.gov/Archives/edgar/data/1045810/x.htm": "edgar_official",
-    "https://ir.nvidia.com/news/press-release": "company_ir_official",
-    "https://investor.tesla.com/x": "company_ir_official",
+    "https://investor.nvidia.com/news/press-release": "company_ir_official",
     "https://www.reuters.com/technology/x": "financial_press",
     "https://lesechos.fr/x": "financial_press",
     "https://www.amf-france.org/x": "regulator_filing_eu",
     "https://blog.random-guy.dev/nvidia-moat": "web_search_generic",
-    # Sans ticker, le site d'un émetteur n'est plus « réputé » : ce plafond se mérite désormais
-    # émetteur par émetteur (#31), pas depuis une constante globale. Cf. §1bis.
+    # Le site d'une AUTRE société n'est pas « réputé » : ce plafond se mérite émetteur par émetteur.
     "https://nvidia.com/fr-fr/data-center/": "web_search_generic",
     None: "llm_memory",
 }
 for url, expected in cases.items():
-    got = classify_source_type(url)
-    check(f"{str(url)[:52]:<54} → {got}", got == expected, f"attendu {expected}")
+    got = classify_source_type(url, F_MSFT)
+    check(f"(MSFT) {str(url)[:52]:<54} → {got}", got == expected, f"attendu {expected}")
 
-print("\n1bis. Domaines d'émetteur — clefés par ticker, jamais globaux (#31)")
-# Le défaut de généralité corrigé le 2026-08-31 : `nvidia.com` était en dur dans
-# `_REPUTABLE_SUFFIXES` et Microsoft n'avait rien, si bien que microsoft.com/en-us/investor/ — de
-# l'IR officiel — tombait en `web_search_generic` (0.50) au lieu de `company_ir_official` (0.90).
+print("\n1bis. Les lieux d'une société valent pour ELLE seule (#31)")
 check("chemin IR de l'émetteur analysé → company_ir_official (cas Microsoft)",
-      classify_source_type("https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4", "MSFT")
+      classify_source_type("https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4", F_MSFT)
       == "company_ir_official")
 check("site de l'émetteur hors section IR → web_search_reputable",
-      classify_source_type("https://nvidia.com/fr-fr/data-center/", "NVDA")
+      classify_source_type("https://nvidia.com/fr-fr/data-center/", F_NVDA)
       == "web_search_reputable")
-check("registre insensible à la casse du ticker",
-      classify_source_type("https://nvidia.com/x", "nvda") == "web_search_reputable")
-
-# Le point qui compte : le privilège ne FUIT PAS d'un émetteur à l'autre. Sur une analyse MSFT,
-# nvidia.com est le site marketing d'un concurrent, pas une source primaire.
-check("le domaine d'un émetteur ne vaut rien pour un AUTRE émetteur",
-      classify_source_type("https://nvidia.com/fr-fr/data-center/", "MSFT")
-      == "web_search_generic")
 check("chemin IR sur un domaine tiers → aucune promotion (pas de /investor/ magique)",
-      classify_source_type("https://unblogquelconque.com/investor/msft-analyse", "MSFT")
+      classify_source_type("https://unblogquelconque.com/investor/msft-analyse", F_MSFT)
       == "web_search_generic")
-check("ticker inconnu → aucun domaine d'émetteur, donc aucune promotion héritée",
-      classify_source_type("https://microsoft.com/en-us/investor/", "AAPL")
+check("émetteur sans fiche → aucun lieu, donc aucune promotion héritée",
+      classify_source_type("https://microsoft.com/en-us/investor/", F_AAPL)
       == "web_search_generic")
-check("issuer_domains_for rend un tuple vide pour un ticker non enregistré",
-      issuer_domains_for("AAPL") == () and issuer_domains_for(None) == ())
-
-# Non-régression : le sous-domaine `ir.` reste GÉNÉRIQUE. Le restreindre au registre ferait tomber
-# l'IR d'un concurrent de 0.90 à 0.50 sur toute analyse — un faux trou de couverture creusé par le
-# correctif censé en boucher un (#32).
-check("ir.<concurrent>.com reste company_ir_official sur une analyse MSFT",
-      classify_source_type("https://ir.nvidia.com/news/press-release", "MSFT")
+check("émetteur sans fiche → aucune source admise, pas même les dépôts officiels (A10, A11)",
+      classify_source_type("https://www.sec.gov/Archives/edgar/data/789019/x.htm", F_AAPL)
+      == "web_search_generic")
+# Les pages investisseurs d'une AUTRE société valent A dès que le système les a admises (A16) ; une
+# adresse qui en a seulement la forme n'est plus devinée (tri de M1 : « la fiche nomme les pages »).
+check("page investisseurs admise d'un concurrent → company_ir_official sur une analyse MSFT",
+      classify_source_type("https://investor.nvidia.com/news/press-release", F_MSFT)
       == "company_ir_official")
-check("sec.gov prime sur le registre d'émetteur",
-      classify_source_type("https://www.sec.gov/Archives/edgar/data/789019/x.htm", "MSFT")
+check("adresse à la forme « ir. » d'une société non admise → web_search_generic",
+      classify_source_type("https://investor.tesla.com/x", F_MSFT) == "web_search_generic")
+check("sec.gov prime sur les lieux de l'émetteur",
+      classify_source_type("https://www.sec.gov/Archives/edgar/data/789019/x.htm", F_MSFT)
       == "edgar_official")
-check("le mandat porte l'émetteur jusqu'à _resolve_source_type",
+check("le mandat porte la fiche jusqu'à _resolve_source_type",
       _resolve_source_type("web_search_generic",
-                           "https://www.microsoft.com/en-us/investor/", "MSFT")
+                           "https://www.microsoft.com/en-us/investor/", F_MSFT)
       == "company_ir_official")
 
-print("\n2. _resolve_source_type — le domaine tranche, sauf aveu llm_memory")
+print("\n2. _resolve_source_type — la fiche tranche, sauf aveu llm_memory")
 check("edgar sur-déclaré sur un blog → web_search_generic",
-      _resolve_source_type("edgar_official", "https://blog.x.dev/p") == "web_search_generic")
-check("IR sous-déclaré en générique → company_ir_official (le domaine corrige)",
-      _resolve_source_type("web_search_generic", "https://ir.nvidia.com/x") == "company_ir_official")
-check("llm_memory déclaré sur sec.gov → llm_memory (l'aveu prime sur le domaine)",
-      _resolve_source_type("llm_memory", "https://www.sec.gov/x") == "llm_memory")
-check("source_type inventé → qualification du domaine",
-      _resolve_source_type("mon_source_type", "https://www.reuters.com/x") == "financial_press")
+      _resolve_source_type("edgar_official", "https://blog.x.dev/p", F_NVDA) == "web_search_generic")
+check("IR sous-déclaré en générique → company_ir_official (la fiche corrige)",
+      _resolve_source_type("web_search_generic", "https://investor.nvidia.com/x", F_NVDA)
+      == "company_ir_official")
+check("llm_memory déclaré sur sec.gov → llm_memory (l'aveu prime sur la fiche)",
+      _resolve_source_type("llm_memory", "https://www.sec.gov/x", F_NVDA) == "llm_memory")
+check("source_type inventé → qualification de la fiche",
+      _resolve_source_type("mon_source_type", "https://www.reuters.com/x", F_NVDA) == "financial_press")
 
-print("\n2bis. Câblage réel : le ticker du mandat atteint-il les outils ?")
+print("\n2bis. Câblage réel : la fiche du mandat atteint-elle les outils ?")
 # Une table de domaines correcte ne sert à rien si `ticker_id` n'arrive pas jusqu'à l'appel. C'est
 # LE défaut que §1bis ne peut pas voir : on remplace le backend de recherche par un bouchon et on
 # regarde ce que l'exécuteur annonce réellement au modèle dans `source_type_max`.
@@ -118,22 +109,22 @@ from app.knowledge.websearch import SearchHit  # noqa: E402
 _IR_MSFT = "https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4"
 
 
-async def _stub_web_search(query, max_results=5, ticker_id=None):
+async def _stub_web_search(query, max_results=5, fiche=None):
     return [SearchHit(title="Earnings", url=_IR_MSFT, snippet="…")]
 
 
 _reel = _tools.web_search
 _tools.web_search = _stub_web_search
 try:
-    execs = _tools.build_tool_executors(ticker_id="MSFT", query="revenus Microsoft Cloud")
+    execs = _tools.build_tool_executors(ticker_id="MSFT", fiche=F_MSFT, query="revenus Microsoft Cloud")
     res = asyncio.run(execs["web_search"]({"query": "microsoft investor relations revenus"}))
     annonce = (res.get("results") or [{}])[0].get("source_type_max")
     check(f"web_search annonce {annonce!r} sur l'IR de l'émetteur analysé",
           annonce == "company_ir_official",
-          "le ticker du mandat ne descend pas jusqu'à classify_source_type")
+          "la fiche du mandat ne descend pas jusqu'à classify_source_type")
 
     # Même bouchon, même URL, mais le mandat porte sur un AUTRE émetteur.
-    execs_autre = _tools.build_tool_executors(ticker_id="NVDA", query="marché des GPU")
+    execs_autre = _tools.build_tool_executors(ticker_id="NVDA", fiche=F_NVDA, query="marché des GPU")
     res_autre = asyncio.run(execs_autre["web_search"]({"query": "microsoft investor relations"}))
     annonce_autre = (res_autre.get("results") or [{}])[0].get("source_type_max")
     check(f"le même lien vaut {annonce_autre!r} quand le mandat porte sur un autre émetteur",
@@ -149,7 +140,7 @@ req = WorkerRequest(
                                field_path="moat.preuves"),
     reliability_min=0.60, max_entries=2,
 )
-_TEXTES_LUS = {'https://blog.random-guy.dev/cuda': 'developers told us they feel locked into the CUDA ecosystem', 'https://www.reuters.com/tech/cuda': 'rewriting kernels away from CUDA carries significant engineering costs', 'https://www.sec.gov/x': 'revenue for fiscal year 2026 was $130.5 billion', 'https://ir.nvidia.com/ecosystem': 'the CUDA developer ecosystem now counts millions of developers', 'https://lesechos.fr/cuda': "l'outillage propriétaire de NVIDIA reste difficile à répliquer"}
+_TEXTES_LUS = {'https://blog.random-guy.dev/cuda': 'developers told us they feel locked into the CUDA ecosystem', 'https://www.reuters.com/tech/cuda': 'rewriting kernels away from CUDA carries significant engineering costs', 'https://www.sec.gov/x': 'revenue for fiscal year 2026 was $130.5 billion', 'https://investor.nvidia.com/ecosystem': 'the CUDA developer ecosystem now counts millions of developers', 'https://lesechos.fr/cuda': "l'outillage propriétaire de NVIDIA reste difficile à répliquer"}
 hostile = {
     "request_hash": "peu importe",
     "worker": "search-worker",
@@ -197,7 +188,7 @@ hostile = {
         #    le domaine et rien d'autre.
         {"entry_type": "fact_qualitative", "title": "Écosystème CUDA",
          "content": "Page IR NVIDIA décrivant l'ampleur de l'écosystème développeurs.",
-         "source_type": "web_search_generic", "source_url": "https://ir.nvidia.com/ecosystem",
+         "source_type": "web_search_generic", "source_url": "https://investor.nvidia.com/ecosystem",
          "extraits": ["the CUDA developer ecosystem now counts millions of developers"],
          "portee_temporelle": "indatable", "date_du_document": "2026-06-01",
          "datation_motif": "description stable d'un écosystème, aucune date de fait affirmée",
@@ -224,7 +215,7 @@ for _u, _q in _TEXTES_LUS.items():
     LOG.record_text(_u, f"Préambule de la page. {_q}. Suite de la page.")
 out = _apply_deterministic_overrides(
     hostile, req, model_used="deepseek-ai/DeepSeek-V4-Flash-0731",
-    tokens_in=1200, tokens_out=800, cost_usd=0.000240, log=LOG,
+    tokens_in=1200, tokens_out=800, cost_usd=0.000240, log=LOG, fiche=fiche(req.ticker_id),
 )
 # Chaque fiche est suivie de la LECTURE du collecteur, rangée à part (#126) : les asserts de cette
 # section portent sur les fiches ; les lectures ont leur section (§3bis).
@@ -237,7 +228,7 @@ check("blog surqualifié écarté (score 0.50 < plancher 0.60)",
 check("entry de mauvais type rejetée", not any(e["entry_type"] != "fact_qualitative" for e in entries))
 check("doublon dédupliqué", urls.count("https://www.reuters.com/tech/cuda") <= 1)
 check("IR NVIDIA promu par le domaine et classé 1er (0.90)",
-      entries[0]["source_url"] == "https://ir.nvidia.com/ecosystem"
+      entries[0]["source_url"] == "https://investor.nvidia.com/ecosystem"
       and entries[0]["source_type"] == "company_ir_official"
       and entries[0]["reliability_score"] == 0.90,
       f"→ {entries[0]['source_type']} {entries[0]['reliability_score']}")
@@ -253,7 +244,7 @@ check("troncature = les 2 MIEUX notées, pas les 2 premières venues",
 # Même sortie, plafond desserré : on voit alors le recalcul de score sur chaque entry retenue.
 large = _apply_deterministic_overrides(
     hostile, req.model_copy(update={"max_entries": 10}),
-    model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG,
+    model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG, fiche=fiche(req.ticker_id),
 )
 reuters = next((e for e in large["entries"] if "reuters" in (e["source_url"] or "")), None)
 check("score Reuters gonflé 0.99 → recalculé à la baseline presse, décote d'âge comprise",
@@ -299,7 +290,7 @@ check("request_hash stable", request_hash(req) == request_hash(req.model_copy(de
 print("\n5. Tout écarté → not_found explicite (jamais muet, A6)")
 req_div = req.model_copy(update={"divergent": True, "reliability_min": 0.99})
 out2 = _apply_deterministic_overrides(
-    dict(hostile), req_div, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG,
+    dict(hostile), req_div, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=LOG, fiche=fiche(req_div.ticker_id),
 )
 check("status not_found", out2["status"] == "not_found", f"→ {out2['status']}")
 check("uncovered_fields renseigné", out2["uncovered_fields"] == ["moat.preuves"],
@@ -325,6 +316,7 @@ out3 = _apply_deterministic_overrides(
                   "requires_human_review": False}],
      "uncovered_fields": []},
     req_mem, model_used="m", tokens_in=1, tokens_out=1, cost_usd=0.0, log=RetrievalLog(),
+    fiche=fiche(req_mem.ticker_id),
 )
 e = out3["entries"][0]
 check("requires_human_review forcé", e["requires_human_review"] is True)
@@ -541,7 +533,7 @@ def _passe(raw, log=log_q, r=req_q):
     try:
         return _apply_deterministic_overrides({"entries": [raw], "uncovered_fields": []}, r,
                                               model_used="m", tokens_in=1, tokens_out=1,
-                                              cost_usd=0.0, log=log)
+                                              cost_usd=0.0, log=log, fiche=fiche(r.ticker_id))
     except Exception as e:  # noqa: BLE001 — un refus inattendu est un FAIL nommé, pas la mort du script
         return {"entries": [], "status": f"LEVÉ : {e!r}"}
 
@@ -580,7 +572,7 @@ check("le titre de la LECTURE DU COLLECTEUR nomme le document par le même déte
 o2b = _apply_deterministic_overrides(
     {"entries": [_fiche([_BON_1]), _fiche([_BON_2])], "uncovered_fields": []},
     req_q.model_copy(update={"max_entries": 3}), model_used="m", tokens_in=1, tokens_out=1,
-    cost_usd=0.0, log=log_q)
+    cost_usd=0.0, log=log_q, fiche=fiche(req_q.ticker_id))
 check("deux fiches d'un même document, extraits différents → deux fiches (pas un doublon)",
       sum(1 for e in o2b["entries"] if TAG_LECTURE not in e["tags"]) == 2,
       f"→ {[e['title'] for e in o2b['entries']]}")
@@ -733,12 +725,12 @@ check("contrat : `extraits` est REQUIS, sans défaut", ProducedEntry.model_field
 # Le journal se remplit au point de récupération RÉEL : les deux exécuteurs d'outils, bouchonnés au
 # niveau du réseau seulement. Sans ce câblage, toute fiche serait refusée en production alors que les
 # fixtures ci-dessus, qui remplissent le journal à la main, resteraient vertes.
-async def _stub_fetch(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
+async def _stub_fetch(url, *, query=None, chercher=None, fiche=None, max_chars=None):
     return {"url": url, "final_url": url + "?redirige", "status": 200, "title": "CFO Commentary",
             "text": _CFO_TEXTE, "via": "direct"}
 
 
-async def _stub_search(query, max_results=5, ticker_id=None):
+async def _stub_search(query, max_results=5, fiche=None):
     return [SearchHit(title="Article", url="https://www.reuters.com/x", snippet="accroche seule",
                       text="Full excerpt text returned by the search backend for this article."),
             SearchHit(title="Lien", url="https://www.ft.com/y", snippet="accroche d'un simple lien")]
@@ -748,7 +740,7 @@ _reels = (_tools.fetch_url, _tools.web_search)
 _tools.fetch_url, _tools.web_search = _stub_fetch, _stub_search
 try:
     _lg = RetrievalLog()
-    _ex = _tools.build_tool_executors(ticker_id="NVDA", query="volumes", log=_lg)
+    _ex = _tools.build_tool_executors(ticker_id="NVDA", fiche=F_NVDA, query="volumes", log=_lg)
     asyncio.run(_ex["fetch_url"]({"url": _CFO_URL}))
     asyncio.run(_ex["web_search"]({"query": "nvidia"}))
     check("fetch_url : le texte rapporté est journalisé sous l'adresse demandée…",
@@ -807,7 +799,7 @@ _espion = _BackendEspion()
 _get_reel = _ws.get_search_backend
 _ws.get_search_backend = lambda: _espion
 try:
-    _ex12 = _tools.build_tool_executors(ticker_id="NVDA", query="prévision du trimestre")
+    _ex12 = _tools.build_tool_executors(ticker_id="NVDA", fiche=F_NVDA, query="prévision du trimestre")
     _r12 = asyncio.run(_ex12["web_search"]({"query": "NVIDIA outlook next quarter"})).get("results") or []
     check("émetteur enregistré : le site de l'émetteur est interrogé, restreint à SES domaines",
           ("nvidia.com",) in _espion.appels, f"→ appels {_espion.appels}")
@@ -823,7 +815,7 @@ try:
           any(r["url"] == _MIROIR and r.get("site_emetteur") is False for r in _r12), f"→ {_r12}")
 
     _espion.appels.clear()
-    _ex_inconnu = _tools.build_tool_executors(ticker_id="ZZZZ", query="prévision")
+    _ex_inconnu = _tools.build_tool_executors(ticker_id="ZZZZ", fiche=fiche("ZZZZ"), query="prévision")
     _r_inc = asyncio.run(_ex_inconnu["web_search"]({"query": "outlook"})).get("results") or []
     check("émetteur sans site enregistré : une seule recherche, ouverte (aucun domaine deviné)",
           _espion.appels == [()], f"→ appels {_espion.appels}")
@@ -833,11 +825,11 @@ finally:
     _ws.get_search_backend = _get_reel
 
 check("site de l'émetteur : un sous-domaine compte (investor.nvidia.com pour NVDA)",
-      _ws.est_site_emetteur("https://investor.nvidia.com/x", "NVDA"))
+      _ws.est_site_emetteur("https://investor.nvidia.com/x", F_NVDA))
 check("site de l'émetteur : un domaine qui se termine pareil ne compte pas (notnvidia.com)",
-      not _ws.est_site_emetteur("https://notnvidia.com/x", "NVDA"))
+      not _ws.est_site_emetteur("https://notnvidia.com/x", F_NVDA))
 check("site de l'émetteur : nvidia.com n'est pas le site de l'émetteur d'une analyse MSFT",
-      not _ws.est_site_emetteur("https://investor.nvidia.com/x", "MSFT"))
+      not _ws.est_site_emetteur("https://investor.nvidia.com/x", F_MSFT))
 from app.db.migrations._gen_025 import PROMPTS as _PROMPTS  # noqa: E402
 
 _consigne = (_PROMPTS / "11-search-worker.md").read_text()
@@ -983,25 +975,30 @@ async def _stub_agent_provider13(name, version):
     return SimpleNamespace(model="stub-agent-13")
 
 
-async def _stub_fetch13(url, *, query=None, chercher=None, ticker_id=None, max_chars=None):
+async def _stub_fetch13(url, *, query=None, chercher=None, fiche=None, max_chars=None):
     return {"url": url, "final_url": url, "status": 200, "title": "Doc",
             "text": _TEXTES13.get(url, _TXT13), "via": "direct"}
 
 
-async def _stub_search13(query, max_results=5, ticker_id=None):
+async def _stub_search13(query, max_results=5, fiche=None):
     return []
 
 
 def _run_worker13(sequence, *, allow_without_web=False):
     stub_run, appels = _stub_run13(sequence)
     vrais = (_w.run_tool_json_agent, _w.get_agent_provider, _w.get_db_session,
-             _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured)
+             _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured,
+             _w.charger_fiche)
     _w.run_tool_json_agent = stub_run
     _w.get_agent_provider = _stub_agent_provider13
     _w.get_db_session = _fake_db13
     _w.ancre_temporelle = _stub_ancre13
     _w.material_anchor_for_ticker = _stub_materiel13
     _w.search_is_configured = lambda: True  # EXA_API_KEY absente du check (§8) — ce point le contourne
+
+    async def _stub_fiche13(conn, emetteur):
+        return fiche(emetteur)
+    _w.charger_fiche = _stub_fiche13
     _reel_fetch, _reel_search = _tools.fetch_url, _tools.web_search
     _tools.fetch_url, _tools.web_search = _stub_fetch13, _stub_search13
     try:
@@ -1011,7 +1008,8 @@ def _run_worker13(sequence, *, allow_without_web=False):
         return exc, appels
     finally:
         (_w.run_tool_json_agent, _w.get_agent_provider, _w.get_db_session,
-         _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured) = vrais
+         _w.ancre_temporelle, _w.material_anchor_for_ticker, _w.search_is_configured,
+         _w.charger_fiche) = vrais
         _tools.fetch_url, _tools.web_search = _reel_fetch, _reel_search
 
 

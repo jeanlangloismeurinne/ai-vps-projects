@@ -17,9 +17,10 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
    `service.store_knowledge(conn, *, ticker_id, entry_type, content, source_type, …)`. **Jamais
    d'INSERT direct.** Le `reliability_score`/`tier` sont **CALCULÉS** par `store_knowledge`, jamais
    fournis par l'appelant (§6.3, #50).
-2. **S'inscrire nominativement.** Déclarer le domaine de la source dans `source_registry.py` — le
-   standing est accordé pour un **couple (source × nature)** (#52). L'admission est un **acte humain**,
-   jamais une promotion automatique, pas même par corroboration.
+2. **S'inscrire nominativement.** Une source s'admet au journal des sources du module M1 (fiche de
+   l'émetteur, `app/modules/emetteurs/`), datée, motivée, signée, pour des **natures** nommées (#52) ;
+   jamais une promotion automatique, pas même par corroboration. L'ancien code la lit par
+   `fiche_emetteur.py`, son seul lecteur (A15, 2026-11-16).
 3. **La nature se dérive, ne se déclare pas.** Un fait à recette déterministe (un `metric` structuré)
    est `mesure` ; `store_knowledge` l'arbitre via `derive_nature` (détenteur unique, #51). Le feed ne
    passe que `nature_declaree`.
@@ -35,7 +36,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Fichier | Rôle |
 |---|---|
 | `service.py` | `store_knowledge` (passage obligé), scoring, versionnement A1 |
-| `source_registry.py` | Registre nominatif des sources admises (#52) |
+| `fiche_emetteur.py` | Seul lecteur de la fiche de l'émetteur (module M1) : qualification d'une source, plafond, lieux de la société (A15) ; remplace `source_registry.py` et les listes de domaines de `websearch.py` |
 | `edgar_feed.py` · `financials_feed.py` · `valuation_feed.py` · `base_rate_corpus.py` | Feeds financiers déterministes |
 | `material_events.py` · `staleness.py` · `actualite.py` | Événements matériels & péremption (axe actualité) |
 | `evenements.py` | Ce qu'un événement ROUVRE (#89) : type d'un dépôt par sa FORME (`a_qualifier` quand la forme ne décide pas) et ancre PAR QUESTION — le dernier fait d'un type qui la rouvre, filtré par `frameworks.types_qui_rouvrent` |
@@ -62,7 +63,7 @@ Une source est un **objet standard** : elle règle son interface avec la base, r
 | Nature dérivée (`metric` structuré ⟹ `mesure`) | `check_entry_nature.py` §7 (état persisté) |
 | Datation : deux dates nommées, `source_date` dérivée, confusion fait/document INEXPRIMABLE (#79) | `check_datation.py` + `negatif_datation.sh` |
 | L'exemple de sortie des consignes `search-worker`/`ingestion-agent` se valide contre `ProducedEntry`, au fichier ET en base (#121 — l'exemple portait `source_date` après la 045) | `check_prompts_exemples.py` (négatif : rejoué sur les fichiers d'avant correction et la base d'avant la 054, puis d'avant la 055 — `extraits`, #126) |
-| Registre : standing par couple (source × nature) | `check_source_registry.py` |
+| La fiche de l'émetteur lue par l'ancien code : standing par couple (source × nature), jamais de démotion, sans fiche rien n'est admis, détenteur unique, traduction niveau → `source_type` | `check_fiche_lue.py` + `negatif_fiche_lue.sh` |
 | Feeds financiers : identité #43, datation #42, 3 états #44 | `check_edgar_feed.py`, `check_financials_feed.py`, `check_valuation_feed.py`, `check_base_rate_corpus.py` |
 | Un ratio valide un CALCUL, jamais sa SIGNIFICATION : conversion FCF et ROIC ne se publient pas quand l'émetteur n'a ni bénéfice ni exploitation — le refus est PUBLIÉ (il supersede la ligne fausse), et « intrant absent » ne se confond pas avec « ratio non défini » | `check_financials_feed.py` §6 + `negatif_financials_feed.sh` |
 | Le socle des comptes : périodes lues par leurs détenteurs, recette choisie période par période, un écart de bouclage PUBLIÉ jamais absorbé, jamais de zéro fabriqué, reclassement propre à l'émetteur motivé et sourcé, texte tamponné `mesure` (#115) | `check_socle_comptes.py` + `negatif_socle_comptes.sh` ; la publication (une pièce courante, idempotente, remplacée par un dépôt neuf, jointe au dossier) : `check_socle_persist.py` |

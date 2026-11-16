@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-16 (acceptation de M1 sur le VPS : étapes 1-4 passées, 063 appliquée, reprise importée, A14 0 écart ; reste le rebuild et l'écran) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,74 +18,23 @@ role: >
 
 ## ➜ Prochain pas
 
-**PASSER L'ACCEPTATION DE M1 SUR LE VPS, PUIS OUVRIR M2 « COLLECTE DE SOURCES ».** M1 « Fiche de
-l'émetteur et sources » est construit (`backend/app/modules/emetteurs/`, son `ARCHITECTURE.md` dit ce
-qu'il fait et ce qui manque) et prouvé hors ligne et sur une base PostgreSQL locale, **pas accepté** :
-les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base.
+**OUVRIR M2 « COLLECTE DE SOURCES » : tri de l'ancien code et acceptation écrite AVANT la construction**
+(même patron que `M1-fiche-emetteur.md`). M1 est **accepté sur le VPS le 2026-11-16** (journal du plan 07 ;
+`M1-fiche-emetteur.md` § 4) : 063 appliquée, reprise importée, A14 0 écart, l'ancien code lit la fiche
+(`knowledge/fiche_emetteur.py`, seul lecteur ; `source_registry` et les listes de `websearch` supprimés),
+production = `main`. **Reste à l'utilisateur** : les gestes d'écriture à l'écran (`/v2/emetteurs`) sur
+de vraies décisions (registre indélébile) ; puis archiver `M1-fiche-emetteur.md`.
 
-### À vérifier sur le VPS — ÉTAPES 1 À 4 PASSÉES LE 2026-11-16 (reste 5 et 6)
-
-**Fait le 2026-11-16** : suite 6 480 assertions, rouges `check_emetteurs_persist` (063, levé depuis :
-58/0) et `check_signature_modele_persist` (données de l'ancien enchaînement : 29 réponses RVMD périmées
-par les comptes du T3 — hors M1) ; négatifs chef de dossier 25/25, charte 27/27, architecture 6/6
-(première exécution), émetteurs 49/49, API 8/8, persistance 7/7 + 16/16. **063 APPLIQUÉE** (tables vides
-après les checks). Reprise relue et **importée** (40 actes) : CIK confirmés par `notes_flash` ; pays US ;
-**MSFT : deuxième lieu `microsoft.com/en-us/investor`** (adresse réellement servie — sinon niveau B du
-site, `554ffac`). Pages investisseurs d'autres sociétés : 8 admises (Lilly, NVIDIA, Amgen, TSMC,
-Verastem, AMD, Immuneering, Revolution Medicines ; 321 adresses lues). **A14 : 0 écart** (NVDA 161 couples,
-RVMD 168, MSFT 23) ; le comparateur discrimine (fiche MSFT sur pièces NVDA : 5 écarts). Branche fusionnée
-dans `main` et poussée. **Backend et frontend déployés** (`c27e6e3`, HTTP 200, conteneur unique).
-**A13 en cours** : API vérifiée en production (liste, fiche, qualification : statnews admise pour
-l'interprétation et refusée pour une mesure, pages investisseurs MSFT au niveau A) ; écrans `/v2/emetteurs`
-et `/v2/emetteurs/RVMD` capturés et rendus justes. Défaut d'affichage : la colonne « Motif » du tableau des
-sources de la fiche est coupée à droite. **Restent les gestes d'écriture (admettre, révoquer, corriger) :
-à faire par l'utilisateur à l'écran** — le registre est indélébile, aucun acte d'essai n'y a été écrit.
-
-
-1. **Suite de référence avant tout** : `bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md` ;
-   `check_emetteurs_persist` y sort en ÉCHEC NOMMÉ tant que la 063 n'est pas appliquée : attendu).
-   Puis depuis `backend/` : `bash checks/negatif_chef_de_dossier.sh`, `negatif_charte_modules.sh`,
-   `negatif_architecture.sh` (ce dernier exige le conteneur : jamais joué hors VPS), `negatif_emetteurs.sh`,
-   `negatif_emetteurs_api.sh` (exige l'image ; seulement répété sur l'hôte : 8/8).
-2. **Migration 063, d'abord en négatif** : `bash checks/negatif_emetteurs_persist.sh` (partie 2 : base
-   jetable `db_063_neg`, la 063 n'est pas appliquée à la vraie base par ce script ; la partie 1 exige la
-   063 appliquée : la rejouer après). Vérifier que le rôle `portfolio_user` et les droits par défaut
-   (#15) se comportent comme en local (la 063 a été COMPLÉTÉE le 2026-11-14 avant toute application :
-   colonne `evaluation`, acte `suspendre` — local : 58/0, négatif 7/7 + 16/16). Puis appliquer (#17) :
-   `docker cp backend/app/db/migrations/063_v3_emetteurs_et_chef_de_dossier.sql shared-postgres:/tmp/ &&
-   docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/063_v3_emetteurs_et_chef_de_dossier.sql`,
-   puis `bash checks/avec_base.sh check_emetteurs_persist` et de nouveau le négatif.
-3. **Reprise des données** : relire `backend/app/db/seeds/emetteurs_reprise_2026-11-13.json` — **saisis à
-   la main, à confirmer** : les trois raisons sociales (comparer à `tickers.name` et au registre de la
-   SEC), les trois numéros (MSFT 789019 n'a aucune trace dans le dépôt), les pages de relations
-   investisseurs (`investor.nvidia.com`, `microsoft.com/investor`, `ir.revmed.com`, `revmed.com/investors`).
-   Puis `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json --a-blanc`,
-   lire la sortie, rejouer sans `--a-blanc`, `bash tools/emetteurs.sh montrer`. Puis **les pages des
-   autres sociétés** (arbitrage du 2026-11-14) : `bash tools/emetteurs.sh pages-investisseurs --a-blanc`,
-   relire la liste (chaque domaine admis doit être la section investisseurs d'une société), rejouer sans
-   `--a-blanc`. À faire AVANT l'étape 4 : sinon les pages des concurrents sortent en écart.
-4. **A14** : `bash tools/emetteurs.sh comparer NVDA NVDA` et `… comparer RVMD RVMD` (lecture seule) —
-   chaque écart de niveau entre l'ancien code et la fiche, sur les adresses des pièces réelles, est à
-   expliquer (écarts voulus : [R5] sous-domaines des dépôts officiels ; `investors.com` et semblables ne
-   sont plus pris pour des pages de société — `M1-fiche-emetteur.md`, arbitrages du 2026-11-14). L'outil suppose les
-   colonnes `source_url`, `nature`, `ticker_id` de `knowledge_entries` : jamais exécuté sur la vraie base.
-5. **A13, l'écran** : déployer backend puis frontend (`infrastructure/compose-deploy.sh portfolio-backend …`
-   — les lots B4d, #143, B4f, B4g sont DÉJÀ en production depuis le rebuild de sécurité du 31/10 ;
-   l'utilisateur ne s'en soucie pas : la reconstruction reprend module par module).
-   Ouvrir `/v2/emetteurs` et `/v2/emetteurs/RVMD` ; essayer une admission, une révocation, « tester une
-   adresse ». L'écran n'a été ouvert qu'ici, contre une base locale (rendu correct, lignes du journal hautes).
-6. **A15, le jour de l'acceptation** : faire lire la fiche à l'ancien code (`websearch`, `source_registry`,
-   `service.store_knowledge`, `worker`), supprimer `_ISSUER_DOMAINS`, les quatre listes de domaines,
-   `_ADMISES`, `_TICKER_SECTEURS`, `qualify` et `check_emetteurs_reprise.py` ; suite complète verte ;
-   cocher M1 au plan, archiver `M1-fiche-emetteur.md`.
-
-   Sur l'écran, vérifier aussi l'encadré « Sources en suspens — votre arbitrage » (vide tant qu'aucun
-   évaluateur ne tourne ; rendu vérifié ici sur données fictives).
+Écarts voulus constatés en A15 : une adresse à la seule FORME d'une page investisseurs (`ir.`, `investor.`)
+n'est plus devinée (admise par le système quand elle est vue, A16) ; **un émetteur sans fiche n'a aucune
+source admise**, dépôts officiels compris (A10, A11 — décision de cette session, à confirmer par
+l'utilisateur) ; la collecte (M2) devra donc établir la fiche d'abord et appeler
+`admettre_pages_investisseurs` au fil de l'eau.
 
 ### Tranché le 2026-11-14 (construit hors ligne)
 
 - Sources signées par le système, révocation de l'utilisateur qui tient ; pages des concurrents admises
-  par le système (#144). Le pays « US » des trois titres reste à vérifier (étape 3).
+  par le système (#144). Pays « US » des trois titres vérifié le 2026-11-16.
 - **Source inconnue** : un évaluateur ad hoc répond à une grille sur quelques publications ; le code note ;
   admise à 0,80 (≥ 3 publications, critère écrit), **en suspens** dessous pour votre arbitrage (#145 ;
   ligne A17). Seuil, nombre et questions : valeurs de départ en donnée. Choix par défaut à confirmer : une
@@ -101,7 +50,7 @@ avant. Les deux questions qu'il ouvrait sont tranchées et leurs portes construi
 collecte comme travail suivi** (un pas qui rend `en_cours` et sait se `suivre` ; où vit la tâche de fond, et
 le déclencheur qui rappelle l'automate) ; et le branchement des pages investisseurs des autres sociétés.
 
-**M0 « Fondations » : ACCEPTÉ hors ligne le 2026-11-13** (récit : archive, « 2026-11-13 — M0 »).
+**M0 « Fondations » : ACCEPTÉ** (hors ligne le 2026-11-13, rejoué sur le VPS le 2026-11-16).
 
 **Direction** (arbitrée et CONFIRMÉE le 2026-11-13 ; tableau : `EVALUATION-ARCHITECTURE-2026-11-13.md`
 § « Arbitrages rendus ») : reconstruction module par module sur une base propre, l'ancien code est une
@@ -123,7 +72,7 @@ payante avant le module M6 (carte).**
 - 26 contrôles sans test négatif à leur nom ; deux modèles épinglés dans le code : soldés module par module.
 - `backend/tools/mesure_gate_capacite4.py` ne compile pas (erreur d'indentation, relevée par la garde des
   accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
-- Chef de dossier : rangement en base écrit (migration 063, non appliquée) ; toujours ni déclencheur ni
+- Chef de dossier : rangement en base (migration 063, appliquée le 2026-11-16) ; toujours ni déclencheur ni
   geste à l'écran (lever une pause, enregistrer un acte, relancer).
 - La collecte (M2) devra appeler `emetteurs.admettre_pages_investisseurs` sur chaque adresse rencontrée :
   aujourd'hui seul l'outil `pages-investisseurs` l'appelle, sur les pièces déjà collectées.

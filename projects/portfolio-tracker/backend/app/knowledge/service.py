@@ -28,7 +28,7 @@ from typing import Any, Optional, Sequence
 import asyncpg
 
 from .datation import Datation
-from .source_registry import qualify
+from . import fiche_emetteur
 from .embeddings import (
     EmbeddingUnavailable,
     embed_one,
@@ -200,17 +200,20 @@ async def store_knowledge(
     rien en base ne reconstitue. Ne pas le stocker laisserait une absence muette, et une absence
     muette se relit plus tard comme une propriété du sujet (`feedback_rendu_est_un_producteur`).
 
-    `source_type` peut être PROMU ici par le registre nominatif (`source_registry.qualify`, capacité
-    2) : une source admise pour une nature donnée passe de `web_search_generic` à
-    `web_search_reputable` **pour cette nature seulement**. Le paramètre reçu est donc la
+    `source_type` peut être PROMU ici par la fiche de l'émetteur (`fiche_emetteur.qualifier`, module
+    M1) : une source admise pour une nature donnée passe de `web_search_generic` au `source_type` de
+    son admission **pour cette nature seulement**. Le paramètre reçu est donc la
     qualification générique par domaine, pas nécessairement celle qui sera stockée.
     """
     # Qualification AVANT scoring : le registre nominatif (capacité 2) peut promouvoir le
     # `source_type` d'une source admise, et c'est le source_type promu qui doit être scoré et
     # stocké — scorer d'abord écrirait une ligne qui se contredit elle-même (tier B+ sur un
     # source_type C+), le mode de panne de #48.
-    source_type, nature, nature_motif = qualify(
-        source_type=source_type, url=source_url, ticker_id=ticker_id,
+    # Seule une source qualifiée par défaut passe par la fiche : on ne la lit que dans ce cas.
+    fiche = (await fiche_emetteur.charger(conn, ticker_id) if source_type == fiche_emetteur.NON_ADMISE
+             else fiche_emetteur.fiche_vide(ticker_id))
+    source_type, nature, nature_motif = fiche_emetteur.qualifier(
+        source_type=source_type, url=source_url, fiche=fiche,
         entry_type=entry_type, content=content, nature_declaree=nature_declaree,
     )
     # `source_date` est DÉRIVÉE de la datation déclarée, jamais reçue (#79). Le paramètre a été

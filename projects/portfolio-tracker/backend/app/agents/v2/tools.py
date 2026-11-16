@@ -30,7 +30,9 @@ from urllib.parse import urlparse
 
 from app.db.database import get_db_session
 from app.knowledge.service import query_knowledge
+from app.knowledge.fiche_emetteur import fiche_vide
 from app.knowledge.websearch import SearchUnavailable, fetch_url, web_search
+from app.modules.emetteurs.contrat import Fiche
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +122,7 @@ async def exec_web_search(
     args: dict[str, Any],
     *,
     log: Optional[RetrievalLog] = None,
-    ticker_id: Optional[str] = None,
+    fiche: Optional[Fiche] = None,
 ) -> dict[str, Any]:
     """`web_search(query, max_results)` → liste de résultats normalisés.
 
@@ -138,7 +140,8 @@ async def exec_web_search(
     n = max(1, min(n, _MAX_SEARCH_RESULTS))
 
     try:
-        hits = await web_search(query, n, ticker_id=ticker_id)
+        hits = await web_search(query, n, fiche=fiche)
+        fiche = fiche if fiche is not None else fiche_vide(None)
     except SearchUnavailable as e:
         return {"error": f"recherche web indisponible : {e}", "retryable": False}
     except Exception as e:  # noqa: BLE001
@@ -157,7 +160,7 @@ async def exec_web_search(
 
     if not hits:
         return {"query": query, "results": [], "note": "Aucun résultat — la recherche a bien abouti."}
-    return {"query": query, "results": [h.to_dict(ticker_id) for h in hits]}
+    return {"query": query, "results": [h.to_dict(fiche) for h in hits]}
 
 
 async def exec_fetch_url(
@@ -165,7 +168,7 @@ async def exec_fetch_url(
     *,
     query: Optional[str] = None,
     log: Optional[RetrievalLog] = None,
-    ticker_id: Optional[str] = None,
+    fiche: Optional[Fiche] = None,
 ) -> dict[str, Any]:
     """`fetch_url(url, chercher?)` → passages de la page qui répondent à la question du mandat.
 
@@ -182,7 +185,7 @@ async def exec_fetch_url(
         return {"error": "fetch_url : argument 'url' vide."}
     chercher = (args.get("chercher") or "").strip()[:200] or None
     try:
-        result = await fetch_url(url, query=query, chercher=chercher, ticker_id=ticker_id)
+        result = await fetch_url(url, query=query, chercher=chercher, fiche=fiche)
     except ValueError as e:
         return {"error": str(e), "retryable": False}
     except Exception as e:  # noqa: BLE001
@@ -257,6 +260,7 @@ def make_query_knowledge_executor(ticker_id: Optional[str]) -> ToolExecutor:
 def build_tool_executors(
     *,
     ticker_id: Optional[str],
+    fiche: Fiche,
     query: Optional[str] = None,
     log: Optional[RetrievalLog] = None,
 ) -> dict[str, ToolExecutor]:
@@ -266,20 +270,21 @@ def build_tool_executors(
 
     `query` (le mandat), `log` (journal de récupération) et `ticker_id` (l'émetteur analysé) sont
     fermés dans les exécuteurs plutôt que passés en arguments d'outil : ce sont des faits du run, pas
-    des décisions du modèle. `ticker_id` sert désormais à `web_search` et `fetch_url` autant qu'à
-    `query_knowledge` — il décide quel domaine est celui de l'émetteur, donc quel `source_type_max`
-    le modèle se voit annoncer (#31).
+    des décisions du modèle. `fiche` (celle de l'émetteur analysé, module M1) sert à `web_search` et
+    `fetch_url` : elle décide quelles adresses sont celles de la société et quelles sources sont
+    admises, donc quel `source_type_max` le modèle se voit annoncer (#31) ; `ticker_id` sert à
+    `query_knowledge`.
     """
 
     async def _fetch(args: dict[str, Any]) -> dict[str, Any]:
         if log is not None:
             log.record_call("fetch_url")  # avant l'appel : compté même si l'outil échoue (#B)
-        return await exec_fetch_url(args, query=query, log=log, ticker_id=ticker_id)
+        return await exec_fetch_url(args, query=query, log=log, fiche=fiche)
 
     async def _search(args: dict[str, Any]) -> dict[str, Any]:
         if log is not None:
             log.record_call("web_search")
-        return await exec_web_search(args, log=log, ticker_id=ticker_id)
+        return await exec_web_search(args, log=log, fiche=fiche)
 
     return {
         "web_search": _search,

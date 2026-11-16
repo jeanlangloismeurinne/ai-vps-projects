@@ -64,7 +64,7 @@ from app.agents.v2.worker import _normalise_entry
 from app.contracts.worker_delegation_schema import EntryType
 from app.knowledge import ENTRIES_COURANTES
 from app.knowledge.service import store_knowledge
-from app.knowledge.source_registry import qualify
+from app.knowledge.fiche_emetteur import fiche_vide, qualifier
 
 # Le vocabulaire FERMÉ d'`entry_type` (036), lu sur son détenteur (#46). §3 le parcourt jeton par
 # jeton : une énumération recopiée ici resterait verte le jour où le contrat s'élargit.
@@ -262,17 +262,17 @@ check("une prose sans marqueur ne rend rien", annonce_une_derivation(_RELEVE) is
 check("un contenu vide ne rend rien (et ne lève pas)", annonce_une_derivation(None) is None)
 # LES DEUX AXES NE SE MÉLANGENT PAS (#50) : la rétrogradation touche la nature, JAMAIS le tier. Le
 # dépôt reste un dépôt ; c'est la phrase qu'on en a tirée qui n'est pas un relevé. On l'éprouve sur
-# la chaîne réelle de qualification, pas sur `derive_nature` seul : c'est `qualify` qui rend les
+# la chaîne réelle de qualification, pas sur `derive_nature` seul : c'est `qualifier` qui rend les
 # deux, et c'est là qu'un correctif maladroit les confondrait.
-_st_calc, _nat_calc, _ = qualify(source_type="edgar_official", url=None, ticker_id="TEST",
-                                 entry_type="fact_financial", content=_CALCUL)
-_st_rel, _nat_rel, _ = qualify(source_type="edgar_official", url=None, ticker_id="TEST",
-                               entry_type="fact_financial", content=_RELEVE)
-check("`qualify` propage la rétrogradation de nature", _nat_calc == "interpretation",
+_st_calc, _nat_calc, _ = qualifier(source_type="edgar_official", url=None, fiche=fiche_vide("TEST"),
+                                   entry_type="fact_financial", content=_CALCUL)
+_st_rel, _nat_rel, _ = qualifier(source_type="edgar_official", url=None, fiche=fiche_vide("TEST"),
+                                 entry_type="fact_financial", content=_RELEVE)
+check("`qualifier` propage la rétrogradation de nature", _nat_calc == "interpretation",
       f"→ `{_nat_calc}` : `content` n'atteint pas `derive_nature` depuis le chemin d'écriture")
 check("… sans toucher au `source_type` (donc au tier) : deux axes, jamais mélangés (#50)",
       _st_calc == _st_rel == "edgar_official", f"→ `{_st_calc}` vs `{_st_rel}`")
-# LE POINT DE LECTURE RÉEL. `qualify` est un maillon ; ce qui compte est que `content` arrive
+# LE POINT DE LECTURE RÉEL. `qualifier` est un maillon ; ce qui compte est que `content` arrive
 # jusqu'à lui DEPUIS les deux sites d'appel. Un paramètre ajouté au détenteur et non transmis par
 # l'appelant est un décideur sans producteur : 0 appel, 0 ligne, garde verte
 # (`feedback_controle_au_point_de_lecture`).
@@ -280,7 +280,7 @@ check("… sans toucher au `source_type` (donc au tier) : deux axes, jamais mél
 # extraits (`releve`), pas la prose du collecteur, qui part dans une ligne de lecture à part.
 for _nom, _fn, _var in (("store_knowledge", store_knowledge, "content"),
                         ("_normalise_entry (search-worker)", _normalise_entry, "releve")):
-    check(f"`{_nom}` transmet `content=` à `qualify`",
+    check(f"`{_nom}` transmet `content=` à `qualifier`",
           f"content={_var}" in inspect.getsource(_fn),
           "→ la garde est écrite chez son détenteur et jamais atteinte depuis ce chemin")
 check("… et le search-worker écrit ce même texte (`\"content\": releve`)",
@@ -295,15 +295,16 @@ check("`store_knowledge` accepte `nature_declaree` (proposition arbitrée)",
       "nature_declaree" in sig)
 src = inspect.getsource(store_knowledge)
 # Depuis la capacité 2, `store_knowledge` n'appelle plus `derive_nature` en direct : il passe par
-# `source_registry.qualify`, qui dérive la nature PUIS applique le registre nominatif. La chaîne
+# `fiche_emetteur.qualifier` (ancien `source_registry.qualify`), qui dérive la nature PUIS applique
+# la fiche de l'émetteur (module M1). La chaîne
 # gagne un maillon, la règle garde un détenteur unique — et c'est l'ORDRE qui est load-bearing (la
 # nature se dérive du source_type générique, le registre s'applique après). On vérifie donc la
-# chaîne complète, pas l'appel direct : un `qualify` qui cesserait d'appeler `derive_nature`
+# chaîne complète, pas l'appel direct : un `qualifier` qui cesserait d'appeler `derive_nature`
 # rendrait ce check vert sur un chemin mort.
-check("`store_knowledge` appelle `qualify`", "qualify(" in src)
-check("`qualify` est bien le maillon qui appelle `derive_nature`",
-      "derive_nature(" in inspect.getsource(qualify),
-      "→ la chaîne store_knowledge → qualify → derive_nature est rompue")
+check("`store_knowledge` appelle `fiche_emetteur.qualifier`", "fiche_emetteur.qualifier(" in src)
+check("`qualifier` est bien le maillon qui appelle `derive_nature`",
+      "derive_nature(" in inspect.getsource(qualifier),
+      "→ la chaîne store_knowledge → qualifier → derive_nature est rompue")
 check("`store_knowledge` ne dérive pas la nature une seconde fois",
       "derive_nature(" not in src,
       "→ deux chemins de dérivation coexistent, ils divergeront au prochain correctif")

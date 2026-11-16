@@ -5,9 +5,6 @@ par ses tables.
                                  gestes du module (mêmes refus qu'à l'écran). Rejouable : ce qui est
                                  déjà en place est compté, pas réécrit. `--a-blanc` : rien n'est gardé.
   montrer [EMETTEUR]             la liste des émetteurs et le journal des sources, ou une fiche.
-  comparer EMETTEUR TITRE        ligne A14 de l'acceptation : pour chaque adresse des pièces déjà
-                                 collectées sous TITRE (ancien système), le niveau que rend l'ancien
-                                 code et celui que rend la fiche ; liste chaque écart. Lecture seule.
   signaler EMETTEUR TITRE        les pièces déjà collectées qui s'appuient sur une source révoquée.
   pages-investisseurs [--a-blanc]
                                  le SYSTÈME admet les pages de relations investisseurs des autres
@@ -137,39 +134,6 @@ async def _pieces(conn, titre: str):
         "WHERE ticker_id = $1 AND source_url IS NOT NULL AND btrim(source_url) <> '' ORDER BY id", titre)
 
 
-async def comparer(emetteur: str, titre: str) -> int:
-    # L'ANCIEN code, lu ici comme témoin (un outil a le droit ; un module ne l'aurait pas).
-    from app.knowledge.service import RELIABILITY_TABLE
-    from app.knowledge.source_registry import admissions_pour
-    from app.knowledge.websearch import classify_source_type
-
-    conn = await _connexion()
-    try:
-        fiche = await C.lire_fiche(C.depot_base(conn), emetteur)
-        pieces = await _pieces(conn, titre)
-    finally:
-        await conn.close()
-    if not pieces:
-        print(f"aucune pièce avec adresse sous « {titre} » : rien n'est comparé (pas un accord)")
-        return 2
-    vus: dict[tuple[str, str], list[int]] = {}
-    for p in pieces:
-        vus.setdefault((p["source_url"], p["nature"]), []).append(p["id"])
-    ecarts = 0
-    for (adresse, nature), ids in sorted(vus.items()):
-        ancien_type = classify_source_type(adresse, titre)
-        if ancien_type == "web_search_generic" and any(nature in s.natures for s in admissions_pour(adresse, titre)):
-            ancien_type = "web_search_reputable"
-        ancien = RELIABILITY_TABLE[ancien_type][0]
-        q = C.qualifier(fiche, adresse, nature)
-        if ancien != q.niveau:
-            ecarts += 1
-            print(f"  ÉCART {ancien:<3} → {q.niveau:<3} {nature:<15} {adresse}\n"
-                  f"        ancien : {ancien_type} ; fiche : {q.motif} ; pièces {ids[:5]}")
-    print(f"\n{len(vus)} couple(s) adresse × nature sur {len(pieces)} pièce(s) de « {titre} » — {ecarts} écart(s)")
-    return 1 if ecarts else 0
-
-
 async def signaler(emetteur: str, titre: str) -> int:
     conn = await _connexion()
     try:
@@ -216,8 +180,8 @@ def main(argv: list[str]) -> int:
         return asyncio.run(importer(argv[1], "--a-blanc" in argv[2:]))
     if argv and argv[0] == "montrer" and len(argv) <= 2:
         return asyncio.run(montrer(argv[1] if len(argv) == 2 else None))
-    if len(argv) == 3 and argv[0] in ("comparer", "signaler"):
-        return asyncio.run({"comparer": comparer, "signaler": signaler}[argv[0]](argv[1], argv[2]))
+    if len(argv) == 3 and argv[0] == "signaler":
+        return asyncio.run(signaler(argv[1], argv[2]))
     print(__doc__)
     return 2
 

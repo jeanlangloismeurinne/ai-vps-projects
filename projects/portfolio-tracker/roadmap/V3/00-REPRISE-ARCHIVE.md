@@ -7065,3 +7065,74 @@ retient que ses dépendants), arrêt `attente`, arrêt qui énumère toutes les 
 relance d'une collecte, qui aurait tourné sans fin. Preuves : chef de dossier 100/0 et 25/25 ; fiche
 136/0 et 49/49 ; base locale 58/0, 7/7 + 16/16. Rien de déployé ni d'appliqué.
 
+
+
+## 2026-11-16 — sortis de la reprise : l'acceptation de M1 sur le VPS (étapes 1 à 6)
+
+### Prochain pas tel qu'il était écrit (14/11), avec le compte rendu du 16/11
+
+**PASSER L'ACCEPTATION DE M1 SUR LE VPS, PUIS OUVRIR M2 « COLLECTE DE SOURCES ».** M1 « Fiche de
+l'émetteur et sources » est construit (`backend/app/modules/emetteurs/`, son `ARCHITECTURE.md` dit ce
+qu'il fait et ce qui manque) et prouvé hors ligne et sur une base PostgreSQL locale, **pas accepté** :
+les lignes A13-A15 de `M1-fiche-emetteur.md` exigent NVDA, RVMD et la vraie base.
+
+### À vérifier sur le VPS — ÉTAPES 1 À 4 PASSÉES LE 2026-11-16 (reste 5 et 6)
+
+**Fait le 2026-11-16** : suite 6 480 assertions, rouges `check_emetteurs_persist` (063, levé depuis :
+58/0) et `check_signature_modele_persist` (données de l'ancien enchaînement : 29 réponses RVMD périmées
+par les comptes du T3 — hors M1) ; négatifs chef de dossier 25/25, charte 27/27, architecture 6/6
+(première exécution), émetteurs 49/49, API 8/8, persistance 7/7 + 16/16. **063 APPLIQUÉE** (tables vides
+après les checks). Reprise relue et **importée** (40 actes) : CIK confirmés par `notes_flash` ; pays US ;
+**MSFT : deuxième lieu `microsoft.com/en-us/investor`** (adresse réellement servie — sinon niveau B du
+site, `554ffac`). Pages investisseurs d'autres sociétés : 8 admises (Lilly, NVIDIA, Amgen, TSMC,
+Verastem, AMD, Immuneering, Revolution Medicines ; 321 adresses lues). **A14 : 0 écart** (NVDA 161 couples,
+RVMD 168, MSFT 23) ; le comparateur discrimine (fiche MSFT sur pièces NVDA : 5 écarts). Branche fusionnée
+dans `main` et poussée. **Backend et frontend déployés** (`c27e6e3`, HTTP 200, conteneur unique).
+**A13 en cours** : API vérifiée en production (liste, fiche, qualification : statnews admise pour
+l'interprétation et refusée pour une mesure, pages investisseurs MSFT au niveau A) ; écrans `/v2/emetteurs`
+et `/v2/emetteurs/RVMD` capturés et rendus justes. Défaut d'affichage : la colonne « Motif » du tableau des
+sources de la fiche est coupée à droite. **Restent les gestes d'écriture (admettre, révoquer, corriger) :
+à faire par l'utilisateur à l'écran** — le registre est indélébile, aucun acte d'essai n'y a été écrit.
+
+
+1. **Suite de référence avant tout** : `bash backend/checks/run_all.sh` (réécrit `checks/LIGNE_DE_BASE.md` ;
+   `check_emetteurs_persist` y sort en ÉCHEC NOMMÉ tant que la 063 n'est pas appliquée : attendu).
+   Puis depuis `backend/` : `bash checks/negatif_chef_de_dossier.sh`, `negatif_charte_modules.sh`,
+   `negatif_architecture.sh` (ce dernier exige le conteneur : jamais joué hors VPS), `negatif_emetteurs.sh`,
+   `negatif_emetteurs_api.sh` (exige l'image ; seulement répété sur l'hôte : 8/8).
+2. **Migration 063, d'abord en négatif** : `bash checks/negatif_emetteurs_persist.sh` (partie 2 : base
+   jetable `db_063_neg`, la 063 n'est pas appliquée à la vraie base par ce script ; la partie 1 exige la
+   063 appliquée : la rejouer après). Vérifier que le rôle `portfolio_user` et les droits par défaut
+   (#15) se comportent comme en local (la 063 a été COMPLÉTÉE le 2026-11-14 avant toute application :
+   colonne `evaluation`, acte `suspendre` — local : 58/0, négatif 7/7 + 16/16). Puis appliquer (#17) :
+   `docker cp backend/app/db/migrations/063_v3_emetteurs_et_chef_de_dossier.sql shared-postgres:/tmp/ &&
+   docker exec shared-postgres psql -U admin -d db_portfolio -f /tmp/063_v3_emetteurs_et_chef_de_dossier.sql`,
+   puis `bash checks/avec_base.sh check_emetteurs_persist` et de nouveau le négatif.
+3. **Reprise des données** : relire `backend/app/db/seeds/emetteurs_reprise_2026-11-13.json` — **saisis à
+   la main, à confirmer** : les trois raisons sociales (comparer à `tickers.name` et au registre de la
+   SEC), les trois numéros (MSFT 789019 n'a aucune trace dans le dépôt), les pages de relations
+   investisseurs (`investor.nvidia.com`, `microsoft.com/investor`, `ir.revmed.com`, `revmed.com/investors`).
+   Puis `bash tools/emetteurs.sh importer app/db/seeds/emetteurs_reprise_2026-11-13.json --a-blanc`,
+   lire la sortie, rejouer sans `--a-blanc`, `bash tools/emetteurs.sh montrer`. Puis **les pages des
+   autres sociétés** (arbitrage du 2026-11-14) : `bash tools/emetteurs.sh pages-investisseurs --a-blanc`,
+   relire la liste (chaque domaine admis doit être la section investisseurs d'une société), rejouer sans
+   `--a-blanc`. À faire AVANT l'étape 4 : sinon les pages des concurrents sortent en écart.
+4. **A14** : `bash tools/emetteurs.sh comparer NVDA NVDA` et `… comparer RVMD RVMD` (lecture seule) —
+   chaque écart de niveau entre l'ancien code et la fiche, sur les adresses des pièces réelles, est à
+   expliquer (écarts voulus : [R5] sous-domaines des dépôts officiels ; `investors.com` et semblables ne
+   sont plus pris pour des pages de société — `M1-fiche-emetteur.md`, arbitrages du 2026-11-14). L'outil suppose les
+   colonnes `source_url`, `nature`, `ticker_id` de `knowledge_entries` : jamais exécuté sur la vraie base.
+5. **A13, l'écran** : déployer backend puis frontend (`infrastructure/compose-deploy.sh portfolio-backend …`
+   — les lots B4d, #143, B4f, B4g sont DÉJÀ en production depuis le rebuild de sécurité du 31/10 ;
+   l'utilisateur ne s'en soucie pas : la reconstruction reprend module par module).
+   Ouvrir `/v2/emetteurs` et `/v2/emetteurs/RVMD` ; essayer une admission, une révocation, « tester une
+   adresse ». L'écran n'a été ouvert qu'ici, contre une base locale (rendu correct, lignes du journal hautes).
+6. **A15, le jour de l'acceptation** : faire lire la fiche à l'ancien code (`websearch`, `source_registry`,
+   `service.store_knowledge`, `worker`), supprimer `_ISSUER_DOMAINS`, les quatre listes de domaines,
+   `_ADMISES`, `_TICKER_SECTEURS`, `qualify` et `check_emetteurs_reprise.py` ; suite complète verte ;
+   cocher M1 au plan, archiver `M1-fiche-emetteur.md`.
+
+   Sur l'écran, vérifier aussi l'encadré « Sources en suspens — votre arbitrage » (vide tant qu'aucun
+   évaluateur ne tourne ; rendu vérifié ici sur données fictives).
+
+

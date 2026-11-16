@@ -55,11 +55,11 @@ mutations=(
   # 8. TRANSMISSION, site 2 : le search-worker, qui qualifie AVANT le filtre de plancher. Les deux
   #    sites appellent la même fonction ; c'est ce qui les empêche de diverger, à condition qu'ils
   #    lui passent les mêmes ingrédients.
-  "app/agents/v2/worker.py¦        content=content,¦¦(search-worker)\` transmet"
+  "app/agents/v2/worker.py¦        content=releve,¦¦(search-worker)\` transmet"
 
   # 9. LES DEUX AXES NE SE MÉLANGENT PAS (#50). La rétrogradation de nature ne doit jamais toucher
   #    au source_type, donc au tier : le dépôt reste un dépôt.
-  "app/knowledge/source_registry.py¦    if source_type != _PROMOUVABLE:¦    if nature == \"interpretation\":\n        source_type = \"web_search_generic\"\n    if source_type != _PROMOUVABLE:¦sans toucher au \`source_type\`"
+  "app/knowledge/fiche_emetteur.py¦    if source_type != NON_ADMISE or not url:¦    if nature == \"interpretation\":\n        source_type = \"web_search_generic\"\n    if source_type != NON_ADMISE or not url:¦sans toucher au \`source_type\`"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations
