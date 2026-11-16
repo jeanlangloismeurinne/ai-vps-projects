@@ -1,6 +1,6 @@
 ---
 id: m2-collecte-sources
-status: module ouvert (tri fait, acceptation écrite le 2026-11-16, AVANT le code ; à confirmer par l'utilisateur)
+status: module ouvert (tri fait, acceptation écrite le 2026-11-16 AVANT le code, questions tranchées le jour même)
 created: 2026-11-16
 project: portfolio-tracker
 role: >
@@ -37,7 +37,7 @@ Premier émetteur entré par l'écran, et premier qui ne ressemble pas aux trois
   symbole (`traducteur.py:580`, sans rattrapage) et refuse toute recherche web sans raison sociale
   officielle (`collecte_executor.py:530`) : c'est le défaut que M2 doit supprimer.
 
-SpaceX devient donc le **troisième cas d'acceptation de M2**, à côté de NVDA et RVMD (proposition, § 3).
+SpaceX est le **troisième cas d'acceptation de M2**, à côté de NVDA et RVMD (arbitré le 2026-11-16, § 3).
 
 Ce que M2 ne fait pas pour SpaceX : l'analyser. Une société de lancement et de télécommunications par
 satellite, avec une activité d'intelligence artificielle, n'a pas de kit de spécialité : elle suivra le
@@ -95,13 +95,16 @@ rougi par `negatif_collecte.sh`) ; « base » sur une vraie base ; « réel » s
 | B7 | **Une page de relations investisseurs d'une autre société, rencontrée en collectant, est admise au fil de l'eau** (`admettre_pages_investisseurs`, A16 de M1). | société fictive |
 | B8 | **La collecte est un travail suivi** : le pas de collecte rend « en cours », le chef de dossier le suit à chaque passage jusqu'à « fait » ou « indisponible » ; ce qui ne dépend pas d'elle avance (#146). Une collecte interrompue (redémarrage) reprend sans recollecter ce qui est déjà rangé. | société fictive ; base |
 | B9 | **La dépense est comptée** : chaque recherche web et chaque appel de modèle (évaluateur) est déclaré au chef de dossier, qui fait sa pause à 1 $. Dépôts officiels et sites : 0. | société fictive |
-| B10 | **Une fiche incomplète se complète depuis le registre officiel** : quand l'adaptateur des dépôts trouve l'émetteur au registre (par son symbole ou sa raison sociale), il propose une révision de la fiche (raison sociale, numéro, place, symbole, pays) avec le registre cité en motif. *Qui la signe : à arbitrer (§ 3, question 1).* Un homonyme (deux sociétés pour un nom) n'est jamais tranché par le système : indisponibilité nommée, acte attendu de l'utilisateur. | société fictive ; **réel : SpaceX** |
+| B10 | **Une fiche incomplète se complète depuis le registre officiel** : quand l'adaptateur des dépôts trouve l'émetteur au registre (par son symbole ou sa raison sociale), il propose une révision de la fiche (raison sociale, numéro, place, symbole, pays) avec le registre cité en motif. Le système la signe ; votre correction d'un champ l'emporte (#147). Un homonyme (deux sociétés pour un nom) n'est jamais tranché par le système : indisponibilité nommée, acte attendu de l'utilisateur. | société fictive ; **réel : SpaceX** |
 | B11 | **Dans le doute, indisponible** : document illisible (PDF non lu, page vide, erreur du registre après une seconde tentative) → indisponibilité nommée avec la raison ; jamais un document vide rangé comme bon. | société fictive |
 | B12 | **L'écran** montre, par émetteur, les demandes, les documents rangés (origine, qualification, date), les indisponibilités et leur raison, la dépense. | réel |
 | B13 | **NVDA et RVMD** : les derniers comptes annuels, les comptes intermédiaires et les annonces importantes depuis le 1er janvier 2026 sont collectés ; chaque document que l'ancien système a déjà lu pour ces genres est retrouvé (par son numéro de dépôt), chaque écart listé et expliqué. | réel |
 | B14 | **Rien d'autre ne casse** : suite complète verte ; l'ancien code continue de tourner tel quel (M2 ne le rebranche pas : c'est M3 qui lira les documents de M2). | réel |
 
-## 3. Questions pour l'utilisateur
+## 3. Questions pour l'utilisateur — tranchées le 2026-11-16 (les trois recommandations retenues)
+
+> (1) a : le système complète l'identité, signé, révocable (#147) ; (2) oui, le prospectus (#148) ;
+> (3) oui, SpaceX troisième cas.
 
 1. **Qui complète la fiche d'une société quand le registre officiel la connaît ?** Cas réel : SpaceX
    a été saisie avec « SPCX » comme raison sociale ; le registre de la SEC dit « Space Exploration

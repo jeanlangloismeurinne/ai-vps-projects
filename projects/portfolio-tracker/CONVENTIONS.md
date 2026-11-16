@@ -3760,3 +3760,34 @@ globale : pendant une pause, rien ne se fait, pas même suivre un travail.
 **Construit (2026-11-14, hors ligne).** Contrat du chef de dossier 1.1.0 (`en_cours`, `suivre`,
 `Attente`, `ARRET_ATTENTE`) ; `check_chef_de_dossier.py` [D11]-[D12] (100/0) ; `negatif_chef_de_dossier.sh`
 25/25. Où vit le travail long et ce qui rappelle l'automate : avec M2 et le déclencheur.
+
+### #147 — l'identité d'une société cotée est complétée par le système depuis le registre officiel ; l'utilisateur corrige, et sa correction tient (arbitrage du 2026-11-16)
+
+**Logique de fonds.** Dans un fonds, l'identité d'une société cotée (raison sociale, numéro au
+registre, place et symbole, pays) est remplie par l'équipe de données depuis la source officielle —
+registre du régulateur, fournisseur de référentiel — et non tapée par l'analyste ; l'analyste corrige si
+c'est faux. Cas d'origine : SpaceX établie à l'écran avec « SPCX » (le symbole) pour raison sociale ; le
+registre de la SEC dit « Space Exploration Technologies Corp », 1181412, Nasdaq SPCX.
+
+**Règle.** Quand un adaptateur de collecte trouve l'émetteur au registre officiel, le système établit
+une révision de la fiche, signée `systeme:<rôle>`, le registre et la date de consultation cités au
+motif ; il ne remplit que l'identité (raison sociale, références, cotations, pays), **jamais les lieux
+de publication** (site, relations investisseurs : déclarés par l'utilisateur ou admis par un critère
+écrit). Une correction de l'utilisateur sur un champ l'emporte : le système ne réécrit plus ce champ. Un
+homonyme (plusieurs sociétés pour un nom) n'est jamais tranché par le système : indisponibilité nommée,
+acte attendu de l'utilisateur.
+
+**Construit.** À venir (M2, ligne B10 de `roadmap/V3/M2-collecte-sources.md`).
+
+### #148 — une société récemment introduite : le prospectus d'introduction tient lieu de derniers comptes annuels (arbitrage du 2026-11-16)
+
+**Logique de fonds.** Jusqu'au premier rapport annuel, le prospectus d'introduction contient les
+derniers comptes audités et reste le document de référence ; aucun analyste n'attendrait un an.
+
+**Règle.** La demande « derniers comptes annuels » rend le prospectus d'introduction tant qu'aucun
+rapport annuel n'est déposé, et l'origine du document le dit ; jamais un cumul trimestriel présenté
+comme une année. Dès qu'un rapport annuel existe, c'est lui. La correspondance (genre de document →
+formulaires, par registre) est une donnée du référentiel de l'adaptateur.
+
+**Construit.** À venir (M2, ligne B3). Cas réel d'acceptation : SpaceX (Nasdaq depuis juin 2026, aucun
+10-K au 2026-11-16).

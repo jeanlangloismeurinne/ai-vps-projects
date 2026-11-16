@@ -18,18 +18,17 @@ role: >
 
 ## ➜ Prochain pas
 
-**M2 « COLLECTE DE SOURCES » OUVERT le 2026-11-16 : tri et acceptation écrits (`M2-collecte-sources.md`,
-B1-B14), AVANT le code. Attendre les trois réponses de l'utilisateur (§ 3 du fichier), puis construire
-hors ligne (société fictive) avant tout passage réel.** Questions : (1) qui signe la complétion d'une
-fiche depuis le registre officiel (recommandé : le système, révocable) ; (2) prospectus d'introduction =
-« derniers comptes annuels » tant qu'aucun rapport annuel n'existe ; (3) SpaceX troisième cas
-d'acceptation.
+**M2 « COLLECTE DE SOURCES » : CONSTRUIRE HORS LIGNE** (société fictive, sans base, sans réseau, sans
+dépense) selon `M2-collecte-sources.md` (B1-B14), avant tout passage réel. Questions tranchées le
+2026-11-16 (les trois recommandations) : le système complète l'identité depuis le registre officiel
+(#147) ; prospectus = derniers comptes annuels d'une société récemment introduite (#148) ; SpaceX
+troisième cas d'acceptation.
 
 **SpaceX** (ajoutée par l'utilisateur à l'écran le 2026-11-16, fiche révision 1 minimale : raison
 sociale « SPCX », rien d'autre — donc aucune source admise) : Nasdaq SPCX depuis juin 2026, numéro SEC
 1181412, **aucun 10-K** ; comptes annuels 2025 seulement dans le prospectus (424B4 du 2026-06-12), données
 structurées SEC trimestrielles seulement. L'ancien code plante à `traducteur.py:580` : ne pas le
-réparer, M2 le remplace. Ne PAS corriger la fiche avant la réponse à la question 1.
+réparer, M2 le remplace. Sa fiche sera complétée PAR M2 (B10, signée système) au passage réel — pas à la main avant.
 
 M1 est **accepté sur le VPS le 2026-11-16** ; premier geste d'écriture joué par l'utilisateur (création
 de la fiche SpaceX). Restent à l'écran : admettre, révoquer, corriger sur de vraies décisions ; puis

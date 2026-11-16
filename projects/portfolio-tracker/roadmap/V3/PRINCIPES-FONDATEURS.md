@@ -63,6 +63,9 @@ cette situation ?** Et on s'en sert pour orienter la conception.
   système de même (conv. #144). Second arbitrage du 2026-11-14 : une source **inconnue** est jugée par un
   évaluateur ad hoc sur quelques exemples ; au-dessus d'un seuil, le système l'admet ; en dessous, elle est
   **en suspens** et attend l'arbitrage de l'utilisateur (conv. #145).
+- **L'identité d'une société cotée** (2026-11-16) : complétée par le système depuis le registre officiel,
+  signée ; l'utilisateur corrige et sa correction tient ; les lieux de publication ne sont jamais devinés (conv. #147).
+  Une société récemment introduite : son prospectus tient lieu de derniers comptes annuels (conv. #148).
 - **Un dossier avance sur ce qui peut avancer** (2026-11-14) : pendant une collecte, ce qui n'en dépend pas
   continue ; ce qui a besoin de ses informations l'attend, quitte à prendre du temps. On parallélise ce qui
   peut l'être (conv. #146).
