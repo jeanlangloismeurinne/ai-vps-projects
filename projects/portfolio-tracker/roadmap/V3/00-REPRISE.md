@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -20,9 +20,10 @@ role: >
 
 **M2 « COLLECTE DE SOURCES » : CONSTRUIT HORS LIGNE le 2026-11-16** — module `app/modules/recueil/`
 (B1-B11 sur société fictive : `check_recueil.py` 63/0, `negatif_recueil.sh` 43/43 ; détail, leçons et
-passage à blanc : `M2-collecte-sources.md` §5). **Prochain pas : le rangement en base** (migration
-**064**, tables `recueil_*`, `depot_base`, preuve sur base locale comme M1 `check_emetteurs_persist`),
-puis moteur réel (Exa) et évaluateur réel, le déclencheur + la tâche de fond qui rangent l'`Envoi`,
+passage à blanc : `M2-collecte-sources.md` §5). **Rangement en base construit** le 2026-11-16 (migration
+**064 NON appliquée**, `recueil/depot_base.py`, `check_recueil_persist` 59/0 sur base jetable — rouge
+nommé au VPS tant que 064 n'est pas appliquée). **Prochain pas (Opus) : moteur réel (Exa) et
+évaluateur réel**, puis (Exa) et évaluateur réel, le déclencheur + la tâche de fond qui rangent l'`Envoi`,
 l'écran (B12), enfin les lignes « réel » (SpaceX B3/B10, une évaluation B6, NVDA/RVMD B13, suite B14).
 
 **SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main.
@@ -35,9 +36,13 @@ décisions ; puis archiver `M1-fiche-emetteur.md`). M1 a gagné `completer_ident
 inchangé en 1.1.0 (la forme de la fiche ne change pas : monter la version rendrait illisibles les
 fiches rangées). **Rien de M2 n'est déployé** : le module n'est appelé par aucune route ni tâche.
 
-Écarts voulus de M1 (A15) toujours à confirmer par l'utilisateur : **un émetteur sans fiche n'a aucune
-source admise**, dépôts officiels compris ; une adresse à la seule forme `ir.`/`investor.` n'est plus
-devinée (la collecte M2 appelle désormais `admettre_pages_investisseurs` au fil de l'eau — construit).
+Écart « émetteur sans fiche = aucune source admise » (A15) : **sans objet, clos le 2026-11-16 par
+l'utilisateur** — une société sans fiche n'est pas étudiée (le chef de dossier attend l'acte, A11 ; la
+collecte M2 aussi, B2) ; seul l'ancien code pouvait le rencontrer, et il est remplacé. Les sources sur
+les concurrents passent par la fiche de la société étudiée (`service.py`, `charger(conn, ticker_id)`).
+
+Modèles pour M2 (utilisateur, 2026-11-16) : **Sonnet** pour le rangement en base (le modèle existe en
+M1, critère en trois lignes) ; **Opus** pour l'évaluateur réel (sa consigne demande du jugement).
 
 ### Tranché le 2026-11-14 : sorti vers l'archive (« 2026-11-16 — sortis de la reprise ») ; règles : conventions #144-#146.
 

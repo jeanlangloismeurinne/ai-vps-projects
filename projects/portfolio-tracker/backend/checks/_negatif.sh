@@ -76,7 +76,9 @@ run_mutations() {
       mounts+=(-v "$tmp/frozen:/contract_frozen:ro")
     fi
     extra=()
-    [ "$net" = "coolify" ] && extra=(-e "CHECK_DB_URL=${CHECK_DB_URL:-}")
+    # Tout réseau réel (pas seulement « coolify » — un bac à sable a le sien) porte CHECK_DB_URL ;
+    # « none » (le défaut, modules purs mémoire) ne l'exige pas.
+    [ "$net" != "none" ] && extra=(-e "CHECK_DB_URL=${CHECK_DB_URL:-}")
 
     cible="$tmp/backend/$fichier"
     case "$fichier" in

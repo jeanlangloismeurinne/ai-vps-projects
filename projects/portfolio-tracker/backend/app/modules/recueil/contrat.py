@@ -243,6 +243,13 @@ class DepotMemoire:
         self._sources[source] = {**self._sources[source], **dict(champs)}
 
 
+def depot_base(connexion: Any) -> Depot:
+    """Le dépôt en base (tables `recueil_*`, migration 064), sur une connexion que l'appelant
+    possède (et dont il tient la transaction). Le module ne sait pas d'où vient la connexion."""
+    from .depot_base import DepotBase
+    return DepotBase(connexion)
+
+
 # ── Ce que la collecte reçoit du dehors (injecté : les contrôles le simulent) ─────────────────
 
 class Outils(Protocol):
@@ -369,7 +376,7 @@ def pas_evaluation(nom: str, emetteur: str, vue: VueTravaux, envoi: Envoi, *, ap
 __all__ = [
     "pas_evaluation",
     "VERSION_CONTRAT", "Demande", "Provenance", "Qualification", "Document", "Indisponibilite",
-    "Reponse", "Recueil", "Depot", "DepotMemoire", "lire_recueil", "lire_contenu", "collecter",
+    "Reponse", "Recueil", "Depot", "DepotMemoire", "depot_base", "lire_recueil", "lire_contenu", "collecter",
     "traiter_les_travaux", "evaluer_les_sources_rencontrees", "vue_ecran", "pas_collecte", "Envoi",
     "VueTravaux", "vue_travaux", "ranger_envoi", "DemandeRefusee", "Contexte", "Resultat", "FAIT",
     "INDISPONIBLE", "EN_COURS", "ECHEC",

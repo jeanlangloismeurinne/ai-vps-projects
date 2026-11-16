@@ -155,7 +155,13 @@ annuels » → le prospectus 424B4 du 2026-06-12 (11,9 Mo), mention à l'appui ;
 d'octobre-novembre avec le communiqué EX-99.1. Hors fiche admise en mémoire, tous marqués non admis
 (en production, `sec.gov` est admis).
 
-Reste, dans l'ordre proposé : (1) rangement en base (migration 064, `depot_base`, preuve sur base
-locale comme M1) ; (2) moteur réel (Exa) et évaluateur réel (modèle, consigne, trois publications au
+**Rangement en base construit le 2026-11-16** (migration 064, NON appliquée en production ;
+`recueil/depot_base.py`) : `check_recueil_persist.py` **59/0** sur base jetable (063 puis 064), zéro
+résidu ; `negatif_recueil_persist.sh` 7 mutations + 9 sur la migration. Trois mutations du dépôt sont
+arrêtées par la base avant leur assert (droit UPDATE retiré, contrainte de cohérence) : l'assert R5
+lancé SEUL sous mutation rougit bien (3 échecs nommés), il n'est que masqué dans la suite. Tant que
+064 n'est pas appliquée, `check_recueil_persist` est rouge (R0, nommé) dans `run_all.sh` au VPS.
+
+Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) moteur réel (Exa) et évaluateur réel (modèle, consigne, trois publications au
 moins) ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
 lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).

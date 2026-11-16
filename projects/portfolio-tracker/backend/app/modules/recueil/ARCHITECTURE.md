@@ -2,9 +2,12 @@
 
 Contrat **1.0.0**. Module M2 du plan `roadmap/V3/07-avant-comite.md`. **État : construit et prouvé
 hors ligne le 2026-11-16 (société fictive, sans base, sans réseau, sans dépense) ; passage à blanc
-réel sur SpaceX, en mémoire, contre le registre de la SEC (gratuit). PAS ENCORE ACCEPTÉ** : restent
-le rangement en base, l'écran, l'évaluateur réel, le déclencheur, et les lignes « réel » (B3, B6,
-B10, B12-B14) de `roadmap/V3/M2-collecte-sources.md`, qui porte aussi le tri de l'ancien code.
+réel sur SpaceX, en mémoire, contre le registre de la SEC (gratuit). Le rangement en base (tables
+`recueil_*`, migration 064, `app/modules/recueil/depot_base.py`) est construit et prouvé le
+2026-11-16 sur une base PostgreSQL 16 locale/jetable (`checks/check_recueil_persist.py`) ; PAS
+ENCORE APPLIQUÉE en production. PAS ENCORE ACCEPTÉ** : restent l'écran, l'évaluateur réel, le
+déclencheur, et les lignes « réel » (B3, B6, B10, B12-B14) de `roadmap/V3/M2-collecte-sources.md`,
+qui porte aussi le tri de l'ancien code.
 
 *Ce que ferait un vrai fonds* : la documentation reçoit une demande de l'analyste, rend les documents
 eux-mêmes avec leur provenance, ou répond « ça n'existe pas » en disant pourquoi ; elle ne lit pas
@@ -23,8 +26,9 @@ par `contrat.lire_contenu(empreinte)`.
 ## Comment c'est construit
 
 ```
-contrat.py        objets, dépôt (interface + mémoire), lecture, gestes, pas du chef de dossier
+contrat.py        objets, dépôt (interface + mémoire + base), lecture, gestes, pas du chef de dossier
 coeur.py          l'ordre des sources, l'identité, le rangement, les deux pas (aucun formulaire)
+depot_base.py     le rangement en base (tables recueil_*, migration 064) — seul fichier à les nommer
 referentiel.json  genres de document, ordre des familles, raisons d'indisponibilité
 adaptateurs/
   __init__.py     l'interface d'un adaptateur (Appel, Trouvaille, Identification), la reprise unique
@@ -60,6 +64,21 @@ Contrôle : `checks/check_recueil.py` (société fictive) ; test négatif : `che
 correction tient » visent son détenteur, `emetteurs/regles.py`). Garde des accès : `[C7]` de
 `check_charte_modules.py`, étendue le 2026-11-16 aux formulaires, registres et places.
 
+**Le rangement en base** (tables `recueil_*`, migration 064) : contrôle `checks/check_recueil_persist.py`
+(59 vérifications le 2026-11-16, prouvé sur une base PostgreSQL 16 locale/jetable — PAS ENCORE
+appliqué en production) ; test négatif `checks/negatif_recueil_persist.sh` (7 mutations du code
+de `depot_base.py` + 9 de la migration 064, toutes détectées le 2026-11-16).
+
+| Ligne | Invariant | Assert |
+|---|---|---|
+| R0 | 064 appliquée ici, sinon échec nommé (jamais un saut) | [R0] |
+| R1 | les mêmes gestes jouées sur `DepotMemoire` et sur le dépôt base rendent le même `lire_recueil` et la même `vue_ecran`, comparés en entier | [R1] |
+| R2 | documents, contenus, réponses : la base refuse UPDATE et DELETE (ajout seul) | [R2] |
+| R3 | le même document rangé deux fois : une seule ligne, contenu identique octet pour octet (binaire compris) | [R3] |
+| R4 | une collecte interrompue puis reprise ne recollecte pas ce qui est déjà rangé | [R4] |
+| R5 | une source rencontrée deux fois : adresses fusionnées (dédupliquées, anciennes d'abord), état gardé ; `marquer_source` fusionne | [R5] |
+| R6 | même résultat avec et sans le codec JSON du service | [R6] |
+
 | Ligne | Invariant | Assert |
 |---|---|---|
 | — | Seul le transport touche le réseau ; aucun modèle importé | [B0] |
@@ -77,12 +96,13 @@ correction tient » visent son détenteur, `emetteurs/regles.py`). Garde des acc
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **Le rangement en base** (tables `recueil_*`, migration 064) : le dépôt n'existe qu'en mémoire.
 - **L'évaluateur réel** (un modèle, rôle distinct du collecteur, qui lit au moins trois publications)
   et le **moteur réel** (Exa) : interfaces écrites, simulés dans le contrôle.
 - **Le déclencheur** qui appelle le chef de dossier, la tâche de fond (`traiter_les_travaux`,
   `evaluer_les_sources_rencontrees`) et range l'`Envoi` : à construire.
 - **L'écran** (B12) : `vue_ecran` est écrite, aucune route ni page.
+- **La migration 064 n'est pas appliquée en production** : écrite, prouvée en local/jetable
+  uniquement (motif #17 — jamais auto-appliquée) ; l'appliquer est un pas distinct.
 - Le registre ne lit que les dépôts « récents » de la SEC (le millier le plus récent) : un dépôt plus
   ancien n'est pas vu. Une page du site ne dit pas sa date : `publie_le` reste vide, jamais devinée,
   et un genre « depuis une date » trouvé sur le site n'est pas filtré par date.
