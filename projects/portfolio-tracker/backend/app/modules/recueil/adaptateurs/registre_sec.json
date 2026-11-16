@@ -1,0 +1,130 @@
+{
+  "version": "1.0.0",
+  "_lisez_moi": "Référentiel de l'adaptateur « registre de la SEC » : le seul endroit où s'écrivent les noms de formulaires et les adresses du registre. Ajouter un genre ou un formulaire ne touche que ce fichier (B1).",
+  "registre": "sec",
+  "libelle": "registre de la SEC (États-Unis)",
+  "reference": "sec_cik",
+  "pays_domestique": "US",
+  "_etats_domestiques": "Le registre ne remplit pas toujours « isForeignLocation » (nul pour NVIDIA et SpaceX, mesuré le 2026-11-16) : une adresse d'affaires dans un de ces États vaut pays domestique.",
+  "etats_domestiques": [
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY"
+  ],
+  "adresses": {
+    "symboles": "https://www.sec.gov/files/company_tickers_exchange.json",
+    "depots": "https://data.sec.gov/submissions/CIK{numero10}.json",
+    "document": "https://www.sec.gov/Archives/edgar/data/{numero}/{dossier}/{document}",
+    "soumission": "https://www.sec.gov/Archives/edgar/data/{numero}/{dossier}/{accession}.txt",
+    "donnees": "https://data.sec.gov/api/xbrl/companyfacts/CIK{numero10}.json"
+  },
+  "places": {
+    "Nasdaq": "NASDAQ",
+    "NYSE": "NYSE",
+    "CBOE": "CBOE",
+    "OTC": "OTC"
+  },
+  "suffixe_amendement": "/A",
+  "genres": {
+    "derniers_comptes_annuels": {
+      "formulaires": [
+        "10-K",
+        "20-F",
+        "40-F"
+      ],
+      "lecture": "document_principal",
+      "a_defaut": {
+        "formulaires": [
+          "424B4",
+          "424B1",
+          "424B3",
+          "S-1",
+          "F-1"
+        ],
+        "mention": "Prospectus d'introduction en bourse : aucun rapport annuel n'est encore déposé ; il contient les derniers comptes annuels audités et en tient lieu jusqu'au premier rapport annuel (#148)."
+      }
+    },
+    "comptes_intermediaires": {
+      "formulaires": [
+        "10-Q"
+      ],
+      "lecture": "document_principal"
+    },
+    "annonces_importantes": {
+      "formulaires": [
+        "8-K",
+        "6-K"
+      ],
+      "lecture": "soumission",
+      "parties_jointes": [
+        "EX-99"
+      ]
+    },
+    "document_de_convocation": {
+      "formulaires": [
+        "DEF 14A"
+      ],
+      "lecture": "document_principal"
+    },
+    "donnees_comptables_structurees": {
+      "lecture": "donnees"
+    }
+  },
+  "formats_lus": [
+    "text/",
+    "application/json",
+    "application/xhtml",
+    "application/xml"
+  ],
+  "en_tete_identification": "portfolio-tracker/2.0 (research contact plm@lm-associes.com)",
+  "_en_tete_identification": "Le registre exige un en-tête qui identifie le demandeur (sinon 403) et borne la cadence à 10 demandes par seconde : règle publique de la SEC.",
+  "demandes_par_seconde": 8
+}

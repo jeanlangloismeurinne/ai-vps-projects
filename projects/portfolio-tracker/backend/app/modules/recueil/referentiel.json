@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "genres": {
+    "derniers_comptes_annuels": {
+      "libelle": "Les derniers comptes annuels audités publiés par la société.",
+      "nature": "mesure",
+      "etendue": "dernier"
+    },
+    "comptes_intermediaires": {
+      "libelle": "Les comptes intermédiaires (trimestriels, semestriels) publiés depuis une date.",
+      "nature": "mesure",
+      "etendue": "depuis"
+    },
+    "annonces_importantes": {
+      "libelle": "Les annonces importantes (communiqués, événements déclarés au régulateur) publiées depuis une date.",
+      "nature": "evenement",
+      "etendue": "depuis"
+    },
+    "document_de_convocation": {
+      "libelle": "Le dernier document de convocation à l'assemblée des actionnaires (rémunérations, gouvernance, résolutions).",
+      "nature": "interpretation",
+      "etendue": "dernier"
+    },
+    "donnees_comptables_structurees": {
+      "libelle": "Les données comptables structurées que le régulateur publie pour la société (rendues brutes ; leur lecture n'est pas la collecte).",
+      "nature": "mesure",
+      "etendue": "dernier"
+    },
+    "presentation_aux_investisseurs": {
+      "libelle": "Les présentations faites aux investisseurs, publiées depuis une date.",
+      "nature": "interpretation",
+      "etendue": "depuis"
+    },
+    "page_web": {
+      "libelle": "Une page précise, à l'adresse donnée par la demande.",
+      "nature": "interpretation",
+      "etendue": "adresse"
+    }
+  },
+  "familles_dans_l_ordre": ["registre", "site", "web"],
+  "raisons": {
+    "fiche_absente": "Aucune fiche n'est établie pour cet émetteur : la collecte ne sait ni qui il est ni où il publie.",
+    "injoignable": "La source a répondu par une erreur, deux fois de suite : le document existe peut-être, il n'a pas pu être lu.",
+    "illisible": "Un document a été trouvé mais n'a pas pu être lu (vide, format non lu) : il n'est pas rangé comme bon.",
+    "trop_volumineux": "Le document dépasse la taille qu'on range : il n'est pas rangé.",
+    "homonyme": "Le registre connaît plusieurs sociétés pour ce nom : le système ne tranche pas, l'identité attend votre acte.",
+    "rien_publie": "La source a été consultée : elle ne contient aucun document de ce genre pour la période demandée.",
+    "non_applicable": "Aucune source ne pouvait être consultée pour cette société (ni numéro au registre, ni lieu de publication, ni recherche possible)."
+  },
+  "_priorite_des_raisons": "La raison principale d'une indisponibilité : la plus précise des raisons constatées. Un document trouvé mais illisible en dit plus qu'une source injoignable ; tous les essais restent énumérés.",
+  "priorite_des_raisons": ["fiche_absente", "homonyme", "illisible", "trop_volumineux", "injoignable", "rien_publie", "non_applicable"],
+  "taille_max_octets": 60000000
+}

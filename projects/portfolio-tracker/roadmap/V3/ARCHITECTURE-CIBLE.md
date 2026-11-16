@@ -72,6 +72,7 @@ comptes**.
 | (charte) | Registre des modules et garde des accès entre eux | `check_charte_modules.py` | `app/modules/ARCHITECTURE.md` |
 | `chef_de_dossier` (M0) | État du dossier → pas suivant ; rangé en base (migration 063) | `check_chef_de_dossier.py`, `check_emetteurs_persist.py` [B5]-[B6] | `app/modules/chef_de_dossier/ARCHITECTURE.md` |
 | `emetteurs` (M1, accepté le 2026-11-16 sauf les gestes d'écriture à l'écran) | Fiche de l'émetteur, journal des sources admises et révoquées ; l'ancien code la lit par `knowledge/fiche_emetteur.py` | `check_emetteurs.py`, `check_emetteurs_persist.py`, `check_emetteurs_api.py`, `check_fiche_lue.py` | `app/modules/emetteurs/ARCHITECTURE.md` |
+| `recueil` (M2, construit hors ligne le 2026-11-16, pas encore accepté) | Recueil d'un émetteur : documents bruts avec leur origine ou indisponibilité nommée ; adaptateurs registre SEC, site, web | `check_recueil.py` | `app/modules/recueil/ARCHITECTURE.md` |
 
 ## Registre 2 — ancien code (la carrière)
 

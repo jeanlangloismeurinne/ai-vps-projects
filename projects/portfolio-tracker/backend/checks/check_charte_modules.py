@@ -47,8 +47,11 @@ SOUS_DOSSIER_ADAPTATEURS = "adaptateurs"  # ce qui est propre à une SOURCE vit 
 
 # [C7] Filet, volontairement court et explicite. Une frontière = « ni lettre ni chiffre » (le
 # souligné n'en est pas une : `cik_emetteur` et `nvda_cas` sont attrapés). Insensible à la casse.
-JETONS_JURIDICTION = ("10-K", "10-Q", "8-K", "DEF 14A", "EDGAR", "us-gaap", "cik")
-SYMBOLES_SOCIETE = ("NVDA", "RVMD", "MSFT")
+# M2 (B1, 2026-11-16) : les noms de formulaires, de registres et de places entrent dans le filet —
+# le cœur d'un module demande un GENRE de document, l'adaptateur le traduit par son référentiel.
+JETONS_JURIDICTION = ("10-K", "10-Q", "8-K", "6-K", "20-F", "40-F", "DEF 14A", "424B4", "S-1", "F-1",
+                      "EDGAR", "SEC", "us-gaap", "xbrl", "cik", "Nasdaq", "NYSE")
+SYMBOLES_SOCIETE = ("NVDA", "RVMD", "MSFT", "SPCX")
 
 
 def _motif(jeton: str) -> re.Pattern[str]:

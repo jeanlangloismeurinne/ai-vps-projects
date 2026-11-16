@@ -235,6 +235,64 @@ async def etablir_fiche(depot: Depot, emetteur: str, *, raison_sociale: str, aut
     return await lire_fiche(depot, emetteur)
 
 
+# Les champs d'IDENTITÉ que le système peut compléter depuis un registre officiel (#147). Les lieux
+# de publication et la spécialité n'en sont pas : jamais devinés.
+CHAMPS_IDENTITE = ("raison_sociale", "pays", "cotations", "references")
+
+
+def champs_tenus_par_l_utilisateur(rangees: Sequence[Mapping[str, Any]]) -> set[str]:
+    """Les champs d'identité que l'utilisateur a CORRIGÉS : modifiés par lui dans une révision
+    postérieure à une révision du système. Ce que l'utilisateur a saisi à l'ouverture, avant que le
+    système n'ait rien écrit, n'est pas une correction : le registre peut le compléter (#147)."""
+    tenus: set[str] = set()
+    systeme_vu = False
+    for avant, apres in zip([{}] + list(rangees[:-1]), rangees):
+        if _est_systeme(str(apres.get("auteur", ""))):
+            systeme_vu = True
+            continue
+        if systeme_vu:
+            tenus |= {c for c in CHAMPS_IDENTITE if avant.get(c) != apres.get(c)}
+    return tenus
+
+
+async def completer_identite(depot: Depot, emetteur: str, *, raison_sociale: str, pays: str,
+                             cotations: Sequence[tuple[str, str]], references: Sequence[tuple[str, str]],
+                             auteur: str, motif: str, le: str) -> dict[str, Any]:
+    auteur = _auteur(auteur)
+    if not _est_systeme(auteur):
+        raise ActeRefuse("compléter l'identité depuis un registre est un acte du système ; "
+                         "l'utilisateur corrige par une révision de la fiche")
+    _refuser_un_role_qui_utilise(auteur)
+    rangees = list(await depot.fiches(emetteur))
+    if not rangees:
+        raise FicheAbsente(f"aucune fiche n'est établie pour « {emetteur} »")
+    actuelle = rangees[-1]
+    tenus = champs_tenus_par_l_utilisateur(rangees)
+    propose = _contenu_declare(emetteur=emetteur, raison_sociale=raison_sociale, pays=pays,
+                               cotations=cotations, references=references, lieux=(), specialite="")
+    # Les références d'autres registres restent : le système ne complète que celles qu'il a lues.
+    lues = {r for r, _ in propose["references"]}
+    propose["references"] = sorted([r for r in actuelle["references"] if r[0] not in lues]
+                                   + propose["references"])
+    if not propose["pays"]:
+        propose["pays"] = actuelle["pays"]       # un registre muet sur le pays n'efface rien
+    change = [c for c in CHAMPS_IDENTITE if c not in tenus and propose[c] != actuelle[c]]
+    tenus_differents = sorted(c for c in tenus if propose[c] != actuelle[c])
+    if not change:
+        return {"issue": "inchangee", "revision": int(actuelle["revision"]), "champs": [],
+                "tenus": tenus_differents}
+    nouvelle = {k: actuelle[k] for k in ("raison_sociale", "pays", "cotations", "references", "lieux",
+                                         "specialite")}
+    nouvelle.update({c: propose[c] for c in change})
+    fiche = await etablir_fiche(depot, emetteur, auteur=auteur, motif=motif, le=le,
+                                raison_sociale=nouvelle["raison_sociale"], pays=nouvelle["pays"],
+                                cotations=[tuple(c) for c in nouvelle["cotations"]],
+                                references=[tuple(r) for r in nouvelle["references"]],
+                                lieux=[tuple(l) for l in nouvelle["lieux"]],
+                                specialite=nouvelle["specialite"])
+    return {"issue": "completee", "revision": fiche.revision, "champs": change, "tenus": tenus_differents}
+
+
 def _fiche_depuis(contenu: Mapping[str, Any], sources: tuple[SourceAdmise, ...] = (),
                   revocations: tuple[SourceRevoquee, ...] = (),
                   en_suspens: tuple[SourceEnSuspens, ...] = ()) -> Fiche:

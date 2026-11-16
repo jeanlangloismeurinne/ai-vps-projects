@@ -8,8 +8,8 @@ Ce fichier est le SEUL que le reste du système a le droit d'importer. Il porte 
   · l'objet de sortie versionné (`Fiche`) et LA fonction qui le lit : `lire_fiche` ;
   · ce qu'on peut demander à une fiche, sans rien lire d'autre : `qualifier` (cette adresse
     est-elle une source admise pour cette nature d'information ?) et `pieces_a_signaler` ;
-  · les gestes qui écrivent (`etablir_fiche`, `admettre_source`, `revoquer_source`,
-    `evaluer_source`) : ce sont des actes datés, motivés et signés, jamais une retouche ;
+  · les gestes qui écrivent (`etablir_fiche`, `completer_identite`, `admettre_source`,
+    `revoquer_source`, `evaluer_source`) : ce sont des actes datés, motivés et signés, jamais une retouche ;
   · la vue de l'écran (`vue_ecran`) et le pas déclaré au chef de dossier (`pas_fiche`).
 
 Une référence externe (numéro d'un régulateur, code d'une place) est TOUJOURS facultative, et son
@@ -337,6 +337,30 @@ async def evaluer_source(depot: Depot, evaluation: Evaluation, *, le: str) -> di
     sans constat) est refusée : elle n'entre pas au journal."""
     from . import regles
     return await regles.evaluer_source(depot, evaluation, le=le)
+
+
+async def completer_identite(depot: Depot, emetteur: str, *, raison_sociale: str, pays: str,
+                             cotations: Sequence[tuple[str, str]], references: Sequence[tuple[str, str]],
+                             auteur: str, motif: str, le: str) -> dict[str, Any]:
+    """Le SYSTÈME complète l'identité d'un émetteur depuis un registre officiel (arbitrage du
+    2026-11-16, #147) : raison sociale, pays, cotations, références — jamais les lieux de
+    publication ni la spécialité. Le registre et la date de consultation se citent au motif. Un
+    champ que l'utilisateur a corrigé après une révision du système n'est plus réécrit. Rend
+    `completee` (avec la révision et les champs changés) ou `inchangee` ; `tenus` nomme les champs
+    où le registre dit autre chose que votre correction (montré, jamais appliqué)."""
+    from . import regles
+    return await regles.completer_identite(
+        depot, emetteur, raison_sociale=raison_sociale, pays=pays, cotations=cotations,
+        references=references, auteur=auteur, motif=motif, le=le)
+
+
+def domaine(adresse: str) -> str | None:
+    """Le domaine d'une adresse tel que le registre des sources le nomme (sans protocole ni
+    « www. »), ou `None` si l'adresse est illisible. Détenteur unique : qui veut nommer une source
+    à partir d'une adresse passe par ici."""
+    from . import regles
+    hc = regles._hote_et_chemin(adresse)
+    return None if hc is None else hc[0]
 
 
 def page_investisseurs(adresse: str) -> str | None:

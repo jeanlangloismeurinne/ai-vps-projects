@@ -46,6 +46,15 @@ MODULES: tuple[Module, ...] = (
         prefixe_tables="emetteurs_",
         lit=("chef_de_dossier",),  # pour déclarer son pas (charte, point 8)
     ),
+    Module(
+        nom="recueil",
+        rend="Le recueil d'un émetteur : à chaque demande (un genre de document, depuis une date), "
+             "des documents bruts avec leur origine et leur qualification, ou une indisponibilité "
+             "nommée ; la dépense de collecte.",
+        prefixe_tables="recueil_",
+        # M1 : qui est l'émetteur, où il publie, ce que vaut une adresse ; chef : son pas.
+        lit=("chef_de_dossier", "emetteurs"),
+    ),
 )
 
 

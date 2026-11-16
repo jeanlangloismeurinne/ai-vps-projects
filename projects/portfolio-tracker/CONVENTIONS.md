@@ -3777,7 +3777,7 @@ de publication** (site, relations investisseurs : déclarés par l'utilisateur o
 homonyme (plusieurs sociétés pour un nom) n'est jamais tranché par le système : indisponibilité nommée,
 acte attendu de l'utilisateur.
 
-**Construit.** À venir (M2, ligne B10 de `roadmap/V3/M2-collecte-sources.md`).
+**Construit (2026-11-16, hors ligne).** `emetteurs.completer_identite` (champs tenus = modifiés par l'utilisateur après une révision du système ; la saisie d'ouverture n'en est pas une) appelé par la collecte M2 avant chaque recherche au registre ; homonyme → indisponibilité « homonyme » + acte attendu, le pas de collecte s'arrête sur l'acte et recollecte quand il est enregistré. Preuve : `check_recueil.py` [B10], `negatif_recueil.sh`. Passage à blanc réel sur SpaceX : identité complétée. Le registre ne remplit pas « isForeignLocation » pour une société domestique : le pays vient de l'État de l'adresse d'affaires (liste en donnée).
 
 ### #148 — une société récemment introduite : le prospectus d'introduction tient lieu de derniers comptes annuels (arbitrage du 2026-11-16)
 
@@ -3789,5 +3789,4 @@ rapport annuel n'est déposé, et l'origine du document le dit ; jamais un cumul
 comme une année. Dès qu'un rapport annuel existe, c'est lui. La correspondance (genre de document →
 formulaires, par registre) est une donnée du référentiel de l'adaptateur.
 
-**Construit.** À venir (M2, ligne B3). Cas réel d'acceptation : SpaceX (Nasdaq depuis juin 2026, aucun
-10-K au 2026-11-16).
+**Construit (2026-11-16, hors ligne).** Repli `a_defaut` du genre « derniers comptes annuels » au référentiel de l'adaptateur du registre (424B4, 424B1, 424B3, S-1, F-1, dans cet ordre) avec sa mention ; preuve `check_recueil.py` [B3]. Passage à blanc réel : SpaceX → 424B4 du 2026-06-12. Acceptation réelle à passer (base, écran).

@@ -1,6 +1,6 @@
 ---
 id: m2-collecte-sources
-status: module ouvert (tri fait, acceptation écrite le 2026-11-16 AVANT le code, questions tranchées le jour même)
+status: construit hors ligne le 2026-11-16 (B1-B11 société fictive, check_recueil 63/0, négatif 43/43) ; passage à blanc réel SpaceX en mémoire ; reste base, évaluateur et moteur réels, déclencheur, écran, lignes « réel »
 created: 2026-11-16
 project: portfolio-tracker
 role: >
@@ -81,8 +81,8 @@ investisseurs », « page web »…), un émetteur, une date de départ. Une **r
 chacun avec son origine (adresse, registre, date de publication, date des faits couverts, empreinte),
 ou une indisponibilité nommée (genre, émetteur, raison, adaptateurs essayés).
 
-Les lignes « société fictive » se prouvent sans base, sans réseau et sans dépense (`check_collecte.py`,
-rougi par `negatif_collecte.sh`) ; « base » sur une vraie base ; « réel » sur le VPS.
+Les lignes « société fictive » se prouvent sans base, sans réseau et sans dépense (`check_recueil.py`,
+rougi par `negatif_recueil.sh`) ; « base » sur une vraie base ; « réel » sur le VPS.
 
 | # | Acceptation | Preuve |
 |---|---|---|
@@ -127,3 +127,35 @@ rougi par `negatif_collecte.sh`) ; « base » sur une vraie base ; « réel » s
 - **Décider quoi collecter** : c'est le module qui a besoin de l'information (M4, M6, M8) qui demande.
 - **Les documents fournis à la main** et **les autres régulateurs** : interface écrite (un adaptateur
   de plus, B1), pas construits.
+
+## 5. Construit hors ligne (2026-11-16)
+
+Module `app/modules/recueil/` (contrat 1.0.0, préfixe `recueil_`), détail et limites dans son
+`ARCHITECTURE.md`. Lignes « société fictive » B1-B11 : `check_recueil.py` **63/0**,
+`negatif_recueil.sh` **43/43** ; garde des accès [C7] étendue aux formulaires, registres et places
+(`negatif_charte_modules.sh` 27/27) ; M1 gagne le geste `completer_identite` (#147 ; `negatif_emetteurs.sh`
+49/49). Suite **6 700**, seul rouge : les données RVMD de l'ancien enchaînement (connu).
+
+Ce que la construction a appris (et corrigé avant d'écrire la suite) :
+- **Le registre ne remplit pas `isForeignLocation`** pour une société domestique (nul pour NVIDIA et
+  SpaceX, mesuré) : le pays se déduit de l'État de l'adresse d'affaires, liste en donnée.
+- **La dépense de l'évaluateur arrive après la collecte** : déclarée par le pas de collecte, elle
+  n'aurait jamais été comptée (le pas est déjà fait). Elle a son pas, `pas_evaluation`, dont personne
+  ne dépend : le dossier avance, la dépense est déclarée quand le jugement est rendu.
+- **Une réponse qui aboutit garde la trace des sources essayées avant** (un PDF non lu sur le site,
+  trouvé ensuite sur le web) : sans elle, l'échec du site disparaissait.
+- **La raison principale d'une indisponibilité est la plus précise** : un document trouvé mais
+  illisible passe devant un site injoignable (tous les essais restent énumérés).
+- **La collecte vient toujours après la fiche**, garanti par le pas lui-même, pas par l'appelant.
+
+**Passage à blanc réel** (2026-11-16, en mémoire, aucune écriture, registre gratuit) sur la fiche
+SpaceX telle qu'en production (« SPCX », rien d'autre) : identité complétée — « SPACE EXPLORATION
+TECHNOLOGIES CORP », 1181412, NASDAQ, US, signée `systeme:documentation` ; « derniers comptes
+annuels » → le prospectus 424B4 du 2026-06-12 (11,9 Mo), mention à l'appui ; deux 10-Q ; trois 8-K
+d'octobre-novembre avec le communiqué EX-99.1. Hors fiche admise en mémoire, tous marqués non admis
+(en production, `sec.gov` est admis).
+
+Reste, dans l'ordre proposé : (1) rangement en base (migration 064, `depot_base`, preuve sur base
+locale comme M1) ; (2) moteur réel (Exa) et évaluateur réel (modèle, consigne, trois publications au
+moins) ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
+lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).

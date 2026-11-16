@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "_lisez_moi": "Référentiel de l'adaptateur « web » : comment un genre de document se cherche avec un moteur de recherche. Les domaines de la fiche d'abord, le web ouvert ensuite (#133).",
+  "genres": {
+    "derniers_comptes_annuels": {"requete": "{raison_sociale} annual report audited financial statements", "nombre": 3},
+    "comptes_intermediaires": {"requete": "{raison_sociale} quarterly results interim report", "nombre": 3},
+    "annonces_importantes": {"requete": "{raison_sociale} press release announces", "nombre": 5},
+    "document_de_convocation": {"requete": "{raison_sociale} proxy statement annual meeting", "nombre": 2},
+    "presentation_aux_investisseurs": {"requete": "{raison_sociale} investor presentation", "nombre": 3}
+  },
+  "formats_lus": ["text/", "application/xhtml", "application/xml"]
+}

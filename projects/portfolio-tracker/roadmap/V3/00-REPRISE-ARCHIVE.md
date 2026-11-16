@@ -7136,3 +7136,17 @@ sources de la fiche est coupée à droite. **Restent les gestes d'écriture (adm
    évaluateur ne tourne ; rendu vérifié ici sur données fictives).
 
 
+
+
+## 2026-11-16 — sortis de la reprise (arbitrages du 2026-11-14, construits)
+
+
+- Sources signées par le système, révocation de l'utilisateur qui tient ; pages des concurrents admises
+  par le système (#144). Pays « US » des trois titres vérifié le 2026-11-16.
+- **Source inconnue** : un évaluateur ad hoc répond à une grille sur quelques publications ; le code note ;
+  admise à 0,80 (≥ 3 publications, critère écrit), **en suspens** dessous pour votre arbitrage (#145 ;
+  ligne A17). Seuil, nombre et questions : valeurs de départ en donnée. Choix par défaut à confirmer : une
+  source en suspens ne bloque pas le dossier.
+- **Dossier pendant une collecte** : ce qui n'en dépend pas avance ; ce qui en dépend l'attend, sans limite
+  de temps ; l'arrêt énumère toutes les attentes (#146, chef de dossier 1.1.0).
+

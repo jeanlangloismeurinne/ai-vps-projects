@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,38 +18,28 @@ role: >
 
 ## ➜ Prochain pas
 
-**M2 « COLLECTE DE SOURCES » : CONSTRUIRE HORS LIGNE** (société fictive, sans base, sans réseau, sans
-dépense) selon `M2-collecte-sources.md` (B1-B14), avant tout passage réel. Questions tranchées le
-2026-11-16 (les trois recommandations) : le système complète l'identité depuis le registre officiel
-(#147) ; prospectus = derniers comptes annuels d'une société récemment introduite (#148) ; SpaceX
-troisième cas d'acceptation.
+**M2 « COLLECTE DE SOURCES » : CONSTRUIT HORS LIGNE le 2026-11-16** — module `app/modules/recueil/`
+(B1-B11 sur société fictive : `check_recueil.py` 63/0, `negatif_recueil.sh` 43/43 ; détail, leçons et
+passage à blanc : `M2-collecte-sources.md` §5). **Prochain pas : le rangement en base** (migration
+**064**, tables `recueil_*`, `depot_base`, preuve sur base locale comme M1 `check_emetteurs_persist`),
+puis moteur réel (Exa) et évaluateur réel, le déclencheur + la tâche de fond qui rangent l'`Envoi`,
+l'écran (B12), enfin les lignes « réel » (SpaceX B3/B10, une évaluation B6, NVDA/RVMD B13, suite B14).
 
-**SpaceX** (ajoutée par l'utilisateur à l'écran le 2026-11-16, fiche révision 1 minimale : raison
-sociale « SPCX », rien d'autre — donc aucune source admise) : Nasdaq SPCX depuis juin 2026, numéro SEC
-1181412, **aucun 10-K** ; comptes annuels 2025 seulement dans le prospectus (424B4 du 2026-06-12), données
-structurées SEC trimestrielles seulement. L'ancien code plante à `traducteur.py:580` : ne pas le
-réparer, M2 le remplace. Sa fiche sera complétée PAR M2 (B10, signée système) au passage réel — pas à la main avant.
+**SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main.
+Le passage à blanc en mémoire (2026-11-16, registre gratuit, aucune écriture) l'a complétée
+correctement (« SPACE EXPLORATION TECHNOLOGIES CORP », 1181412, NASDAQ, US) et a rendu le prospectus
+424B4 du 2026-06-12 pour « derniers comptes annuels ». Le vrai passage l'écrira, signé du système.
 
-M1 est **accepté sur le VPS le 2026-11-16** ; premier geste d'écriture joué par l'utilisateur (création
-de la fiche SpaceX). Restent à l'écran : admettre, révoquer, corriger sur de vraies décisions ; puis
-archiver `M1-fiche-emetteur.md`.
+M1 accepté sur le VPS le 2026-11-16 (reste à l'écran : admettre, révoquer, corriger sur de vraies
+décisions ; puis archiver `M1-fiche-emetteur.md`). M1 a gagné `completer_identite` (#147) — contrat
+inchangé en 1.1.0 (la forme de la fiche ne change pas : monter la version rendrait illisibles les
+fiches rangées). **Rien de M2 n'est déployé** : le module n'est appelé par aucune route ni tâche.
 
-Écarts voulus constatés en A15 : une adresse à la seule FORME d'une page investisseurs (`ir.`, `investor.`)
-n'est plus devinée (admise par le système quand elle est vue, A16) ; **un émetteur sans fiche n'a aucune
-source admise**, dépôts officiels compris (A10, A11 — décision de cette session, à confirmer par
-l'utilisateur) ; la collecte (M2) devra donc établir la fiche d'abord et appeler
-`admettre_pages_investisseurs` au fil de l'eau.
+Écarts voulus de M1 (A15) toujours à confirmer par l'utilisateur : **un émetteur sans fiche n'a aucune
+source admise**, dépôts officiels compris ; une adresse à la seule forme `ir.`/`investor.` n'est plus
+devinée (la collecte M2 appelle désormais `admettre_pages_investisseurs` au fil de l'eau — construit).
 
-### Tranché le 2026-11-14 (construit hors ligne)
-
-- Sources signées par le système, révocation de l'utilisateur qui tient ; pages des concurrents admises
-  par le système (#144). Pays « US » des trois titres vérifié le 2026-11-16.
-- **Source inconnue** : un évaluateur ad hoc répond à une grille sur quelques publications ; le code note ;
-  admise à 0,80 (≥ 3 publications, critère écrit), **en suspens** dessous pour votre arbitrage (#145 ;
-  ligne A17). Seuil, nombre et questions : valeurs de départ en donnée. Choix par défaut à confirmer : une
-  source en suspens ne bloque pas le dossier.
-- **Dossier pendant une collecte** : ce qui n'en dépend pas avance ; ce qui en dépend l'attend, sans limite
-  de temps ; l'arrêt énumère toutes les attentes (#146, chef de dossier 1.1.0).
+### Tranché le 2026-11-14 : sorti vers l'archive (« 2026-11-16 — sortis de la reprise ») ; règles : conventions #144-#146.
 
 ### M2 : le détail (tri, acceptation, ce qui reste ouvert) est dans `M2-collecte-sources.md`.
 
@@ -76,9 +66,8 @@ payante avant le module M6 (carte).**
 - `backend/tools/mesure_gate_capacite4.py` ne compile pas (erreur d'indentation, relevée par la garde des
   accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
 - Chef de dossier : rangement en base (migration 063, appliquée le 2026-11-16) ; toujours ni déclencheur ni
-  geste à l'écran (lever une pause, enregistrer un acte, relancer).
-- La collecte (M2) devra appeler `emetteurs.admettre_pages_investisseurs` sur chaque adresse rencontrée :
-  aujourd'hui seul l'outil `pages-investisseurs` l'appelle, sur les pièces déjà collectées.
+  geste à l'écran (lever une pause, enregistrer un acte, relancer). Le déclencheur se construit avec M2
+  (il range l'`Envoi` des pas de collecte dans la même transaction que l'état du dossier).
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
@@ -93,7 +82,7 @@ payante avant le module M6 (carte).**
   à la reconstruction (premier passage du test), pas relues d'ici là.
 - **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : rebuild de sécurité du 31/10 (`46a663f`) — embarque B4d, #143, B4f, B4g et le maillon 1 (vérifié fichier par fichier le 2026-11-16) ; M1 pas encore déployé. Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
-- **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064, réservée aux tables `recueil_*` de M2 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.

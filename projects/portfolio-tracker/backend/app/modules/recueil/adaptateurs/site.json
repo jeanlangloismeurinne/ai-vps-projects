@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "_lisez_moi": "Référentiel de l'adaptateur « site de l'émetteur » : quels liens d'une page de la société mènent à un genre de document. Les mots sont cherchés dans le texte et l'adresse des liens, sans casse. Un genre absent d'ici n'est pas cherché sur le site.",
+  "lieux_parcourus": ["relations_investisseurs", "site"],
+  "genres": {
+    "derniers_comptes_annuels": {"mots": ["annual report", "rapport annuel", "document d'enregistrement universel", "universal registration document", "jahresbericht", "geschäftsbericht"], "nombre": 1},
+    "comptes_intermediaires": {"mots": ["quarterly report", "interim report", "half-year", "rapport semestriel", "rapport financier semestriel", "quartalsbericht"], "nombre": 3},
+    "annonces_importantes": {"mots": ["press release", "news release", "communiqué", "pressemitteilung"], "nombre": 5},
+    "presentation_aux_investisseurs": {"mots": ["investor presentation", "presentation", "présentation"], "nombre": 3},
+    "page_web": {"adresse_de_la_demande": true}
+  },
+  "formats_lus": ["text/", "application/xhtml", "application/xml", "application/json"]
+}
