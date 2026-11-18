@@ -92,6 +92,18 @@ mutations=(
 "$EV¦            raise EvaluationImpossible(f\"réponse du modèle hors de la forme demandée : {exc}\", depense) from exc¦            raise EvaluationImpossible(f\"réponse du modèle hors de la forme demandée : {exc}\", Depense()) from exc¦[V5] une question sans réponse"
 # [V6] un essai manqué perd ce qu'il a payé (détenteur : le cœur).
 "$C¦            cumul = Depense(**s.get(\"depense\", {})).plus(paye if isinstance(paye, Depense) else Depense())¦            cumul = Depense(**s.get(\"depense\", {}))¦[V6] chaque essai manqué garde ce qu'il a payé"
+# [V8] un aperçu compte comme une publication.
+"$EV¦        if apercus:¦        if False:¦[V8] une publication déclarée incomplète ne compte pas"
+# [V8] l'échec de l'aperçu perd la dépense.
+"$EV¦                f\"lues incomplètes (aperçu, accès payant) : {' ; '.join(apercus)}\", depense)¦                f\"lues incomplètes (aperçu, accès payant) : {' ; '.join(apercus)}\", Depense())¦[V8] l'échec porte la dépense"
+# [V8] « texte complet » n'est plus exigé.
+"$EV¦            raise ValueError(f\"{adresse} : « texte_complet » doit dire oui ou non, avec ce qui a été constaté\")¦            pass¦[V8] « texte complet » sans réponse"
+# [V8] la question n'est plus posée au modèle.
+"$EV¦    lignes += [\"\", f\"Et pour chaque publication, d'abord (texte_complet) : {referentiel()['question_texte_complet']}\"]¦¦[V8] le modèle reçoit la question du texte complet"
+# [V8] notre coupe n'est plus dite au modèle.
+"$EV¦t.texte[:coupe] + (\"\\n\" + mention if len(t.texte) > coupe else \"\")¦t.texte[:coupe]¦[V8] la coupe faite par l'équipe est dite"
+# [V8] la mention de coupe est mise partout.
+"$EV¦mention if len(t.texte) > coupe else \"\")¦mention if True else \"\")¦[V8] une page courte ne porte pas la mention"
 # [V7] la consigne est écrite dans le code.
 "$EV¦            objet, d = await self._modele.completer(modele=ref[\"modele\"], consigne=ref[\"consigne\"],¦            objet, d = await self._modele.completer(modele=ref[\"modele\"], consigne=\"Vous évaluez une source.\",¦[V7] la consigne et le modèle sont ceux du référentiel"
 )

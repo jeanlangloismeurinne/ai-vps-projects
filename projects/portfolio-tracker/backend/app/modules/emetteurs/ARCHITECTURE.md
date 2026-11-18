@@ -66,9 +66,11 @@ jouée par `tools/emetteurs.sh importer`.
 - **Un émetteur sans fiche n'a aucune source admise**, pas même les dépôts officiels : l'ancien
   code les qualifie alors `web_search_generic`. Voulu (A10, A11) : on établit la fiche d'abord. Les
   producteurs qui déclarent eux-mêmes leur `source_type` (`edgar_feed`…) ne sont pas touchés.
-- **L'évaluateur lui-même** (le modèle qui lit les publications et répond à la grille) : la porte
-  est construite (`evaluer_source`, contrat 1.1.0, référentiel 1.2.0), l'évaluateur arrive avec la
-  collecte (M2). Seuil, nombre de publications et questions sont des valeurs de départ, en donnée.
+- **La grille d'évaluation n'est éprouvée que sur deux sources réelles** (référentiel 1.3.0, le
+  2026-11-18 : « auteur » et « non promotionnel » resserrés après qu'un site d'alertes générées a
+  obtenu la même note qu'une agence de presse ; mesures : `roadmap/V3/M2-collecte-sources.md` §5).
+  L'évaluateur (le modèle qui répond à la grille) est dans M2, `recueil/evaluateur.py`. Seuil et
+  nombre de publications restent des valeurs de départ, en donnée.
 - **Le contenu du kit de spécialité** : la fiche porte un nom de spécialité, rien de plus.
 - **La reconnaissance au fil de l'eau** des pages de relations investisseurs : le geste existe, mais
   seul l'outil (`tools/emetteurs.sh pages-investisseurs`, sur les pièces déjà collectées) l'appelle.

@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "natures": ["mesure", "evenement", "interpretation"],
   "niveaux": ["A", "A-", "B+", "B", "C+", "C"],
   "niveau_sans_admission": "C+",
@@ -20,11 +20,11 @@
     "seuil": 0.8,
     "exemples_min": 3,
     "questions": {
-      "auteur_identifie": "L'auteur ou la rédaction qui publie est identifié.",
+      "auteur_identifie": "L'auteur est une personne nommée, ou un organisme public qui répond de la publication ; une signature au nom du site ou d'un outil qui produit les textes ne suffit pas.",
       "date_de_publication": "La publication porte sa date.",
       "origine_des_chiffres": "Chaque chiffre avancé renvoie à son origine (document, organisme), ou est recoupé par une source déjà admise.",
       "premiere_main_ou_citee": "Le contenu est de première main, ou rapporte fidèlement une source qu'il nomme.",
-      "non_promotionnel": "Le contenu n'est ni publicitaire, ni publi-rédactionnel, ni écrit pour le référencement."
+      "non_promotionnel": "Le contenu n'est ni publicitaire, ni publi-rédactionnel, ni écrit pour le référencement ; un encart inséré dans la publication qui pousse à s'abonner ou à acheter un service de la source la rend promotionnelle."
     }
   },
   "roles_qui_utilisent_les_sources": ["collecteur", "analyste", "traducteur", "architecte", "redacteur"],

@@ -10,6 +10,10 @@ qui décrit la source (ou aucun). Ce qu'il ne décide pas : la note et l'issue (
 niveau et les natures quand un critère est choisi (ceux que le critère écrit accorde). Une réponse
 hors de la forme demandée, ou qui porte sur une page qu'on ne lui a pas donnée, n'est jamais
 « complétée » : c'est un échec nommé, avec ce qui a été dépensé, et la source reste à évaluer.
+
+Un aperçu n'est pas une publication (arbitrage du 2026-11-18) : le modèle dit pour chaque texte s'il
+est complet ; une publication incomplète (un article payant dont le moteur ne rend que le début) ne
+compte pas, et s'il en manque, c'est un échec nommé qui les désigne.
 """
 from __future__ import annotations
 
@@ -56,16 +60,29 @@ def message(source: str, grille: Mapping[str, Any], publications: Sequence[Texte
                f"Natures d'information : {', '.join(grille['natures'])}", "",
                "Questions (pour chaque publication : oui ou non, et ce que vous avez constaté) :"]
     lignes += [f"- {cle} : {texte}" for cle, texte in grille["questions"].items()]
+    lignes += ["", f"Et pour chaque publication, d'abord (texte_complet) : {referentiel()['question_texte_complet']}"]
+    mention = referentiel()["mention_coupe"].format(n=referentiel()["caracteres_par_publication"])
     for i, p in enumerate(publications, 1):
         lignes += ["", f"### Publication {i}", f"Adresse : {p.adresse}", f"Titre : {p.titre or '(non donné)'}",
-                   f"Date annoncée : {p.publie_le or '(non donnée)'}", "Texte :", p.texte]
+                   f"Date annoncée : {p.publie_le or '(non donnée)'}"]
+        if p.texte.endswith(mention):
+            lignes.append(referentiel()["entete_coupe"].format(n=referentiel()["caracteres_par_publication"]))
+        lignes += ["Texte :", p.texte]
     forme = {"critere": "<clé ou chaîne vide>", "natures": ["<nature>"], "niveau": "<niveau>",
              "publications": [{"adresse": "<adresse exacte de la publication>",
+                               "texte_complet": {"oui": True, "constat": "<ce que vous avez constaté>"},
                                "reponses": {q: {"oui": True, "constat": "<ce que vous avez constaté>"}
                                             for q in grille["questions"]}}]}
     lignes += ["", "Format de réponse (un objet JSON, une entrée par publication) :",
                json.dumps(forme, ensure_ascii=False, indent=1)]
     return "\n".join(lignes)
+
+
+def incompletes(objet: Mapping[str, Any]) -> list[str]:
+    """Les publications que le modèle a déclarées incomplètes (réponse déjà lue par `lire_reponse`),
+    chacune avec ce qu'il a constaté."""
+    return [f"{p['adresse']} ({p['texte_complet']['constat'].strip()})" for p in objet["publications"]
+            if not p["texte_complet"]["oui"]]
 
 
 def lire_reponse(source: str, grille: Mapping[str, Any], publications: Sequence[Texte],
@@ -84,6 +101,10 @@ def lire_reponse(source: str, grille: Mapping[str, Any], publications: Sequence[
             raise ValueError(f"réponse sur une page qu'on ne lui a pas donnée : {adresse!r}")
         if adresse in vues:
             raise ValueError(f"deux réponses pour la même publication : {adresse}")
+        complet = p.get("texte_complet")
+        if (not isinstance(complet, dict) or not isinstance(complet.get("oui"), bool)
+                or not isinstance(complet.get("constat"), str) or not complet["constat"].strip()):
+            raise ValueError(f"{adresse} : « texte_complet » doit dire oui ou non, avec ce qui a été constaté")
         reponses = p.get("reponses")
         if not isinstance(reponses, dict) or sorted(reponses) != sorted(questions):
             raise ValueError(f"{adresse} : il faut une réponse à chaque question de la grille, et à elles seules")
@@ -171,8 +192,10 @@ class EvaluateurDeSources:
             # des publications) ; le moteur ne date que les publications : les pages datées d'abord.
             candidats = [x.adresse for x in sorted(trouves, key=lambda x: not x.publie_le)
                          if _de_la_source(source, x.adresse) and x.adresse not in vues]
-        coupe = ref["caracteres_par_publication"]
-        return [Texte(t.adresse, t.texte[:coupe], t.titre, t.publie_le) for t in lues[:n]], depense, notes
+        # Notre propre coupe est dite au modèle : elle ne doit pas passer pour un aperçu.
+        coupe, mention = ref["caracteres_par_publication"], ref["mention_coupe"].format(n=ref["caracteres_par_publication"])
+        return [Texte(t.adresse, t.texte[:coupe] + ("\n" + mention if len(t.texte) > coupe else ""), t.titre, t.publie_le)
+                for t in lues[:n]], depense, notes
 
     async def __call__(self, source: str, adresses: Sequence[str]) -> tuple[E.Evaluation, Depense]:
         ref = referentiel()
@@ -195,6 +218,12 @@ class EvaluateurDeSources:
             raise EvaluationImpossible(f"modèle : {exc}", depense.plus(getattr(exc, "depense", None) or Depense())) from exc
         depense = depense.plus(d)
         try:
-            return lire_reponse(source, grille, publications, objet), depense
+            evaluation = lire_reponse(source, grille, publications, objet)
         except ValueError as exc:
             raise EvaluationImpossible(f"réponse du modèle hors de la forme demandée : {exc}", depense) from exc
+        apercus = incompletes(objet)
+        if apercus:
+            raise EvaluationImpossible(
+                f"{n - len(apercus)} publication(s) complète(s) de {source} sur {n} exigées ; "
+                f"lues incomplètes (aperçu, accès payant) : {' ; '.join(apercus)}", depense)
+        return evaluation, depense

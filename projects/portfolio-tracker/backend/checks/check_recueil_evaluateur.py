@@ -33,6 +33,10 @@ title/publishedDate`, `costDollars.total`, `statuses[]` ; DeepInfra : `choices[0
        la dépense de la source = recherche + pages + modèle ; un essai manqué garde ce qu'il a payé,
        deux essais manqués = échec nommé
   [V7] le modèle et sa consigne sont au référentiel de l'évaluateur, aucun nom de modèle dans le code
+  [V8] un aperçu n'est pas une publication (arbitrage du 2026-11-18) : le modèle dit pour chaque texte
+       s'il est complet (question du référentiel, réponse motivée exigée) ; une publication déclarée
+       incomplète ne compte pas : échec nommé qui la désigne, avec la dépense, rien n'est transmis à
+       M1 ; la coupe faite par l'équipe est dite au modèle, une page courte n'en porte pas mention
 
     python3 checks/check_recueil_evaluateur.py
 """
@@ -142,9 +146,13 @@ OCCUPE = js({"error": {"message": "Model busy, retry later", "type": "invalid_re
 
 
 def reponse_modele(adresses, *, oui=True, critere="presse_financiere", niveau="A", natures=("mesure",),
-                   sans=None, constat="constaté dans le texte"):
+                   sans=None, constat="constaté dans le texte", incompletes=(), complet=True):
     return {"critere": critere, "natures": list(natures), "niveau": niveau,
-            "publications": [{"adresse": a, "reponses": {q: {"oui": oui if i == 0 else True, "constat": constat}
+            "publications": [{"adresse": a,
+                              **({"texte_complet": {"oui": a not in incompletes,
+                                                    "constat": "aperçu coupé avant le corps" if a in incompletes
+                                                    else "corps de l'article présent"}} if complet else {}),
+                              "reponses": {q: {"oui": oui if i == 0 else True, "constat": constat}
                                                          for q in QUESTIONS if q != sans}}
                              for i, a in enumerate(adresses)]}
 
@@ -399,6 +407,31 @@ def main() -> int:
     mal(lambda: reponse_modele(attendues[:-1]), "une publication oubliée")
     mal(lambda: {**reponse_modele(attendues), "publications": reponse_modele(attendues)["publications"][:1] * 2},
         "deux réponses pour la même publication")
+    mal(lambda: reponse_modele(attendues, complet=False), "[V8] « texte complet » sans réponse")
+
+    # ── [V8] un aperçu n'est pas une publication ──────────────────────────────────────────
+    net = monde(modele=[di(reponse_modele(attendues, incompletes=attendues[1:2]), cout=0.0004)])
+    e, dep, err = run(evaluer(net), n=3)
+    b.check(e is None and err is not None and attendues[1] in str(err) and "aperçu coupé" in str(err)
+            and f"{N - 1} publication(s) complète(s)" in str(err),
+            "[V8] une publication déclarée incomplète ne compte pas : échec nommé qui la désigne", f"{err}")
+    b.check(dep.modeles_usd == 0.0004 and dep.web_usd == 0.007, "[V8] l'échec porte la dépense du modèle et de la recherche",
+            f"{dep}")
+    msg = net.vers(U_DI)[0]["messages"][1]["content"] if net.vers(U_DI) else ""
+    b.check(EVJ["question_texte_complet"] in msg and '"texte_complet"' in msg,
+            "[V8] le modèle reçoit la question du texte complet, telle qu'au référentiel", "")
+    mention = EVJ["mention_coupe"].format(n=EVJ["caracteres_par_publication"])
+    b.check(mention not in msg and EVJ["entete_coupe"].split("{")[0] not in msg,
+            "[V8] une page courte ne porte pas la mention de coupe", "")
+    long_txt = "x" * (EVJ["caracteres_par_publication"] + 50)
+    net = monde(pages_ok=False, contenus=[exa_contenus({f"https://{S}/a1": long_txt, f"https://{S}/a2": long_txt,
+                                                        f"https://{S}/a3": long_txt})],
+                modele=[di(reponse_modele(assez))])
+    e, dep, err = run(evaluer(net, adresses=assez), n=3)
+    msg = net.vers(U_DI)[0]["messages"][1]["content"] if net.vers(U_DI) else ""
+    entete = EVJ["entete_coupe"].format(n=EVJ["caracteres_par_publication"])
+    b.check(e is not None and msg.count(mention) == N and msg.count(entete) == N and long_txt not in msg,
+            "[V8] la coupe faite par l'équipe est dite au modèle, sur chaque texte coupé", f"{msg.count(mention)} {err}")
 
     # ── [V6] de bout en bout, par le contrat ───────────────────────────────────────────────
     async def bout_en_bout(lus_modele, passes=1):
@@ -421,6 +454,9 @@ def main() -> int:
     src, actes = run(bout_en_bout([di(reponse_modele(attendues, oui=False), cout=0.0003)]), n=2)
     b.check(src.get("issue") == "en_suspens" and any(a["acte"] == E.SUSPENDRE for a in actes),
             "[V6] une source faible est mise en suspens, pour votre arbitrage", f"{src}")
+    src, actes = run(bout_en_bout([di(reponse_modele(attendues, incompletes=attendues[:1]))]), n=2)
+    b.check(src.get("issue") != "admise" and src.get("statut") != "evaluee" and "incomplète" in src.get("motif", "")
+            and not actes, "[V8] de bout en bout : un aperçu ne fait ni admettre ni suspendre, le motif le dit", f"{src}")
     src, actes = run(bout_en_bout([OCCUPE], passes=2), n=2)
     b.check(src.get("statut") != "evaluee" and int(src.get("essais", 0)) == 2 and "429" in src.get("motif", "")
             and not actes, "[V6] deux essais manqués : échec nommé, rien n'est acté", f"{src}")

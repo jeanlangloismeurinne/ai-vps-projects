@@ -10,6 +10,8 @@ quelques millièmes de dollar par source.
 
 `--repetitions=N` : les publications sont lues UNE fois, puis le modèle juge N fois les mêmes textes
 (stabilité du verdict à entrée identique) ; seule la dernière passe est rangée en mémoire.
+`--modele=<nom DeepInfra>` : juge avec un autre modèle que celui du référentiel (comparaison de
+modèles), sans toucher à `evaluateur.json`.
 """
 from __future__ import annotations
 
@@ -39,7 +41,12 @@ class _Memo:
         return self._lu[0], type(self._lu[1])(), self._lu[2]
 
 
-async def main(source: str, adresses: list[str], repetitions: int) -> int:
+async def main(source: str, adresses: list[str], repetitions: int, modele: str | None) -> int:
+    if modele:
+        from app.modules.recueil import evaluateur as ev_mod
+        lire = ev_mod.referentiel
+        ev_mod.referentiel = lambda: {**lire(), "modele": modele}
+        print(f"modèle d'essai : {modele}")
     outils = R.outils_reels(clef_moteur=os.environ.get("EXA_API_KEY", ""))
     evaluateur = R.evaluateur_reel(outils, clef_modele=os.environ.get("DEEPINFRA_API_KEY", ""))
     evaluateur._publications = _Memo(evaluateur).publications
@@ -73,5 +80,6 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(2)
     reps = [int(a.split("=", 1)[1]) for a in sys.argv[2:] if a.startswith("--repetitions=")]
-    args = [a for a in sys.argv[2:] if not a.startswith("--repetitions=")]
-    sys.exit(asyncio.run(main(sys.argv[1], args, reps[0] if reps else 1)))
+    modeles = [a.split("=", 1)[1] for a in sys.argv[2:] if a.startswith("--modele=")]
+    args = [a for a in sys.argv[2:] if not a.startswith("--")]
+    sys.exit(asyncio.run(main(sys.argv[1], args, reps[0] if reps else 1, modeles[0] if modeles else None)))

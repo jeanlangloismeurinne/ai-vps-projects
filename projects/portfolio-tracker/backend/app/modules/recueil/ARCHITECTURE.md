@@ -51,9 +51,12 @@ aussi ses pages de rubrique) ; une page refusée en direct est relue par le mote
 manque, plus une). Le modèle répond à chaque question pour chaque publication et choisit un critère
 écrit ; **le niveau et les natures sont ceux du critère**, pas ceux du modèle. Hors forme, trop peu de
 publications, modèle occupé : `EvaluationImpossible` nommée, avec ce qui a été payé (le cœur le
-cumule sur la source ; deux essais manqués = échec nommé). Modèle retenu le 2026-11-18 :
-DeepSeek-V4-Flash-0731, stable à entrée identique ; V4.1-Flash mesuré instable (même source : admise,
-admise, puis en suspens) donc écarté.
+cumule sur la source ; deux essais manqués = échec nommé). **Un aperçu n'est pas une publication**
+(arbitrage du 2026-11-18) : le modèle dit d'abord si chaque texte est complet ; un aperçu d'article
+payant ne compte pas, et s'il en manque, `EvaluationImpossible` les désigne. Notre propre coupe
+(`caracteres_par_publication`) est annoncée en tête et en fin du texte pour ne pas passer pour un
+aperçu. Modèle : DeepSeek-V4.1-Flash (référentiel 1.1.0 ; mesures et raison du choix dans
+`evaluateur.json`, `_modele`).
 
 - **Ordre d'autorité** : registre officiel, site de l'émetteur, web. On s'arrête à la première
   famille qui rend un document ; les sources essayées avant restent dans la réponse (`essais`).
@@ -112,8 +115,8 @@ de `depot_base.py` + 9 de la migration 064, toutes détectées le 2026-11-16).
 | B11 | PDF, page vide, registre en erreur deux fois : indisponible nommé ; une seule seconde tentative | [B11] |
 
 **Le moteur, le modèle et l'évaluateur réels** : contrôle `checks/check_recueil_evaluateur.py`
-(53 vérifications le 2026-11-18, transport simulé dont les réponses copient la forme réelle relevée
-le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (38 mutations, toutes détectées).
+(60 vérifications le 2026-11-18, transport simulé dont les réponses copient la forme réelle relevée
+le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (44 mutations, toutes détectées).
 
 | Ligne | Invariant | Assert |
 |---|---|---|
@@ -125,15 +128,15 @@ le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (38 mutati
 | V3-V5 | Grille et critères de M1 tels qu'écrits ; le critère fixe niveau et natures ; réponse hors forme = échec, jamais transmise | [V3] [V4] [V5] |
 | V6 | Bout en bout : admise / en suspens ; dépense = recherche + pages + modèle ; essais manqués payés et comptés | [V6] |
 | V7 | Modèle et consigne au référentiel, pas dans le code | [V7] |
+| V8 | Un aperçu ne compte pas : « texte complet » motivé exigé ; incomplète = échec nommé qui la désigne, avec la dépense ; notre coupe est dite au modèle | [V8] |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **La grille de M1 ne distingue pas une rédaction d'un générateur automatique** (mesuré le
-  2026-11-18 : un site d'alertes boursières générées, signées du nom du site et suivies d'un encart
-  d'abonnement, obtient 15/15 comme une agence de presse). Une formulation resserrée de deux questions
-  a été mesurée (agence 14/15, site généré 9/15) ; elle attend l'arbitrage de l'utilisateur.
-- Le modèle retenu est souvent « occupé » chez le fournisseur (429, y compris après 75 s) : les
-  reprises et la relance du cœur l'absorbent, au prix d'une évaluation retardée.
+- **Une source payante inconnue ne peut pas être évaluée** : ses publications ne sont lisibles qu'en
+  aperçu ; elle finit en échec nommé et attend l'arbitrage à l'écran. La lecture des articles payants
+  pendant la collecte est une question ouverte (`roadmap/V3/M2-collecte-sources.md` §6).
+- Le modèle rend parfois une réponse hors forme (2 sur ~20 appels mesurés) : échec nommé, la
+  relance du cœur la rejoue.
 - **Le déclencheur** qui appelle le chef de dossier, la tâche de fond (`traiter_les_travaux`,
   `evaluer_les_sources_rencontrees`) et range l'`Envoi` : à construire.
 - **L'écran** (B12) : `vue_ecran` est écrite, aucune route ni page.

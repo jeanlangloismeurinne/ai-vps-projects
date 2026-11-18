@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-18 soir (grille 1.3.0 appliquée ; V4.1-Flash retenu ; règle « un aperçu n'est pas une publication » ; question ouverte : lire la presse payante) ; 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -25,10 +25,15 @@ VPS tant qu'elle ne l'est pas). **Moteur Exa, modèle DeepInfra et évaluateur r
 2026-11-18** (`check_recueil_evaluateur.py` 53/0, négatif 38/38 ; essais réels en mémoire :
 `tools/essai_evaluateur.sh <domaine>`).
 
-**En attente de l'utilisateur** : resserrer deux questions de la grille d'évaluation des sources (M1)
-— avec la grille actuelle, un site d'alertes générées obtient 15/15 comme une agence de presse
-(mesures : `M2-collecte-sources.md` §5). Si oui : appliquer au référentiel de M1 (version 1.3.0) et
-rejouer `essai_evaluateur.sh` sur reuters.com et marketbeat.com.
+**Fait le 2026-11-18 soir** (accords de l'utilisateur) : grille de M1 resserrée (référentiel 1.3.0) ;
+modèle de l'évaluateur **V4.1-Flash** (l'« instabilité » de V4.1 était de l'exigence sur des aperçus
+d'articles payants — diagnostic du sprint précédent corrigé) ; **un aperçu n'est pas une
+publication** (`check_recueil_evaluateur` 60/0, négatif 44/44 ; réel : Reuters → échec nommé
+« 1 complète sur 3 », MarketBeat 3/15 en suspens). Détail : `M2-collecte-sources.md` §5.
+
+**En attente de l'utilisateur** : comment LIRE la presse payante (9 des 15 titres admis ne se lisent
+qu'en aperçu). Mesures et proposition en trois étages (aperçu = signal vers la pièce d'origine ;
+reprise sous licence reconnue à l'empreinte du chapeau ; abonnement) : `M2-collecte-sources.md` §6.
 
 **Prochain pas (Opus)** : le déclencheur + la tâche de fond qui rangent l'`Envoi` (appliquer 064
 avant), l'écran (B12), enfin les lignes « réel » (SpaceX B3/B10, une évaluation B6 en production,

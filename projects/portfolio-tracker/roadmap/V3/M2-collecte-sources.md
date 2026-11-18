@@ -171,13 +171,62 @@ aucune écriture au journal des sources), ~0,01 $ par source :
 - MarketBeat (alertes boursières générées, « Written by MarketBeat », encart d'abonnement) : **15/15,
   admise aussi**, stable. La grille ne voit pas la différence. Grille resserrée mesurée (auteur = une
   personne nommée ou un organisme public ; un encart d'abonnement = promotionnel) : Reuters 14/15
-  (admise), MarketBeat 9/15 (en suspens). **Question posée à l'utilisateur ; la grille n'est pas changée.**
+  (admise), MarketBeat 9/15 (en suspens). **Appliquée le 2026-11-18 sur accord de l'utilisateur**
+  (référentiel de M1 1.3.0).
 - Appris en chemin (corrigé avant d'écrire le contrôle) : une recherche limitée à un site rend ses pages
   de rubrique (listes, plan du site) — pages datées d'abord, requête rédigée comme un sujet d'article,
   catégorie actualités ; ne relire par le moteur que ce qui manque ; le fournisseur répond souvent
   « occupé » (429) — reprises écrites au référentiel ; un essai manqué garde ce qu'il a payé.
-- Modèle : DeepSeek-V4-Flash-0731 retenu ; V4.1-Flash écarté, verdict instable à entrée identique
-  (Reuters admise, admise, puis en suspens).
+- Modèle : ~~DeepSeek-V4-Flash-0731 retenu ; V4.1-Flash écarté, verdict instable~~ — **diagnostic
+  faux, corrigé le 2026-11-18** (5 passages par source, grille 1.3.0, mêmes textes) : V4.1 n'était pas
+  instable, il était exigeant sur des APERÇUS. Deux des trois articles Reuters ne sont lus que par
+  le moteur, ~1 000 caractères coupés avant le corps (Reuters 401) ; V4.1 y répond « non » (la
+  consigne le demande) et Reuters tombe pile au seuil (12-13/15), où une réponse qui bascule change le
+  verdict. V4-Flash accordait 15/15 à ces aperçus et rangeait MarketBeat sous « rédaction
+  spécialisée » (9/15) ; V4.1 : MarketBeat 3/15, aucun critère. **V4.1-Flash retenu** (utilisateur).
+- **Un aperçu n'est pas une publication** (arbitrage de l'utilisateur, 2026-11-18) : le modèle dit
+  d'abord si chaque texte est complet ; un aperçu ne compte pas ; s'il en manque, échec nommé.
+  `check_recueil_evaluateur` 60/0, négatif 44/44. Réel : Reuters → « 1 publication complète sur 3,
+  lues incomplètes : … » (stable) ; MarketBeat 3/15, en suspens (stable sur 3 passes). Appris : le
+  modèle prenait d'abord NOTRE coupe à 6 000 caractères pour un aperçu — elle est maintenant
+  annoncée en tête de la publication.
 
 Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
 lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).
+
+## 6. Lire la presse payante — mesures et proposition (2026-11-18, question ouverte)
+
+Demande de l'utilisateur : « ce cas va se reproduire souvent avec les sources de bonne qualité ;
+trouver la meilleure façon de les exploiter ». L'admission n'est pas le problème : les 15 titres de
+presse financière de l'ancienne liste sont admis en production (reprise A14). Le problème est la
+**lecture** de leurs articles pendant la collecte.
+
+**Mesuré** (5 articles de résultats par titre, recherche Exa limitée au domaine + lecture directe
+depuis le VPS, ~0,13 $) :
+- **Lisibles en entier** : fool.com, latribune.fr, cnbc.com (par le moteur ; direct 403).
+  handelsblatt.com : 1 sur 5 en entier, le reste ~1 500 caractères (probables aperçus « H+ »).
+- **Aperçu seulement** : reuters.com (1 000 car., 4 sur 5 en 401 direct), bloomberg.com (~900),
+  wsj.com (~700), barrons.com (~200), marketwatch.com (700-2 600), nikkei.com (300-770),
+  seekingalpha.com (300-500), economist.com (1 000-2 000).
+- ft.com, lesechos.fr, morningstar.com : la recherche rend surtout des COMMUNIQUÉS d'émetteurs
+  rediffusés (markets.ft.com, lesechos-comfi, pr-newswire) — complets, mais c'est l'émetteur qui parle.
+- **La même dépêche existe ailleurs en entier** : une recherche par le titre de l'aperçu (hors
+  domaines payants, ~0,007 $) rend, pour 4 dépêches sur 4, le communiqué d'origine de la société
+  (nu.com, conocophillips.com, berkshirehathaway.com, ti.com) ET des reprises sous licence créditées
+  « Reuters » en entier (channelnewsasia, bnnbloomberg.ca, cnbc.com, investing.com, uol.com.br).
+
+**Proposition (en attente de l'utilisateur)** — trois étages, du gratuit au payant :
+1. **L'aperçu est un signal, pas une pièce.** Titre, date, signature et puces de résumé d'un titre
+   admis disent qu'un événement a eu lieu : la collecte s'en sert pour aller chercher la pièce
+   d'origine (communiqué, 8-K, page IR), déjà dans son ordre d'autorité. Aucun chiffre n'est tiré
+   d'un aperçu. C'est ce que fait un analyste avec un fil d'agence.
+2. **Reprise sous licence reconnue à son empreinte.** Le texte complet d'une dépêche peut être pris
+   chez un diffuseur si (a) il crédite l'agence admise et (b) il contient mot pour mot le chapeau de
+   l'aperçu lu chez l'agence. La pièce garde l'agence comme source et le diffuseur comme lieu de
+   lecture. Règle générale, vérifiable par le code, aucune liste de diffuseurs.
+3. **Abonnement** (si l'utilisateur en a un) : lecture avec ses accès, ou API sous licence — coût,
+   conditions d'utilisation et rangement des identifiants à trancher.
+
+Ce que la presse apporte en plus de la pièce d'origine — citations de dirigeants, consensus des
+analystes, contexte, informations pas encore publiées par la société — se trouve en partie dans
+d'autres pièces (transcription de la conférence de résultats, base de consensus) : à voir à M3+.
