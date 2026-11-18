@@ -13,7 +13,7 @@ from typing import Any, Mapping
 from app.modules.chef_de_dossier.contrat import Depense
 
 from ..contrat import Provenance
-from . import WEB, Appel, Resultat, Trouvaille, Trouve, lire_avec_reprise, lisible, referentiel_de
+from . import WEB, Appel, MoteurInjoignable, Resultat, Trouvaille, Trouve, lire_avec_reprise, lisible, referentiel_de
 
 PARTIE = "page"
 
@@ -38,8 +38,13 @@ class Web:
         depense = Depense()
         resultats: list[Resultat] = []
         for restreint in ([domaines] if domaines else []) + [[]]:
-            r, d = await appel.moteur.rechercher(requete, domaines=restreint, depuis=appel.demande.depuis,
-                                                 nombre=regle["nombre"])
+            try:
+                r, d = await appel.moteur.rechercher(requete, domaines=restreint, depuis=appel.demande.depuis,
+                                                     nombre=regle["nombre"])
+            except MoteurInjoignable as exc:
+                if resultats:
+                    break   # le web ouvert ne répond pas : on garde ce que les domaines de la fiche ont rendu
+                return Trouvaille(raison="injoignable", detail=f"moteur de recherche : {exc}", depense=depense)
             depense = depense.plus(d)
             resultats.extend(x for x in r if x.adresse not in {y.adresse for y in resultats})
         t = Trouvaille(depense=depense, rencontrees=[r.adresse for r in resultats])

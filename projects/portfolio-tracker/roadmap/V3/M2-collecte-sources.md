@@ -1,6 +1,6 @@
 ---
 id: m2-collecte-sources
-status: construit hors ligne le 2026-11-16 (B1-B11 société fictive, check_recueil 63/0, négatif 43/43) ; passage à blanc réel SpaceX en mémoire ; reste base, évaluateur et moteur réels, déclencheur, écran, lignes « réel »
+status: construit hors ligne (B1-B11, base 064 non appliquée, moteur/modèle/évaluateur réels le 2026-11-18) ; reste arbitrage de la grille d'évaluation, déclencheur, écran, lignes « réel »
 created: 2026-11-16
 project: portfolio-tracker
 role: >
@@ -162,6 +162,22 @@ arrêtées par la base avant leur assert (droit UPDATE retiré, contrainte de co
 lancé SEUL sous mutation rougit bien (3 échecs nommés), il n'est que masqué dans la suite. Tant que
 064 n'est pas appliquée, `check_recueil_persist` est rouge (R0, nommé) dans `run_all.sh` au VPS.
 
-Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) moteur réel (Exa) et évaluateur réel (modèle, consigne, trois publications au
-moins) ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
+**Moteur, modèle et évaluateur réels construits le 2026-11-18** (`adaptateurs/exa.py`,
+`adaptateurs/deepinfra.py`, `evaluateur.py`, leurs référentiels) : `check_recueil_evaluateur.py`
+**53/0**, `negatif_recueil_evaluateur.sh` **38/38**. Essais réels EN MÉMOIRE (`tools/essai_evaluateur.sh`,
+aucune écriture au journal des sources), ~0,01 $ par source :
+- Reuters : lecture directe refusée (401), texte rendu par le moteur ; 15/15, admise sous « presse
+  financière », stable sur trois passes.
+- MarketBeat (alertes boursières générées, « Written by MarketBeat », encart d'abonnement) : **15/15,
+  admise aussi**, stable. La grille ne voit pas la différence. Grille resserrée mesurée (auteur = une
+  personne nommée ou un organisme public ; un encart d'abonnement = promotionnel) : Reuters 14/15
+  (admise), MarketBeat 9/15 (en suspens). **Question posée à l'utilisateur ; la grille n'est pas changée.**
+- Appris en chemin (corrigé avant d'écrire le contrôle) : une recherche limitée à un site rend ses pages
+  de rubrique (listes, plan du site) — pages datées d'abord, requête rédigée comme un sujet d'article,
+  catégorie actualités ; ne relire par le moteur que ce qui manque ; le fournisseur répond souvent
+  « occupé » (429) — reprises écrites au référentiel ; un essai manqué garde ce qu'il a payé.
+- Modèle : DeepSeek-V4-Flash-0731 retenu ; V4.1-Flash écarté, verdict instable à entrée identique
+  (Reuters admise, admise, puis en suspens).
+
+Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
 lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).

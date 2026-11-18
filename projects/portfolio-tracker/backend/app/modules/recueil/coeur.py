@@ -366,7 +366,10 @@ async def evaluer_les_sources_rencontrees(*, depot: Depot, emetteurs_depot: Any,
         except Exception as exc:  # noqa: BLE001 — l'évaluateur qui plante laisse la source à évaluer
             essais = int(s.get("essais", 0)) + 1
             statut = EN_ECHEC if essais >= ESSAIS_PAR_DEMANDE else A_EVALUER
-            await depot.marquer_source(s["source"], {"essais": essais, "statut": statut,
+            # Ce qu'un essai manqué a déjà payé (recherche, modèle) reste compté (B9).
+            paye = getattr(exc, "depense", None)
+            cumul = Depense(**s.get("depense", {})).plus(paye if isinstance(paye, Depense) else Depense())
+            await depot.marquer_source(s["source"], {"essais": essais, "statut": statut, "depense": asdict(cumul),
                                                      "motif": f"{type(exc).__name__}: {exc}"})
             lignes.append({"source": s["source"], "issue": statut, "motif": str(exc)})
             continue

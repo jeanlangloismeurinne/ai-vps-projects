@@ -43,6 +43,12 @@ class Transport(Protocol):
     async def lire(self, adresse: str) -> Lu: ...
 
 
+class Poste(Protocol):
+    """Le transport, quand il faut ENVOYER une demande (moteur de recherche, modèle)."""
+    async def envoyer(self, adresse: str, corps: Mapping[str, Any], *, en_tetes: Mapping[str, str],
+                      delai_s: float = ...) -> Lu: ...
+
+
 @dataclass(frozen=True)
 class Resultat:
     """Un résultat de moteur de recherche : l'adresse, son titre, sa date si le moteur la donne."""
@@ -51,9 +57,28 @@ class Resultat:
     publie_le: str = ""
 
 
+@dataclass(frozen=True)
+class Texte:
+    """Le texte d'une page tel que le moteur de recherche l'a lu depuis chez lui (une page qui refuse
+    la lecture directe, ou rendue en JavaScript)."""
+    adresse: str
+    texte: str
+    titre: str = ""
+    publie_le: str = ""
+
+
+class MoteurInjoignable(RuntimeError):
+    """Le moteur de recherche n'a pas répondu (réseau, refus, crédit). L'adaptateur en fait une
+    indisponibilité nommée ; il ne la fait jamais passer pour « rien trouvé »."""
+
+
 class Moteur(Protocol):
-    async def rechercher(self, requete: str, *, domaines: Sequence[str] = (),
-                         depuis: str = "", nombre: int = 5) -> tuple[list[Resultat], Depense]: ...
+    # `categorie` : un genre de pages au vocabulaire du moteur (« actualites »…), vide = toutes.
+    async def rechercher(self, requete: str, *, domaines: Sequence[str] = (), depuis: str = "",
+                         nombre: int = 5, categorie: str = "") -> tuple[list[Resultat], Depense]: ...
+
+    # Facultatif : un moteur qui ne sait pas rendre le texte d'une page ne l'expose pas.
+    # async def contenus(self, adresses: Sequence[str]) -> tuple[list[Texte], Depense]: ...
 
 
 @dataclass(frozen=True)
@@ -171,6 +196,43 @@ def liens(html: bytes, base: str) -> list[tuple[str, str]]:
     except Exception:  # noqa: BLE001 — une page mal formée rend les liens lus jusque-là
         pass
     return list(dict.fromkeys(p.liens))
+
+
+class _Texte(HTMLParser):
+    _MUETS = {"script", "style", "noscript", "svg", "head", "template"}
+    _BLOCS = {"p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "table"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.morceaux: list[str] = []
+        self._muet = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self._MUETS:
+            self._muet += 1
+        elif tag in self._BLOCS:
+            self.morceaux.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._MUETS and self._muet:
+            self._muet -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._muet:
+            self.morceaux.append(data)
+
+
+def texte_de(contenu: bytes) -> str:
+    """Le texte lisible d'une page (sans scripts ni styles), lignes vides fusionnées. Sert à LIRE pour
+    juger (l'évaluateur) ; le document rangé, lui, reste brut."""
+    p = _Texte()
+    try:
+        p.feed(contenu.decode("utf-8", errors="replace"))
+        p.close()
+    except Exception:  # noqa: BLE001 — une page mal formée rend le texte lu jusque-là
+        pass
+    lignes = (" ".join(l.split()) for l in "".join(p.morceaux).splitlines())
+    return "\n".join(l for l in lignes if l)
 
 
 def lisible(lu: Lu, formats_lus: Sequence[str]) -> str:

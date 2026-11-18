@@ -1,5 +1,6 @@
-"""Le transport réel : lire une adresse sur le réseau, en bibliothèque standard. Seul fichier du
-module qui touche le réseau ; les contrôles le remplacent par un transport simulé.
+"""Le transport réel : lire une adresse sur le réseau, ou lui ENVOYER une demande en JSON (moteur de
+recherche, modèle), en bibliothèque standard. Seul fichier du module qui touche le réseau ; les
+contrôles le remplacent par un transport simulé.
 
 Un seul détenteur pour la politesse envers chaque hôte : l'en-tête d'identification et la cadence
 maximale que l'hôte impose (règle publique du registre : 10 demandes par seconde), lues dans le
@@ -9,10 +10,13 @@ référentiel de l'adaptateur qui en a besoin. Aucune reprise ici : la seconde t
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
+
+from typing import Any, Mapping
 
 from . import Lu, referentiel_de
 
@@ -47,5 +51,25 @@ class TransportReel:
                 return Lu(r.status, contenu, r.headers.get("Content-Type", ""))
         except urllib.error.HTTPError as e:
             return Lu(e.code, b"", "")
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return Lu(0, b"", "")
+
+    async def envoyer(self, adresse: str, corps: Mapping[str, Any], *, en_tetes: Mapping[str, str],
+                      delai_s: float = DELAI_S) -> Lu:
+        """Une demande POST en JSON. Rend le statut et le corps tels quels : c'est l'appelant qui sait
+        lire la réponse de SON service, et qui nomme l'échec."""
+        return await asyncio.to_thread(self._envoyer, adresse, json.dumps(corps).encode("utf-8"),
+                                       dict(en_tetes), delai_s)
+
+    @staticmethod
+    def _envoyer(adresse: str, corps: bytes, en_tetes: dict[str, str], delai_s: float) -> Lu:
+        req = urllib.request.Request(adresse, data=corps, method="POST",
+                                     headers={"Content-Type": "application/json", "Accept": "application/json",
+                                              **en_tetes})
+        try:
+            with urllib.request.urlopen(req, timeout=delai_s) as r:
+                return Lu(r.status, r.read(TAILLE_MAX + 1), r.headers.get("Content-Type", ""))
+        except urllib.error.HTTPError as e:
+            return Lu(e.code, e.read(4000), "")
         except (urllib.error.URLError, TimeoutError, OSError):
             return Lu(0, b"", "")

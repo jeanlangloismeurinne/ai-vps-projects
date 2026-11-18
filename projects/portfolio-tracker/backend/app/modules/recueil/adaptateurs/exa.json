@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "_lisez_moi": "Référentiel du moteur de recherche Exa. Le coût de chaque demande est celui qu'Exa déclare dans sa réponse (costDollars.total) ; le coût de repli ne sert que si la réponse ne le déclare pas, et il est volontairement prudent (relevé le 2026-11-18 : 0,007 $ une recherche de 3 résultats, 0,001 $ le texte d'une page).",
+  "adresses": {
+    "recherche": "https://api.exa.ai/search",
+    "contenus": "https://api.exa.ai/contents"
+  },
+  "type_de_recherche": "auto",
+  "categories": {"actualites": "news"},
+  "caracteres_par_page": 12000,
+  "delai_s": 60,
+  "cout_de_repli_usd": {"recherche": 0.01, "page": 0.002}
+}

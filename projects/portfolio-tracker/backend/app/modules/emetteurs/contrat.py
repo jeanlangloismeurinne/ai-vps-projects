@@ -363,6 +363,20 @@ def domaine(adresse: str) -> str | None:
     return None if hc is None else hc[0]
 
 
+def grille_d_evaluation() -> dict[str, Any]:
+    """Ce que l'évaluateur de sources doit savoir pour juger une source inconnue (#145) : les questions
+    de la grille, le nombre de publications à lire au moins, les critères écrits qu'il peut proposer
+    (texte, niveau maximal, natures), les niveaux et les natures. Lu dans le référentiel : l'évaluateur
+    n'en recopie rien. Le critère des pages de relations investisseurs n'y est pas : il se reconnaît à
+    l'adresse (`admettre_pages_investisseurs`), jamais au jugement d'un modèle."""
+    from . import regles
+    ref = regles.referentiel()
+    ev = ref["evaluation_des_sources"]
+    return {"version": ref["version"], "questions": dict(ev["questions"]), "exemples_min": int(ev["exemples_min"]),
+            "criteres": {k: dict(v) for k, v in ref["criteres"].items() if k != CRITERE_PAGES_INVESTISSEURS},
+            "niveaux": list(ref["niveaux"]), "natures": list(ref["natures"])}
+
+
 def page_investisseurs(adresse: str) -> str | None:
     """Le domaine d'une page de relations investisseurs reconnue à son adresse dédiée, ou `None`."""
     from . import regles

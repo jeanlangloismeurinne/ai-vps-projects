@@ -5,8 +5,10 @@ hors ligne le 2026-11-16 (société fictive, sans base, sans réseau, sans dépe
 réel sur SpaceX, en mémoire, contre le registre de la SEC (gratuit). Le rangement en base (tables
 `recueil_*`, migration 064, `app/modules/recueil/depot_base.py`) est construit et prouvé le
 2026-11-16 sur une base PostgreSQL 16 locale/jetable (`checks/check_recueil_persist.py`) ; PAS
-ENCORE APPLIQUÉE en production. PAS ENCORE ACCEPTÉ** : restent l'écran, l'évaluateur réel, le
-déclencheur, et les lignes « réel » (B3, B6, B10, B12-B14) de `roadmap/V3/M2-collecte-sources.md`,
+ENCORE APPLIQUÉE en production. Le moteur réel (Exa), le modèle réel (DeepInfra) et l'évaluateur
+réel des sources inconnues sont construits et prouvés hors ligne le 2026-11-18
+(`checks/check_recueil_evaluateur.py`), et essayés en réel EN MÉMOIRE (`tools/essai_evaluateur.sh`).
+PAS ENCORE ACCEPTÉ** : restent l'écran, le déclencheur, et les lignes « réel » (B3, B6, B10, B12-B14) de `roadmap/V3/M2-collecte-sources.md`,
 qui porte aussi le tri de l'ancien code.
 
 *Ce que ferait un vrai fonds* : la documentation reçoit une demande de l'analyste, rend les documents
@@ -35,8 +37,23 @@ adaptateurs/
   registre_sec.*  dépôts de la SEC : le SEUL endroit où s'écrivent formulaires et adresses du registre
   site.*          les pages de l'émetteur, aux lieux de sa fiche (jamais devinés)
   web.*           un moteur de recherche INJECTÉ ; domaines de la fiche d'abord (#133)
-  transport.py    le seul fichier qui touche le réseau (bibliothèque standard, cadence bornée)
+  exa.*           le moteur réel : chercher, et le texte des pages qui refusent la lecture directe
+  deepinfra.*     le modèle réel : un objet JSON et ce qu'il a coûté ; reprises sur « occupé »
+  transport.py    le seul fichier qui touche le réseau (lire, envoyer en JSON ; bibliothèque standard)
+evaluateur.py     l'évaluateur réel des sources inconnues (rôle distinct du collecteur)
+evaluateur.json   son modèle, sa consigne, ses recherches de publications — jamais dans le code
 ```
+
+**L'évaluateur réel** (#145) : pour une source (un domaine), il lit autant de publications que la
+grille de M1 en exige (`emetteurs.grille_d_evaluation`) — celles rencontrées d'abord, puis les
+recherches du référentiel limitées au domaine (pages datées d'abord : une recherche sur un site rend
+aussi ses pages de rubrique) ; une page refusée en direct est relue par le moteur (seulement ce qui
+manque, plus une). Le modèle répond à chaque question pour chaque publication et choisit un critère
+écrit ; **le niveau et les natures sont ceux du critère**, pas ceux du modèle. Hors forme, trop peu de
+publications, modèle occupé : `EvaluationImpossible` nommée, avec ce qui a été payé (le cœur le
+cumule sur la source ; deux essais manqués = échec nommé). Modèle retenu le 2026-11-18 :
+DeepSeek-V4-Flash-0731, stable à entrée identique ; V4.1-Flash mesuré instable (même source : admise,
+admise, puis en suspens) donc écarté.
 
 - **Ordre d'autorité** : registre officiel, site de l'émetteur, web. On s'arrête à la première
   famille qui rend un document ; les sources essayées avant restent dans la réponse (`essais`).
@@ -94,10 +111,29 @@ de `depot_base.py` + 9 de la migration 064, toutes détectées le 2026-11-16).
 | B10 | Fiche complétée depuis le registre ; votre correction tient ; lieux intouchés ; homonyme = acte | [B10] |
 | B11 | PDF, page vide, registre en erreur deux fois : indisponible nommé ; une seule seconde tentative | [B11] |
 
+**Le moteur, le modèle et l'évaluateur réels** : contrôle `checks/check_recueil_evaluateur.py`
+(53 vérifications le 2026-11-18, transport simulé dont les réponses copient la forme réelle relevée
+le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (38 mutations, toutes détectées).
+
+| Ligne | Invariant | Assert |
+|---|---|---|
+| X1-X2 | La demande à Exa porte requête, nombre, domaines, catégorie ; dépense = celle déclarée, sinon repli > 0 | [X1] [X2] |
+| X3 | Exa qui refuse ou se tait : `MoteurInjoignable` ; le web en fait « injoignable » nommant le moteur | [X3] |
+| X4 | Texte des pages rendu sous l'adresse demandée ; dépense comptée | [X4] |
+| M1-M3 | Objet JSON + dépense déclarée (sinon jetons × prix, sinon repli) ; « occupé » repris selon le référentiel ; coupé ou non JSON = échec avec sa dépense | [M1] [M2] [M3] |
+| V1-V2 | Publications de la source seule, rencontrées d'abord ; recherche seulement s'il en manque ; relecture par le moteur bornée ; trop peu = échec sans appel au modèle | [V1] [V2] |
+| V3-V5 | Grille et critères de M1 tels qu'écrits ; le critère fixe niveau et natures ; réponse hors forme = échec, jamais transmise | [V3] [V4] [V5] |
+| V6 | Bout en bout : admise / en suspens ; dépense = recherche + pages + modèle ; essais manqués payés et comptés | [V6] |
+| V7 | Modèle et consigne au référentiel, pas dans le code | [V7] |
+
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **L'évaluateur réel** (un modèle, rôle distinct du collecteur, qui lit au moins trois publications)
-  et le **moteur réel** (Exa) : interfaces écrites, simulés dans le contrôle.
+- **La grille de M1 ne distingue pas une rédaction d'un générateur automatique** (mesuré le
+  2026-11-18 : un site d'alertes boursières générées, signées du nom du site et suivies d'un encart
+  d'abonnement, obtient 15/15 comme une agence de presse). Une formulation resserrée de deux questions
+  a été mesurée (agence 14/15, site généré 9/15) ; elle attend l'arbitrage de l'utilisateur.
+- Le modèle retenu est souvent « occupé » chez le fournisseur (429, y compris après 75 s) : les
+  reprises et la relance du cœur l'absorbent, au prix d'une évaluation retardée.
 - **Le déclencheur** qui appelle le chef de dossier, la tâche de fond (`traiter_les_travaux`,
   `evaluer_les_sources_rencontrees`) et range l'`Envoi` : à construire.
 - **L'écran** (B12) : `vue_ecran` est écrite, aucune route ni page.

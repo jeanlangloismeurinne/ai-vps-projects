@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "_lisez_moi": "L'évaluateur des sources inconnues (#145) : un rôle distinct de celui qui collecte. Il lit quelques publications d'une source (le nombre est celui de la grille de M1) et répond à la grille ; le code calcule la note et décide. Le modèle et sa consigne sont ici, jamais dans le code.",
+  "modele": "deepseek-ai/DeepSeek-V4-Flash-0731",
+  "temperature": 0,
+  "max_jetons": 6000,
+  "candidats_max": 8,
+  "caracteres_par_publication": 6000,
+  "caracteres_min": 500,
+  "recherches": [
+    {
+      "requete": "company reports quarterly earnings results",
+      "categorie": "actualites"
+    },
+    {
+      "requete": "{source} report analysis",
+      "categorie": ""
+    }
+  ],
+  "consigne": "Vous évaluez une source d'information pour l'équipe de recherche d'un fonds d'investissement fondamental, avant qu'elle ne s'en serve. On vous donne quelques publications de cette source, telles qu'elles ont été lues, et une grille de questions.\n\nRègles :\n1. Répondez à chaque question pour chaque publication, par oui ou par non, en vous fondant UNIQUEMENT sur le texte fourni. N'utilisez pas la réputation de la source ni ce que vous savez d'elle par ailleurs.\n2. Chaque réponse dit ce que vous avez constaté dans le texte (une courte citation ou une description précise). Si le texte ne permet pas de vérifier, répondez non et dites ce qui manque.\n3. Choisissez ensuite, parmi les critères écrits, la clé de celui qui décrit cette source au vu des publications lues ; si aucun ne convient, laissez une chaîne vide. Ne choisissez pas un critère pour avantager la source : en cas de doute, chaîne vide.\n4. Proposez les natures d'information pour lesquelles la source pourrait servir et un niveau de l'échelle donnée.\n5. Écrivez les constats en français.\n6. Répondez par un seul objet JSON, au format demandé, sans texte autour.",
+  "_recherches": "Tant qu'il manque des publications lisibles, ces recherches limitées au domaine de la source sont faites dans l'ordre. Mesuré le 2026-11-18 sur marketbeat.com : une requête qui nomme le site rend ses pages de rubrique (listes d'articles, plan du site) ; une requête rédigée comme un sujet d'article, catégorie actualités, rend des publications datées."
+}

@@ -373,8 +373,34 @@ def pas_evaluation(nom: str, emetteur: str, vue: VueTravaux, envoi: Envoi, *, ap
     return coeur.pas_evaluation(nom, emetteur, vue, envoi, apres=apres, cout_estime_usd=cout_estime_usd)
 
 
+# ── Les outils réels (le déclencheur les construit ; les contrôles les simulent) ─────────────────
+
+@dataclass(frozen=True)
+class OutilsReels:
+    transport: Any
+    moteur: Any
+
+
+def outils_reels(*, clef_moteur: str) -> OutilsReels:
+    """Le réseau réel et le moteur de recherche réel. Les clefs viennent de l'appelant (la
+    configuration du service) : le module n'en lit aucune."""
+    from .adaptateurs.exa import MoteurExa
+    from .adaptateurs.transport import TransportReel
+    transport = TransportReel()
+    return OutilsReels(transport=transport, moteur=MoteurExa(transport, clef_moteur))
+
+
+def evaluateur_reel(outils: OutilsReels, *, clef_modele: str) -> Evaluateur:
+    """L'évaluateur réel des sources inconnues : il lit les publications par les outils donnés et
+    juge par le modèle écrit à son référentiel (`evaluateur.json`)."""
+    from .adaptateurs.deepinfra import ModeleDeepInfra
+    from .evaluateur import EvaluateurDeSources
+    return EvaluateurDeSources(transport=outils.transport, moteur=outils.moteur,
+                               modele=ModeleDeepInfra(outils.transport, clef_modele))
+
+
 __all__ = [
-    "pas_evaluation",
+    "pas_evaluation", "OutilsReels", "outils_reels", "evaluateur_reel",
     "VERSION_CONTRAT", "Demande", "Provenance", "Qualification", "Document", "Indisponibilite",
     "Reponse", "Recueil", "Depot", "DepotMemoire", "depot_base", "lire_recueil", "lire_contenu", "collecter",
     "traiter_les_travaux", "evaluer_les_sources_rencontrees", "vue_ecran", "pas_collecte", "Envoi",
