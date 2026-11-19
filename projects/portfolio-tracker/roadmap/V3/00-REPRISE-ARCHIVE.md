@@ -7150,3 +7150,12 @@ sources de la fiche est coupée à droite. **Restent les gestes d'écriture (adm
 - **Dossier pendant une collecte** : ce qui n'en dépend pas avance ; ce qui en dépend l'attend, sans limite
   de temps ; l'arrêt énumère toutes les attentes (#146, chef de dossier 1.1.0).
 
+
+
+## 2026-11-19 — sorti de la reprise
+
+**Fait le 2026-11-18 soir** (accords de l'utilisateur) : grille de M1 resserrée (référentiel 1.3.0) ;
+modèle de l'évaluateur **V4.1-Flash** (l'« instabilité » de V4.1 était de l'exigence sur des aperçus
+d'articles payants — diagnostic du sprint précédent corrigé) ; **un aperçu n'est pas une
+publication** (`check_recueil_evaluateur` 60/0, négatif 44/44 ; réel : Reuters → échec nommé
+« 1 complète sur 3 », MarketBeat 3/15 en suspens). Détail : `M2-collecte-sources.md` §5.

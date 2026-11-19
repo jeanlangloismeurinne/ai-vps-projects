@@ -3790,3 +3790,23 @@ comme une année. Dès qu'un rapport annuel existe, c'est lui. La correspondance
 formulaires, par registre) est une donnée du référentiel de l'adaptateur.
 
 **Construit (2026-11-16, hors ligne).** Repli `a_defaut` du genre « derniers comptes annuels » au référentiel de l'adaptateur du registre (424B4, 424B1, 424B3, S-1, F-1, dans cet ordre) avec sa mention ; preuve `check_recueil.py` [B3]. Passage à blanc réel : SpaceX → 424B4 du 2026-06-12. Acceptation réelle à passer (base, écran).
+
+### #149 — un aperçu d'article payant est un signal, pas une pièce : la collecte va chercher la pièce d'origine ou la reprise sous licence (arbitrage du 2026-11-19)
+
+**Logique de fonds.** Un analyste qui ne lit que le chapeau d'une dépêche ne cite aucun chiffre tiré
+de ce chapeau : il va chercher le communiqué de la société, ou le texte complet de la dépêche chez
+un diffuseur qui la reprend sous licence (même texte, agence créditée).
+
+**Règle.** Une page dont l'accès est refusé n'est jamais rangée, ni telle quelle ni par le texte du
+moteur. Son titre sert à UNE recherche hors du domaine de l'agence : un résultat sur un lieu de la
+fiche de l'émetteur est rangé comme pièce d'origine (« signalée par » l'aperçu), et il passe devant
+une reprise. Une reprise est reconnue par le code, sans modèle et sans liste de diffuseurs : elle
+nomme l'agence, contient mot pour mot une phrase entière de l'aperçu (au moins 8 mots) et elle est
+plus longue que lui. Elle est rangée sous l'adresse de l'agence (c'est l'agence que M1 qualifie) et
+lue chez le diffuseur, qui n'est jamais une source rencontrée. Pour l'évaluateur, une publication
+déclarée aperçu est remplacée par sa reprise reconnue, et le modèle rejuge une fois. Sinon l'échec
+est nommé. L'étage « abonnement » n'est pas construit.
+
+**Construit (2026-11-19, hors ligne + essais réels en mémoire).** `recueil/adaptateurs/apercus.py`
+(+ `apercus.json`), branché dans `web.py` et `evaluateur.py` ; preuve `check_recueil_evaluateur.py`
+[X5] [P1]-[P7], `negatif_recueil_evaluateur.sh`. Détail et mesures : `roadmap/V3/M2-collecte-sources.md` §7.

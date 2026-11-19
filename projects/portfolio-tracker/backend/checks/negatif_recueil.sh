@@ -105,7 +105,7 @@ mutations=(
 # [B11] un PDF est lu comme une page.
 "$AD¦    if lu.contenu[:5] == b\"%PDF-\" or tm == \"application/pdf\":¦    if False:¦[B11]"
 # [B11] la priorité des raisons met l'injoignable devant l'illisible.
-"$REF¦\"homonyme\", \"illisible\", \"trop_volumineux\", \"injoignable\",¦\"homonyme\", \"injoignable\", \"illisible\", \"trop_volumineux\",¦[B11] un document vide"
+"$REF¦\"homonyme\", \"illisible\", \"apercu\", \"trop_volumineux\", \"injoignable\",¦\"homonyme\", \"injoignable\", \"illisible\", \"apercu\", \"trop_volumineux\",¦[B11] un document vide"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

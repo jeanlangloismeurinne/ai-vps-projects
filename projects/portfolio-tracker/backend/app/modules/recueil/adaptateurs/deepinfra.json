@@ -1,8 +1,12 @@
 {
   "version": "1.0.0",
+  "_prix": "Prix catalogue lus à l'API le 2026-11-19 (GET /models/<modèle>) : entrée 0,2 $, sortie 0,6 $ par million, jetons servis par le cache à 3 % du prix d'entrée ; une remise temporaire (51 %) n'est pas reportée ici : le coût de repli reste prudent.",
   "_lisez_moi": "Référentiel du fournisseur de modèles DeepInfra (dialecte « chat/completions »). Le coût d'un appel est celui que DeepInfra déclare (usage.estimated_cost, relevé le 2026-11-18) ; à défaut, il se calcule sur les jetons au prix du modèle ; un modèle sans prix connu prend le prix de repli, volontairement le plus cher.",
   "adresse": "https://api.deepinfra.com/v1/openai/chat/completions",
   "delai_s": 240,
+  "niveau_de_service": "flex",
+  "facteur_du_niveau_de_service": 0.8,
+  "_niveau_de_service": "Mesuré le 2026-11-19 : « flex » est accepté par l'API et facturé 0,8 fois le prix (rate_per_service_tier_flex de la fiche du modèle), réponse plus lente (2,6 s contre 0,7 s sur un appel minimal). Nos appels sont des tâches de fond : la lenteur ne coûte rien. Le facteur ne sert qu'au coût de repli (DeepInfra déclare le coût réel).",
   "pauses_avant_reprise_s": [
     15,
     60
@@ -18,6 +22,7 @@
     },
     "deepseek-ai/DeepSeek-V4.1-Flash-1017": {
       "entree": 0.2,
+      "entree_en_cache": 0.006,
       "sortie": 0.6
     }
   },

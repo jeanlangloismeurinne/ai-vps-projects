@@ -33,7 +33,11 @@ def _cout(modele: str, usage: Mapping[str, Any]) -> Depense:
         return Depense(modeles_usd=float(declare))
     prix = _ref()["prix_usd_par_million_de_jetons"].get(modele) or _ref()["prix_de_repli"]
     entree, sortie = int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
-    return Depense(modeles_usd=(entree * prix["entree"] + sortie * prix["sortie"]) / 1_000_000)
+    details = usage.get("prompt_tokens_details")
+    en_cache = min(entree, int((details.get("cached_tokens") if isinstance(details, dict) else 0) or 0))
+    cout = ((entree - en_cache) * prix["entree"] + en_cache * prix.get("entree_en_cache", prix["entree"])
+            + sortie * prix["sortie"]) / 1_000_000
+    return Depense(modeles_usd=cout * float(_ref()["facteur_du_niveau_de_service"]))
 
 
 class ModeleDeepInfra:
@@ -51,6 +55,7 @@ class ModeleDeepInfra:
         if not self._clef:
             raise ModeleEnEchec("DeepInfra : aucune clef")
         corps = {"model": modele, "temperature": temperature, "max_tokens": int(max_jetons),
+                 "service_tier": _ref()["niveau_de_service"],
                  "response_format": {"type": "json_object"},
                  "messages": [{"role": "system", "content": consigne}, {"role": "user", "content": message}]}
         lu: Lu = await self._envoyer(corps)

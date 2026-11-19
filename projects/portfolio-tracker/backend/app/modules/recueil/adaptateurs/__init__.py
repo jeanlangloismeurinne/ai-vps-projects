@@ -51,10 +51,12 @@ class Poste(Protocol):
 
 @dataclass(frozen=True)
 class Resultat:
-    """Un résultat de moteur de recherche : l'adresse, son titre, sa date si le moteur la donne."""
+    """Un résultat de moteur de recherche : l'adresse, son titre, sa date si le moteur la donne, et
+    son texte quand il a été demandé avec (`avec_texte`)."""
     adresse: str
     titre: str = ""
     publie_le: str = ""
+    texte: str = ""
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,9 @@ class Texte:
     texte: str
     titre: str = ""
     publie_le: str = ""
+    # Une reprise sous licence (`apercus.py`) : l'adresse reste celle de la publication de l'agence,
+    # le texte a été lu chez le diffuseur, nommé ici.
+    lu_chez: str = ""
 
 
 class MoteurInjoignable(RuntimeError):
@@ -74,8 +79,10 @@ class MoteurInjoignable(RuntimeError):
 
 class Moteur(Protocol):
     # `categorie` : un genre de pages au vocabulaire du moteur (« actualites »…), vide = toutes.
+    # `exclus` : domaines écartés ; `avec_texte` : chaque résultat porte son texte (suivi d'un aperçu).
     async def rechercher(self, requete: str, *, domaines: Sequence[str] = (), depuis: str = "",
-                         nombre: int = 5, categorie: str = "") -> tuple[list[Resultat], Depense]: ...
+                         nombre: int = 5, categorie: str = "", exclus: Sequence[str] = (),
+                         avec_texte: bool = False) -> tuple[list[Resultat], Depense]: ...
 
     # Facultatif : un moteur qui ne sait pas rendre le texte d'une page ne l'expose pas.
     # async def contenus(self, adresses: Sequence[str]) -> tuple[list[Texte], Depense]: ...

@@ -7,7 +7,7 @@
 > |---|---|
 > | Comment décider et poser un arbitrage — **à lire à chaque session, en premier** | `roadmap/V3/PRINCIPES-FONDATEURS.md` |
 > | Où on en est, prochain pas | `roadmap/V3/00-REPRISE.md` |
-> | Texte INTÉGRAL d'une convention (#1 → #148) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
+> | Texte INTÉGRAL d'une convention (#1 → #149) | **`CONVENTIONS.md`** — `grep -n "#NN" CONVENTIONS.md` |
 > | V0/V1, schéma, liste des migrations, endpoints, scheduling, DataService, env | **`REFERENCE.md`** |
 > | Les règles durables (charte d'un module, garde-fous) | `roadmap/V3/principe-directeur.md` |
 > | Le plan (modules M0-M11) et le schéma des blocs | `roadmap/V3/07-avant-comite.md`, `roadmap/V3/ARCHITECTURE-CIBLE.md` |
@@ -200,3 +200,4 @@ vit dans `roadmap/V3/` ; l'historique V0/V1/V2 sous `roadmap/archive/`. Protocol
 - #146 un dossier avance sur tout ce qui ne dépend pas d'un travail en cours ; ce qui en dépend l'attend, sans limite ; l'arrêt énumère toutes les attentes
 - #147 l'identité d'une société cotée est complétée par le système depuis le registre officiel (jamais les lieux de publication) ; la correction de l'utilisateur tient ; un homonyme n'est jamais tranché
 - #148 société récemment introduite : le prospectus d'introduction tient lieu de derniers comptes annuels jusqu'au premier rapport annuel
+- #149 aperçu d'article payant = signal : pièce d'origine (lieux de la fiche) ou reprise sous licence reconnue par le code (agence nommée + phrase entière commune + plus longue) ; jamais rangé tel quel

@@ -14,6 +14,7 @@ D="app/modules/recueil/adaptateurs/deepinfra.py"
 WEB="app/modules/recueil/adaptateurs/web.py"
 AD="app/modules/recueil/adaptateurs/__init__.py"
 EV="app/modules/recueil/evaluateur.py"
+APS="app/modules/recueil/adaptateurs/apercus.py"
 C="app/modules/recueil/coeur.py"
 EMC="app/modules/emetteurs/contrat.py"
 
@@ -23,7 +24,7 @@ mutations=(
 # [X1] les domaines ne sont plus transmis.
 "$X¦            corps[\"includeDomains\"] = list(domaines)¦            pass¦[X1] la demande porte la requête"
 # [X1] la date est perdue.
-"$X¦publie_le=_jour(x.get(\"publishedDate\")))¦publie_le=\"\")¦[X1] chaque résultat garde son adresse"
+"$X¦titre=str(x.get(\"title\") or \"\").strip(), publie_le=_jour(x.get(\"publishedDate\")),¦titre=str(x.get(\"title\") or \"\").strip(), publie_le=\"\",¦[X1] chaque résultat garde son adresse"
 # [X1] la dépense déclarée est ignorée.
 "$X¦        return Depense(web_usd=float(total) if ok else repli)¦        return Depense(web_usd=repli)¦[X1] la dépense est celle qu'Exa déclare"
 # [X2] sans coût déclaré, rien n'est compté.
@@ -83,7 +84,9 @@ mutations=(
 # [V4] sans critère, n'importe quelle nature passe.
 "$EV¦any(n not in grille[\"natures\"] for n in natures)¦False¦[V4] sans critère, une nature hors échelle"
 # [V5] une page inventée est acceptée.
-"$EV¦        if adresse not in donnees:¦        if adresse is None:¦[V5] une page qu'on ne lui a pas donnée"
+"$EV¦            raise ValueError(f\"réponse sur une publication qu'on ne lui a pas donnée : {numero!r}\")¦            pass¦[V5] une page qu'on ne lui a pas donnée"
+# [V5] un booléen passe pour le numéro 1.
+"$EV¦if type(numero) is int else None¦if isinstance(numero, int) else None¦[V5] un numéro de publication booléen"
 # [V5] un constat vide passe.
 "$EV¦            if not isinstance(constat, str) or not constat.strip():¦            if not isinstance(constat, str):¦[V5] un constat vide"
 # [V5] une publication oubliée passe.
@@ -95,7 +98,7 @@ mutations=(
 # [V8] un aperçu compte comme une publication.
 "$EV¦        if apercus:¦        if False:¦[V8] une publication déclarée incomplète ne compte pas"
 # [V8] l'échec de l'aperçu perd la dépense.
-"$EV¦                f\"lues incomplètes (aperçu, accès payant) : {' ; '.join(apercus)}\", depense)¦                f\"lues incomplètes (aperçu, accès payant) : {' ; '.join(apercus)}\", Depense())¦[V8] l'échec porte la dépense"
+"$EV¦                + (f\" ; reprises cherchées : {' ; '.join(cherche)}\" if cherche else \"\"), depense)¦                + (f\" ; reprises cherchées : {' ; '.join(cherche)}\" if cherche else \"\"), Depense())¦[V8] l'échec porte la dépense"
 # [V8] « texte complet » n'est plus exigé.
 "$EV¦            raise ValueError(f\"{adresse} : « texte_complet » doit dire oui ou non, avec ce qui a été constaté\")¦            pass¦[V8] « texte complet » sans réponse"
 # [V8] la question n'est plus posée au modèle.
@@ -104,6 +107,58 @@ mutations=(
 "$EV¦t.texte[:coupe] + (\"\\n\" + mention if len(t.texte) > coupe else \"\")¦t.texte[:coupe]¦[V8] la coupe faite par l'équipe est dite"
 # [V8] la mention de coupe est mise partout.
 "$EV¦mention if len(t.texte) > coupe else \"\")¦mention if True else \"\")¦[V8] une page courte ne porte pas la mention"
+# [X5] l'exclusion n'est plus transmise.
+"$X¦            corps[\"excludeDomains\"] = list(exclus)¦            pass¦[X5] Exa : domaines écartés"
+# [X5] le texte des résultats est perdu.
+"$X¦                              texte=str(x.get(\"text\") or \"\").strip() if avec_texte else \"\")¦                              texte=\"\")¦[X5] Exa : domaines écartés"
+# [X5] toute recherche paie les textes.
+"$X¦        if avec_texte:¦        if True:¦[X5] Exa : sans demande"
+# [P1] une page à l'accès refusé n'est plus suivie.
+"$WEB¦            if lu.statut in apercus.ref()[\"acces_refuses\"] and hasattr(appel.moteur, \"contenus\"):¦            if False:¦[P1] [P5] un aperçu sans suite"
+# [P1] l'aperçu sans suite est rangé tel quel.
+"$WEB¦        return None, f\"apercu {r.adresse} : {suite.detail}\", depense¦        return Trouve(Provenance(adaptateur=self.nom, adresse=r.adresse, identifiant=r.adresse, partie=PARTIE), apercu.texte.encode(), \"text/plain\"), \"\", depense¦[P1] [P5] un aperçu sans suite"
+# [P2] la pièce d'origine est ignorée.
+"$APS¦    suite.origine = [r for r in resultats if lieux and _sur(r.adresse, lieux)]¦    suite.origine = []¦[P2] la pièce d'origine, sur un lieu de la fiche"
+# [P2] la pièce d'origine qui refuse la lecture est perdue.
+"$WEB¦            if o.texte:¦            if False:¦[P2] la pièce d'origine qui refuse la lecture directe"
+# [P2] la recherche n'écarte plus l'agence.
+"$APS¦        resultats, depense = await moteur.rechercher(apercu.titre.strip(), exclus=[source],¦        resultats, depense = await moteur.rechercher(apercu.titre.strip(), exclus=[],¦[P2] UNE recherche par le titre"
+# [P3] l'agence n'a plus à être nommée.
+"$APS¦    if len(candidat.texte) <= len(apercu.texte) or not nomme(source, candidat.texte):¦    if len(candidat.texte) <= len(apercu.texte):¦[P3] une copie qui ne nomme pas l'agence"
+# [P3] un texte pas plus long passe.
+"$APS¦    if len(candidat.texte) <= len(apercu.texte) or not nomme(source, candidat.texte):¦    if not nomme(source, candidat.texte):¦[P3] un texte pas plus long"
+# [P3] une phrase courte suffit.
+"$APS¦            if len(p.split()) >= n and not p.startswith(\"#\") and p not in out:¦            if len(p.split()) >= 1 and not p.startswith(\"#\") and p not in out:¦[P3] une phrase de moins"
+# [P3] la phrase n'a plus à être dans le candidat.
+"$APS¦    return next((p for p in phrases(apercu) if p in c), \"\")¦    return next((p for p in phrases(apercu)), \"\")¦[P3] la pièce d'origine (8-K)"
+# [P3] la reprise est rangée sous l'adresse du diffuseur.
+"$WEB¦            prov = Provenance(adaptateur=self.nom, adresse=r.adresse, identifiant=lieu, partie=PARTIE,¦            prov = Provenance(adaptateur=self.nom, adresse=lieu, identifiant=lieu, partie=PARTIE,¦[P3] la reprise est rangée sous l'adresse"
+# [P3] le diffuseur qui refuse la lecture fait perdre la reprise.
+"$WEB¦            return Trouve(prov, suite.reprise.texte.encode(\"utf-8\"), \"text/plain; charset=utf-8\"), \"\", depense¦            return None, \"apercu\", depense¦[P3] le diffuseur refuse la lecture directe"
+# [P4] le diffuseur devient une source rencontrée.
+"$WEB¦                    t.trouves.append(trouve)¦                    t.trouves.append(trouve); t.rencontrees.append(trouve.provenance.identifiant)¦[P4] le diffuseur n'est pas une source"
+# [P5] plus de borne.
+"$WEB¦                if suivis >= int(apercus.ref()[\"suivis_max_par_demande\"]):¦                if False:¦[P5] au plus suivis_max_par_demande"
+# [P5] un aperçu sans titre est cherché quand même.
+"$APS¦    if not apercu.titre.strip():¦    if False:¦[P5] un aperçu sans titre"
+# [P5] le suivi n'est pas compté.
+"$WEB¦                t.depense = t.depense.plus(d)¦                pass¦[P5] le suivi est payé et compté"
+# [P6] l'aperçu n'est plus remplacé.
+"$EV¦            if len(reprises) == len(apercus):¦            if False:¦[P6] l'aperçu est remplacé"
+# [P6] les recherches continuent après un manque.
+"$EV¦                        break   # il les faut toutes : on ne paie pas les recherches suivantes¦                        continue¦[P6] sans reprise pour chaque aperçu"
+# [P6] le lieu de lecture n'est pas dit au modèle.
+"$EV¦        if p.lu_chez:¦        if False:¦[P6] le modèle sait où"
+# [P6] les publications inchangées ne passent plus d'abord.
+"$EV¦key=lambda p: p.adresse in reprises)¦key=lambda p: 0)¦[P6] les publications inchangées d'abord"
+# [P7] le niveau de service n'est plus demandé.
+"$D¦                 \"service_tier\": _ref()[\"niveau_de_service\"],¦¦[P7] la demande porte le niveau de service"
+# [P7] les jetons en cache au prix plein.
+"$D¦en_cache * prix.get(\"entree_en_cache\", prix[\"entree\"])¦en_cache * prix[\"entree\"]¦[P7] sans coût déclaré, les jetons servis par le cache"
+# [P7] la source passe en tête du message.
+"$EV¦    lignes = [\"Critères écrits (donnez¦    lignes = [f\"Source à juger : {source}\", \"Critères écrits (donnez¦[P7] critères, questions et format précèdent"
+# [V5] le gabarit montre le numéro en texte.
+"$EV¦             \"publications\": [{\"numero\": 1,¦             \"publications\": [{\"numero\": \"<numéro>\",¦[V5] le format montre le numéro"
 # [V7] la consigne est écrite dans le code.
 "$EV¦            objet, d = await self._modele.completer(modele=ref[\"modele\"], consigne=ref[\"consigne\"],¦            objet, d = await self._modele.completer(modele=ref[\"modele\"], consigne=\"Vous évaluez une source.\",¦[V7] la consigne et le modèle sont ceux du référentiel"
 )

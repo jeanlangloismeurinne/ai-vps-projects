@@ -54,18 +54,24 @@ class MoteurExa:
         return Depense(web_usd=float(total) if ok else repli)
 
     async def rechercher(self, requete: str, *, domaines: Sequence[str] = (), depuis: str = "",
-                         nombre: int = 5, categorie: str = "") -> tuple[list[Resultat], Depense]:
+                         nombre: int = 5, categorie: str = "", exclus: Sequence[str] = (),
+                         avec_texte: bool = False) -> tuple[list[Resultat], Depense]:
         # `depuis` n'est pas transmis : Exa écarterait les pages qu'il ne sait pas dater ; l'adaptateur
         # filtre lui-même ce qui est daté.
         corps: dict[str, Any] = {"query": requete, "numResults": int(nombre), "type": _ref()["type_de_recherche"]}
         if domaines:
             corps["includeDomains"] = list(domaines)
+        if exclus:
+            corps["excludeDomains"] = list(exclus)
+        if avec_texte:
+            corps["contents"] = {"text": {"maxCharacters": int(_ref()["caracteres_par_page"])}}
         if categorie:
             if categorie not in _ref()["categories"]:
                 raise MoteurInjoignable(f"Exa : catégorie inconnue au référentiel : {categorie!r}")
             corps["category"] = _ref()["categories"][categorie]
         rep = await self._demander("recherche", corps)
-        resultats = [Resultat(adresse=x["url"], titre=str(x.get("title") or "").strip(), publie_le=_jour(x.get("publishedDate")))
+        resultats = [Resultat(adresse=x["url"], titre=str(x.get("title") or "").strip(), publie_le=_jour(x.get("publishedDate")),
+                              texte=str(x.get("text") or "").strip() if avec_texte else "")
                      for x in rep.get("results") or [] if isinstance(x, dict) and x.get("url")]
         return resultats, self._cout(rep, float(_ref()["cout_de_repli_usd"]["recherche"]))
 

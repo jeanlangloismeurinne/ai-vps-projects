@@ -230,3 +230,72 @@ depuis le VPS, ~0,13 $) :
 Ce que la presse apporte en plus de la pièce d'origine — citations de dirigeants, consensus des
 analystes, contexte, informations pas encore publiées par la société — se trouve en partie dans
 d'autres pièces (transcription de la conférence de résultats, base de consensus) : à voir à M3+.
+
+## 7. Lire la presse payante — construction des étages 1 et 2 (accord de l'utilisateur, 2026-11-19)
+
+Accord : « ok avec tes propositions sur les sources reprises » ; consigne : optimiser la dépense
+DeepInfra. L'étage 3 (abonnement) n'est pas construit (aucun abonnement déclaré).
+
+**Mesuré avant d'écrire** (2026-11-19, 0,035 $ Exa, 0 $ DeepInfra) : 4 dépêches Reuters lues par le
+moteur (Exa en rend 1 000 caractères au plus) ; une recherche par leur titre, hors reuters.com, avec
+le texte. Les reprises sous licence contiennent mot pour mot 2 à 5 phrases entières de l'aperçu
+(phrase = au moins 8 mots) et nomment Reuters ; les autres textes (8-K, page IR, AP, transcription)
+n'en contiennent AUCUNE. La même recherche rend la pièce d'origine (sec.gov, broadridge-ir.com,
+ir.sqm.com) dans 3 cas sur 4 : UNE recherche sert les deux étages, et la reconnaissance est du code,
+sans modèle.
+
+**Mesuré côté DeepInfra** (une évaluation réelle, fool.com, deux passes) : 6 372 jetons d'entrée,
+1 327 de sortie, 0,0010 $ ; la seconde passe identique : 6 272 jetons servis par le cache, 0,0004 $
+(prix lus à l'API : remise de 51 %, cache à 3 % du prix d'entrée, niveau « flex » −20 %, accepté et
+mesuré). La sortie fait 39 % d'un appel neuf, 93 % d'un appel servi par le cache. Exa coûte 7 fois
+plus que le modèle par source évaluée.
+
+Acceptation (écrite avant le code) :
+
+| Ligne | Ce qui doit être vrai |
+|---|---|
+| P1 | Un aperçu n'est jamais rangé comme pièce : une page web refusée en lecture directe (accès refusé) n'est rangée ni telle quelle ni par le texte du moteur |
+| P2 | Étage 1 : son titre sert à UNE recherche hors du domaine de l'agence ; un résultat sur un lieu de la fiche de l'émetteur, lisible, est rangé comme pièce d'origine, mention « signalée par » l'aperçu ; il passe devant une reprise |
+| P3 | Étage 2 : une reprise est reconnue si elle nomme l'agence, contient mot pour mot une phrase entière de l'aperçu et est plus longue que lui ; rangée sous l'adresse de l'aperçu (la source reste l'agence, M1 la qualifie), lue chez le diffuseur (identifiant, mention) ; aucune liste de diffuseurs |
+| P4 | Le diffuseur n'est jamais une source rencontrée : ni évaluation, ni admission de pages |
+| P5 | Rien de reconnu, ou un aperçu sans titre : indisponibilité nommée « aperçu » qui désigne l'aperçu ; chaque suivi est payé et compté ; au plus `suivis_max` suivis par demande |
+| P6 | Évaluateur : une publication déclarée aperçu est remplacée par sa reprise reconnue, le modèle rejuge UNE fois en sachant où elle a été lue ; sinon l'échec nommé de V8, qui dit ce qui a été cherché |
+| P7 | DeepInfra : niveau de service et prix (cache compris) au référentiel ; la partie fixe du message (grille, critères, format) précède tout ce qui varie, pour que le cache la serve d'une source à l'autre ; aucun appel au modèle dans les étages 1 et 2 |
+
+**Construit le 2026-11-19** (hors ligne, puis essais réels EN MÉMOIRE ; convention #149) :
+`recueil/adaptateurs/apercus.py` + `apercus.json`, branchés dans `web.py` (collecte) et
+`evaluateur.py`. `check_recueil_evaluateur.py` **92/0** (fixture copiée du réel :
+`checks/fixtures/recueil/apercu_reuters.json`), `negatif_recueil_evaluateur.sh` **71/71** ;
+`check_recueil` 63/0, `negatif_recueil` 43/43 (mutation B11 recalée sur la nouvelle raison
+« apercu »), charte 22/0 et 27/27.
+
+Essais réels (2026-11-19, ~0,06 $ Exa, ~0,003 $ DeepInfra au total) :
+- **Collecte, étage 1** : dépêche Reuters Broadridge (401) avec une fiche dont le lieu est
+  broadridge-ir.com → le communiqué d'origine est rangé, « signalée par » l'aperçu. Appris : le site
+  IR refuse la lecture directe (403) ; le texte rendu par la recherche (déjà payé) est rangé en texte
+  brut — corrigé avant d'écrire le contrôle ([P2]).
+- **Collecte, étage 2** : même dépêche, fiche sans lieu → reprise lue chez investing.com, rangée sous
+  l'adresse Reuters, motif « nomme reuters, contient … » ; 0,008 $, 0 $ de modèle.
+- **Évaluateur** : reuters.com avec les quatre dépêches mesurées le matin → premier jugement : deux
+  aperçus ; reprises reconnues chez spokesman.com et investing.com ; second jugement : **admise**
+  (presse financière, 5/5 par publication). Modèle 0,0008 $ pour deux jugements, Exa 0,017 $.
+
+Côté DeepInfra (consigne de l'utilisateur), ce qui a changé et ce que ça vaut :
+- **Niveau de service « flex »** : −20 % sur tous les appels de M2 (tâches de fond).
+- **Partie fixe du message en tête** (critères, échelle, questions, format, puis la source) : servie
+  par le cache d'une source à l'autre (relevé : 896 à 1 280 jetons en cache dès le premier appel
+  d'une nouvelle source, 2 816 au second jugement ; le cache coûte 3 % du prix d'entrée).
+- **Numéro au lieu de l'adresse** : le modèle recopiait l'adresse de chaque publication ; une coquille
+  (« tecnology ») a fait rejeter une réponse payée le 2026-11-19. Il écrit maintenant 1, 2, 3 : moins
+  de jetons de sortie, et ce mode d'échec disparaît. Appris en chemin : un gabarit qui montrait le
+  numéro entre guillemets a fait écrire « "1" » — le format le montre désormais comme un entier ([V5]).
+- **Aucun modèle dans les étages 1 et 2** ; un second jugement seulement si TOUS les aperçus ont une
+  reprise (les recherches s'arrêtent au premier manque).
+- Le poste dominant d'une évaluation reste Exa (~0,007-0,017 $ contre ~0,0004-0,0008 $ de modèle).
+
+**Ouvert — à arbitrer par l'utilisateur** : le modèle a jugé COMPLÈTE la dépêche Visa que le moteur
+coupe à 1 000 caractères en plein mot (« … We did n ») ; Reuters a donc été admise avec un aperçu
+compté comme publication (les deux autres étaient de vraies reprises, le verdict ne change pas ici).
+Proposition : un texte lu par le moteur après un accès refusé et qui s'arrête en plein mot est
+suivi AVANT le modèle (code, ~0,008 $ Exa par page) ; sa reprise, si elle existe, le remplace, sinon
+le modèle juge comme aujourd'hui. Coût Exa contre rigueur : à trancher.

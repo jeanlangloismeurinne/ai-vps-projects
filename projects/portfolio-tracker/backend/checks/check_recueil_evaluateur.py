@@ -61,6 +61,7 @@ from app.modules.emetteurs import contrat as E  # noqa: E402
 from app.modules.recueil import adaptateurs as AD  # noqa: E402
 from app.modules.recueil import contrat as R  # noqa: E402
 from app.modules.recueil import evaluateur as EV  # noqa: E402
+from app.modules.recueil.adaptateurs import apercus as AP  # noqa: E402
 from app.modules.recueil.adaptateurs import deepinfra as DI  # noqa: E402
 from app.modules.recueil.adaptateurs import exa as X  # noqa: E402
 from app.modules.recueil.adaptateurs.web import Web  # noqa: E402
@@ -148,7 +149,7 @@ OCCUPE = js({"error": {"message": "Model busy, retry later", "type": "invalid_re
 def reponse_modele(adresses, *, oui=True, critere="presse_financiere", niveau="A", natures=("mesure",),
                    sans=None, constat="constaté dans le texte", incompletes=(), complet=True):
     return {"critere": critere, "natures": list(natures), "niveau": niveau,
-            "publications": [{"adresse": a,
+            "publications": [{"numero": i + 1,
                               **({"texte_complet": {"oui": a not in incompletes,
                                                     "constat": "aperçu coupé avant le corps" if a in incompletes
                                                     else "corps de l'article présent"}} if complet else {}),
@@ -263,10 +264,11 @@ def main() -> int:
             and net.envoyes[0][2].get("Authorization") == "Bearer clef",
             "[M1] la demande nomme le modèle, exige un objet JSON, porte consigne et message", f"{envoi}")
     _, _, dep, _ = run(completer([di({"ok": 1}, cout=None, jetons=(1_000_000, 1_000_000))]), n=4)
-    b.check(dep == CD.Depense(modeles_usd=prix[connu]["entree"] + prix[connu]["sortie"]),
+    f = DIJ["facteur_du_niveau_de_service"]
+    b.check(dep == CD.Depense(modeles_usd=(prix[connu]["entree"] + prix[connu]["sortie"]) * f),
             "[M1] sans coût déclaré, les jetons au prix du référentiel", f"{dep}")
     _, _, dep, _ = run(completer([di({"ok": 1}, cout=None, jetons=(1_000_000, 0))], modele="inconnu/modele"), n=4)
-    b.check(dep == CD.Depense(modeles_usd=DIJ["prix_de_repli"]["entree"]),
+    b.check(dep == CD.Depense(modeles_usd=DIJ["prix_de_repli"]["entree"] * f),
             "[M1] un modèle sans prix connu prend le prix de repli", f"{dep}")
 
     pauses = DIJ["pauses_avant_reprise_s"]
@@ -400,6 +402,12 @@ def main() -> int:
 
     # Une page inventée EN PLUS des pages données (du même site : M1 ne la refuserait pas).
     mal(lambda: reponse_modele(attendues + ["https://presse.example/inventee"]), "une page qu'on ne lui a pas donnée")
+    mal(lambda: {**reponse_modele(attendues), "publications": [{**x, "numero": str(x["numero"])}
+                                                                for x in reponse_modele(attendues)["publications"]]},
+        "un numéro de publication écrit en texte")
+    mal(lambda: {**reponse_modele(attendues), "publications": [{**x, "numero": True if x["numero"] == 1 else x["numero"]}
+                                                                for x in reponse_modele(attendues)["publications"]]},
+        "un numéro de publication booléen")
     mal(lambda: reponse_modele(attendues, sans=QUESTIONS[0]), "une question sans réponse")
     mal(lambda: reponse_modele(attendues, constat="  "), "un constat vide")
     mal(lambda: reponse_modele(attendues, critere="relations_investisseurs_d_une_autre_societe"),
@@ -415,8 +423,8 @@ def main() -> int:
     b.check(e is None and err is not None and attendues[1] in str(err) and "aperçu coupé" in str(err)
             and f"{N - 1} publication(s) complète(s)" in str(err),
             "[V8] une publication déclarée incomplète ne compte pas : échec nommé qui la désigne", f"{err}")
-    b.check(dep.modeles_usd == 0.0004 and dep.web_usd == 0.007, "[V8] l'échec porte la dépense du modèle et de la recherche",
-            f"{dep}")
+    b.check(dep.modeles_usd == 0.0004 and dep.web_usd == 0.014,
+            "[V8] l'échec porte la dépense du modèle, de la recherche et du suivi de l'aperçu", f"{dep}")
     msg = net.vers(U_DI)[0]["messages"][1]["content"] if net.vers(U_DI) else ""
     b.check(EVJ["question_texte_complet"] in msg and '"texte_complet"' in msg,
             "[V8] le modèle reçoit la question du texte complet, telle qu'au référentiel", "")
@@ -462,6 +470,214 @@ def main() -> int:
             and not actes, "[V6] deux essais manqués : échec nommé, rien n'est acté", f"{src}")
     b.check((src.get("depense") or {}).get("web_usd", 0) == 0.014,
             "[V6] chaque essai manqué garde ce qu'il a payé (deux recherches)", f"{src.get('depense')}")
+
+
+    # ── [X5] [P1]-[P7] un aperçu est un signal (M2 §7) ─────────────────────────────────────
+    REEL = json.loads((BACKEND / "checks" / "fixtures" / "recueil" / "apercu_reuters.json").read_text(encoding="utf-8"))
+    AJ = json.loads((MODULE / "adaptateurs" / "apercus.json").read_text(encoding="utf-8"))
+    AP_U, AP_T, AP_TXT = REEL["apercu"]["url"], REEL["apercu"]["title"], REEL["apercu"]["text"]
+    R_REPRISE = [r["url"] for r in REEL["resultats"] if "investing.com/news/stock-market" in r["url"]][0]
+    R_SEC = [r["url"] for r in REEL["resultats"] if "sec.gov" in r["url"]][0]
+    R_SANS = [r["url"] for r in REEL["resultats"] if "investing.com/news/earnings" in r["url"]][0]
+
+    def exa_textes(resultats, cout=0.009):
+        return js({"requestId": "s", "results": [{"id": r["url"], "url": r["url"], "title": r.get("title"),
+                                                  "publishedDate": r.get("publishedDate"), "text": r["text"]}
+                                                 for r in resultats], "costDollars": {"total": cout}})
+
+    async def s_x5():
+        net = Reseau(envois={U_RECH: [exa_textes(REEL["resultats"][:2])]})
+        res, _ = await X.MoteurExa(net, "clef").rechercher("t", exclus=["reuters.com"], avec_texte=True)
+        net2 = Reseau(envois={U_RECH: [exa_textes(REEL["resultats"][:1])]})
+        res2, _ = await X.MoteurExa(net2, "clef").rechercher("t")
+        return net.vers(U_RECH)[0], res, net2.vers(U_RECH)[0], res2
+    c5, res5, c5b, res5b = run(s_x5(), n=4)
+    b.check(c5.get("excludeDomains") == ["reuters.com"] and c5.get("contents", {}).get("text", {}).get("maxCharacters")
+            == EXA["caracteres_par_page"] and res5 and res5[0].texte == REEL["resultats"][0]["text"].strip(),
+            "[X5] Exa : domaines écartés et texte demandé, le texte revient avec chaque résultat", f"{c5}")
+    b.check("contents" not in c5b and "excludeDomains" not in c5b and res5b and res5b[0].texte == "",
+            "[X5] Exa : sans demande, ni texte ni exclusion (une recherche ordinaire ne paie pas les textes)", f"{c5b}")
+
+    apercu = AD.Texte(AP_U, AP_TXT, AP_T, "2026-10-27")
+    par_url = {r["url"]: AD.Resultat(r["url"], r.get("title") or "", "", r["text"]) for r in REEL["resultats"]}
+    b.check(AP.reprise_reconnue(apercu, "reuters.com", par_url[R_REPRISE]) != "",
+            "[P3] la reprise réelle est reconnue (nomme l'agence, phrase entière commune, plus longue)",
+            f"{AP.phrases(AP_TXT)}")
+    b.check(AP.reprise_reconnue(apercu, "reuters.com", par_url[R_SEC]) == ""
+            and AP.reprise_reconnue(apercu, "reuters.com", par_url[R_SANS]) == "",
+            "[P3] la pièce d'origine (8-K) et un article qui nomme l'agence sans phrase commune ne sont pas des reprises")
+    vraie = par_url[R_REPRISE]
+    sans_nom = AD.Resultat(vraie.adresse, "", "", AP.re.sub(r"(?i)reuters", "agence", vraie.texte))
+    courte = AD.Resultat(vraie.adresse, "", "", vraie.texte[: len(AP_TXT)])
+    phrase = AP.phrase_commune(AP_TXT, vraie.texte)
+    mots_courts = AD.Resultat(vraie.adresse, "", "", "Reuters. " + " ".join(phrase.split()[: AJ["mots_min_par_phrase"] - 1])
+                              + ". " + "remplissage " * 400)
+    b.check(AP.reprise_reconnue(apercu, "reuters.com", sans_nom) == "",
+            "[P3] une copie qui ne nomme pas l'agence n'est pas une reprise", "")
+    b.check(AP.reprise_reconnue(apercu, "reuters.com", courte) == "",
+            "[P3] un texte pas plus long que l'aperçu n'est pas une reprise (c'est un autre aperçu)", "")
+    b.check(phrase and AP.reprise_reconnue(apercu, "reuters.com", mots_courts) == "",
+            "[P3] une phrase de moins de mots_min_par_phrase mots n'identifie rien", "")
+    b.check(AP.nom_de_l_agence("lesechos.fr") == "lesechos" and AP.nomme("lesechos.fr", "selon Les Echos, hier")
+            and AP.nom_de_l_agence("nikkei.co.jp") == "nikkei" and AP.nom_de_l_agence("markets.ft.com") == "ft",
+            "[P3] l'agence se nomme depuis son domaine, mots accolés compris", "")
+
+    class Lieu:
+        def __init__(self, adresse):
+            self.adresse = adresse
+
+    class FicheV:
+        raison_sociale = "Visa Inc."
+        lieux = (Lieu("investor.visa.com/news"),)
+
+    ORIG = "https://investor.visa.com/news/q4-2026-results"
+    vide = exa_recherche()
+
+    def monde_web(suivis, refus=(AP_U,), pages_extra=None, titre=AP_T):
+        pages = {u: AD.Lu(401) for u in refus}
+        pages.update(pages_extra or {})
+        ouverts = exa_recherche(*[(u, titre if u == AP_U else "T", "2026-10-27") for u in refus])
+        envois = {U_RECH: [vide, ouverts, *suivis],
+                  U_CONT: [exa_contenus({u: AP_TXT for u in refus})]}
+        return Reseau(pages, envois)
+
+    async def web(net, fiche=FicheV()):
+        appel = AD.Appel(demande=R.Demande("annonces_importantes", "V"), fiche=fiche, genre={}, transport=net,
+                         moteur=X.MoteurExa(net, "clef"), deja=lambda _: _vide(), le=JOUR)
+        return await Web().chercher(appel)
+
+    # [P1] [P5] rien de reconnu : l'aperçu n'est pas rangé, l'indisponibilité le nomme, le suivi est payé.
+    net = monde_web([exa_textes([r for r in REEL["resultats"] if r["url"] in (R_SEC, R_SANS)])])
+    tr = run(web(net), n=5)
+    b.check(not tr.trouves and tr.raison == "apercu" and AP_U in tr.detail,
+            "[P1] [P5] un aperçu sans suite n'est jamais rangé : indisponibilité « aperçu » qui le désigne",
+            f"{tr.raison} {tr.detail} {[t.provenance.adresse for t in tr.trouves]}")
+    b.check(abs(tr.depense.web_usd - (0.007 * 2 + 0.001 + 0.009)) < 1e-9,
+            "[P5] le suivi est payé et compté (texte de l'aperçu + une recherche)", f"{tr.depense}")
+    sv = [c for c in net.vers(U_RECH) if c.get("excludeDomains")]
+    b.check(len(sv) == 1 and sv[0]["query"] == AP_T and sv[0]["excludeDomains"] == ["reuters.com"],
+            "[P2] UNE recherche par le titre de l'aperçu, hors du domaine de l'agence", f"{sv}")
+
+    # [P3] [P4] la reprise reconnue est rangée sous l'adresse de l'aperçu, lue chez le diffuseur.
+    net = monde_web([exa_textes(REEL["resultats"])],
+                    pages_extra={R_REPRISE: article("reprise lue directement", 3000)})
+    tr = run(web(net), n=5)
+    t0 = tr.trouves[0] if tr.trouves else None
+    b.check(t0 is not None and t0.provenance.adresse == AP_U and t0.provenance.identifiant == R_REPRISE
+            and "reprise sous licence" in t0.provenance.mention and b"reprise lue directement" in (t0.contenu or b""),
+            "[P3] la reprise est rangée sous l'adresse de l'agence, lue chez le diffuseur (identifiant, mention)",
+            f"{t0}")
+    b.check(not any(E.domaine(a) == "investing.com" for a in tr.rencontrees),
+            "[P4] le diffuseur n'est pas une source rencontrée", f"{tr.rencontrees}")
+    b.check(all(b"opens new tab" not in (t.contenu or b"") for t in tr.trouves),
+            "[P1] le texte de l'aperçu n'est jamais rangé", "")
+    net = monde_web([exa_textes([r for r in REEL["resultats"] if r["url"] == R_REPRISE])])
+    tr = run(web(net), n=5)
+    t0 = tr.trouves[0] if tr.trouves else None
+    b.check(t0 is not None and t0.type_media.startswith("text/plain") and t0.provenance.identifiant == R_REPRISE,
+            "[P3] le diffuseur refuse la lecture directe : le texte du moteur, dit en texte brut", f"{t0}")
+
+    # [P2] la pièce d'origine sur un lieu de la fiche passe devant la reprise.
+    orig = {"url": ORIG, "title": "Visa Reports Fiscal Fourth Quarter", "publishedDate": "2026-10-27T20:05:00.000Z",
+            "text": "Visa Inc. reported fiscal fourth quarter results."}
+    net = monde_web([exa_textes([*REEL["resultats"], orig])], pages_extra={ORIG: article("communiqué Visa")})
+    tr = run(web(net), n=5)
+    t0 = tr.trouves[0] if tr.trouves else None
+    b.check(t0 is not None and t0.provenance.adresse == ORIG and "signalée par" in t0.provenance.mention
+            and AP_U in t0.provenance.mention and len(tr.trouves) == 1,
+            "[P2] la pièce d'origine, sur un lieu de la fiche, est rangée et passe devant la reprise", f"{tr.trouves}")
+    net = monde_web([exa_textes([*REEL["resultats"], orig])])
+    tr = run(web(net), n=5)
+    t0 = tr.trouves[0] if tr.trouves else None
+    b.check(t0 is not None and t0.provenance.adresse == ORIG and t0.type_media.startswith("text/plain")
+            and t0.contenu == orig["text"].encode(),
+            "[P2] la pièce d'origine qui refuse la lecture directe : le texte rendu par la recherche, en texte brut",
+            f"{t0}")
+    net = monde_web([exa_textes([*REEL["resultats"], {**orig, "text": ""}])])
+    tr = run(web(net), n=5)
+    t0 = tr.trouves[0] if tr.trouves else None
+    b.check(t0 is not None and t0.provenance.identifiant == R_REPRISE,
+            "[P2] une pièce d'origine sans texte lisible laisse place à la reprise", f"{t0}")
+
+    # [P5] borne et aperçu sans titre.
+    trois = [f"https://www.reuters.com/x{i}" for i in range(AJ["suivis_max_par_demande"] + 1)]
+    net = monde_web([exa_textes([])], refus=trois)
+    tr = run(web(net), n=5)
+    b.check(len([c for c in net.vers(U_RECH) if c.get("excludeDomains")]) == AJ["suivis_max_par_demande"]
+            and "non suivi" in tr.detail, "[P5] au plus suivis_max_par_demande suivis par demande", f"{tr.detail}")
+    net = monde_web([exa_textes(REEL["resultats"])], titre="")
+    net.envois[U_CONT] = [js({"results": [{"id": AP_U, "url": AP_U, "title": "", "text": AP_TXT}], "costDollars": {"total": 0.001}})]
+    tr = run(web(net), n=5)
+    b.check(not tr.trouves and "sans titre" in tr.detail and not [c for c in net.vers(U_RECH) if c.get("excludeDomains")],
+            "[P5] un aperçu sans titre : nommé, aucune recherche payée", f"{tr.detail}")
+
+    # [P6] l'évaluateur remplace l'aperçu par sa reprise et rejuge une fois.
+    SR = "reuters.com"
+    pubs = [f"https://www.{SR}/a{i}" for i in range(1, N + 1)]
+
+    def monde_ev(modele, suivis, refus=1):
+        pages = {u: article(u) for u in pubs}
+        for u in pubs[:refus]:
+            pages[u] = AD.Lu(401)
+        envois = {U_CONT: [js({"results": [{"id": u, "url": u, "title": AP_T, "text": AP_TXT} for u in pubs[:refus]],
+                               "costDollars": {"total": 0.001 * refus}})],
+                  U_RECH: list(suivis), U_DI: modele}
+        return Reseau(pages, envois)
+
+    # Ordre du message : les pages lues en direct d'abord, la page refusée relue par le moteur ensuite.
+    net = monde_ev([di(reponse_modele(pubs[1:] + pubs[:1], incompletes=pubs[:1]), cout=0.0004),
+                    di(reponse_modele(pubs), cout=0.0002)],
+                   [exa_textes(REEL["resultats"])])
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    appels = net.vers(U_DI)
+    m2 = appels[1]["messages"][1]["content"] if len(appels) > 1 else ""
+    b.check(e is not None and len(appels) == 2 and sorted(x.adresse for x in e.exemples) == sorted(pubs),
+            "[P6] l'aperçu est remplacé par sa reprise reconnue, le modèle rejuge une fois", f"{err}")
+    b.check(EVJ["entete_reprise"].format(lieu=R_REPRISE) in m2 and m2.index(pubs[1]) < m2.index(pubs[0]),
+            "[P6] le modèle sait où la reprise a été lue", "")
+    b.check(abs(dep.modeles_usd - 0.0006) < 1e-9 and abs(dep.web_usd - 0.010) < 1e-9,
+            "[P6] dépense = deux jugements + texte de l'aperçu + une recherche", f"{dep}")
+    # L'aperçu lu EN DIRECT (page servie, texte coupé) arrive en tête : après remplacement, il passe en dernier.
+    html = AD.Lu(200, ("<html><body>" + AP_TXT.replace("\n\n", "<p>") + "</body></html>").encode(), "text/html")
+    net = Reseau({**{u: article(u) for u in pubs}, pubs[0]: html},
+                 {U_RECH: [exa_recherche(*[(u, AP_T, "2026-10-27") for u in pubs]), exa_textes(REEL["resultats"])],
+                  U_DI: [di(reponse_modele(pubs, incompletes=pubs[:1])), di(reponse_modele(pubs))]})
+    e, dep, err = run(evaluer(net, adresses=[], source=SR), n=6)
+    msgs = [a["messages"][1]["content"] for a in net.vers(U_DI)]
+    b.check(e is not None and len(msgs) == 2 and msgs[0].index(pubs[0]) < msgs[0].index(pubs[1])
+            and msgs[1].index(pubs[1]) < msgs[1].index(pubs[2]) < msgs[1].index(pubs[0]),
+            "[P6] les publications inchangées d'abord, dans leur ordre (le début du message reste en cache)",
+            f"{err} {len(msgs)}")
+    net = monde_ev([di(reponse_modele(pubs[2:] + pubs[:2], incompletes=pubs[:2]), cout=0.0004)], [exa_textes([])], refus=2)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    b.check(e is None and err is not None and "reprises cherchées" in str(err) and len(net.vers(U_DI)) == 1
+            and len(net.vers(U_RECH)) == 1,
+            "[P6] sans reprise pour chaque aperçu : échec nommé (V8) qui dit ce qui a été cherché ; un seul jugement, "
+            "les recherches s'arrêtent au premier manque", f"{err} {len(net.vers(U_RECH))}")
+
+    # [P7] DeepInfra : niveau de service, cache, préfixe commun ; aucun modèle dans le suivi.
+    net, _, _, _ = run(completer([di({"ok": True})]), n=4)
+    b.check((net.vers(U_DI) or [{}])[0].get("service_tier") == DIJ["niveau_de_service"],
+            "[P7] la demande porte le niveau de service du référentiel", "")
+    _, _, dep, _ = run(completer([js({"choices": [{"finish_reason": "stop", "message": {"content": "{}"}}],
+                                      "usage": {"prompt_tokens": 1_000_000, "completion_tokens": 0,
+                                                "prompt_tokens_details": {"cached_tokens": 1_000_000}}})],
+                                 modele="deepseek-ai/DeepSeek-V4.1-Flash-1017"), n=4)
+    p41 = prix["deepseek-ai/DeepSeek-V4.1-Flash-1017"]
+    b.check(abs(dep.modeles_usd - p41["entree_en_cache"] * f) < 1e-12,
+            "[P7] sans coût déclaré, les jetons servis par le cache à leur prix", f"{dep}")
+    t = [AD.Texte("https://a.example/1", "x" * 600)]
+    ma, mb = EV.message("a.example", GRILLE, t), EV.message("tout-autre.example", GRILLE, t)
+    commun = len(next((ma[:i] for i in range(len(ma), 0, -1) if mb.startswith(ma[:i])), ""))
+    b.check('"numero": 1' in ma and "nombre entier" in ma,
+            "[V5] le format montre le numéro de publication comme un entier (mesuré : un gabarit entre guillemets "
+            "fait écrire « \"1\" »)", "")
+    b.check(commun >= ma.index("Source à juger") and all(c["texte"] in ma[:commun] for c in GRILLE["criteres"].values())
+            and '"texte_complet"' in ma[:commun],
+            "[P7] critères, questions et format précèdent la source : deux sources partagent ce début", f"{commun}")
+    src_ap = strip_code((MODULE / "adaptateurs" / "apercus.py").read_text(encoding="utf-8"))
+    b.check("deepinfra" not in src_ap and "completer" not in src_ap and "modele" not in src_ap.lower(),
+            "[P7] aucun appel au modèle dans le suivi des aperçus", "")
 
     # ── [V7] aucun nom de modèle dans le code ─────────────────────────────────────────────
     noms = [EVJ["modele"], *DIJ["prix_usd_par_million_de_jetons"]]

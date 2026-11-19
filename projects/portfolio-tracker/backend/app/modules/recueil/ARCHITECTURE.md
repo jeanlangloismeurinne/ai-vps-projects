@@ -38,7 +38,10 @@ adaptateurs/
   site.*          les pages de l'émetteur, aux lieux de sa fiche (jamais devinés)
   web.*           un moteur de recherche INJECTÉ ; domaines de la fiche d'abord (#133)
   exa.*           le moteur réel : chercher, et le texte des pages qui refusent la lecture directe
-  deepinfra.*     le modèle réel : un objet JSON et ce qu'il a coûté ; reprises sur « occupé »
+  deepinfra.*     le modèle réel : un objet JSON et ce qu'il a coûté ; reprises sur « occupé » ; niveau
+                  de service « flex » (−20 %) et prix des jetons servis par le cache au référentiel
+  apercus.*       un aperçu d'article payant est un signal (#149) : UNE recherche par son titre rend la
+                  pièce d'origine ou la reprise sous licence, reconnue par le code (aucun modèle)
   transport.py    le seul fichier qui touche le réseau (lire, envoyer en JSON ; bibliothèque standard)
 evaluateur.py     l'évaluateur réel des sources inconnues (rôle distinct du collecteur)
 evaluateur.json   son modèle, sa consigne, ses recherches de publications — jamais dans le code
@@ -115,8 +118,10 @@ de `depot_base.py` + 9 de la migration 064, toutes détectées le 2026-11-16).
 | B11 | PDF, page vide, registre en erreur deux fois : indisponible nommé ; une seule seconde tentative | [B11] |
 
 **Le moteur, le modèle et l'évaluateur réels** : contrôle `checks/check_recueil_evaluateur.py`
-(60 vérifications le 2026-11-18, transport simulé dont les réponses copient la forme réelle relevée
-le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (44 mutations, toutes détectées).
+(92 vérifications le 2026-11-19, transport simulé dont les réponses copient la forme réelle relevée
+les 18 et 19 novembre ; fixture d'aperçu Reuters et de ses reprises copiée du réel :
+`checks/fixtures/recueil/apercu_reuters.json`) ; test négatif `checks/negatif_recueil_evaluateur.sh`
+(71 mutations, toutes détectées le 2026-11-19).
 
 | Ligne | Invariant | Assert |
 |---|---|---|
@@ -129,12 +134,22 @@ le même jour) ; test négatif `checks/negatif_recueil_evaluateur.sh` (44 mutati
 | V6 | Bout en bout : admise / en suspens ; dépense = recherche + pages + modèle ; essais manqués payés et comptés | [V6] |
 | V7 | Modèle et consigne au référentiel, pas dans le code | [V7] |
 | V8 | Un aperçu ne compte pas : « texte complet » motivé exigé ; incomplète = échec nommé qui la désigne, avec la dépense ; notre coupe est dite au modèle | [V8] |
+| V5bis | Le modèle désigne une publication par son NUMÉRO (entier, montré comme tel dans le format), jamais en recopiant son adresse : mesuré le 2026-11-19, une adresse recopiée avec une coquille a fait rejeter une réponse payée | [V5] |
+| X5 | Exa : domaines écartés et texte des résultats seulement sur demande | [X5] |
+| P1 | Un aperçu (accès refusé) n'est jamais rangé, ni tel quel ni par le texte du moteur | [P1] |
+| P2 | UNE recherche par son titre hors du domaine de l'agence ; une pièce sur un lieu de la fiche est rangée (« signalée par »), lue en direct ou, refusée, par le texte de la recherche ; elle passe devant la reprise | [P2] |
+| P3 | Reprise reconnue : nomme l'agence, phrase entière commune (≥ 8 mots), plus longue ; rangée sous l'adresse de l'agence, lue chez le diffuseur | [P3] |
+| P4 | Le diffuseur n'est jamais une source rencontrée | [P4] |
+| P5 | Rien de reconnu ou sans titre : indisponibilité « apercu » nommée ; suivi payé et compté ; au plus `suivis_max_par_demande` | [P5] |
+| P6 | Évaluateur : aperçus remplacés par leurs reprises, un seul second jugement, publications inchangées d'abord ; recherches arrêtées au premier manque | [P6] |
+| P7 | DeepInfra : niveau de service, prix en cache, partie fixe du message en tête (cache d'une source à l'autre) ; aucun modèle dans le suivi | [P7] |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **Une source payante inconnue ne peut pas être évaluée** : ses publications ne sont lisibles qu'en
-  aperçu ; elle finit en échec nommé et attend l'arbitrage à l'écran. La lecture des articles payants
-  pendant la collecte est une question ouverte (`roadmap/V3/M2-collecte-sources.md` §6).
+- **Une source payante inconnue n'est évaluée que si ses aperçus ont des reprises reconnues** (étage 2,
+  #149) ; sinon échec nommé, arbitrage à l'écran. L'étage « abonnement » n'est pas construit. Le modèle
+  peut juger complet un aperçu coupé en milieu de phrase (relevé le 2026-11-19 sur une dépêche Reuters
+  de 1 000 caractères) : alors il n'est pas suivi.
 - Le modèle rend parfois une réponse hors forme (2 sur ~20 appels mesurés) : échec nommé, la
   relance du cœur la rejoue.
 - **Le déclencheur** qui appelle le chef de dossier, la tâche de fond (`traiter_les_travaux`,

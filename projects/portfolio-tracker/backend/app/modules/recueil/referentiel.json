@@ -45,9 +45,10 @@
     "trop_volumineux": "Le document dépasse la taille qu'on range : il n'est pas rangé.",
     "homonyme": "Le registre connaît plusieurs sociétés pour ce nom : le système ne tranche pas, l'identité attend votre acte.",
     "rien_publie": "La source a été consultée : elle ne contient aucun document de ce genre pour la période demandée.",
-    "non_applicable": "Aucune source ne pouvait être consultée pour cette société (ni numéro au registre, ni lieu de publication, ni recherche possible)."
+    "non_applicable": "Aucune source ne pouvait être consultée pour cette société (ni numéro au registre, ni lieu de publication, ni recherche possible).",
+    "apercu": "Seul un aperçu d'article payant a été trouvé : ni la pièce d'origine ni une reprise sous licence n'ont été reconnues ; un aperçu n'est jamais rangé comme pièce."
   },
   "_priorite_des_raisons": "La raison principale d'une indisponibilité : la plus précise des raisons constatées. Un document trouvé mais illisible en dit plus qu'une source injoignable ; tous les essais restent énumérés.",
-  "priorite_des_raisons": ["fiche_absente", "homonyme", "illisible", "trop_volumineux", "injoignable", "rien_publie", "non_applicable"],
+  "priorite_des_raisons": ["fiche_absente", "homonyme", "illisible", "apercu", "trop_volumineux", "injoignable", "rien_publie", "non_applicable"],
   "taille_max_octets": 60000000
 }

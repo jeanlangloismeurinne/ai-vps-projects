@@ -23,5 +23,7 @@
   "question_texte_complet": "Le texte fourni est-il la publication elle-même, et non un aperçu (un titre, un chapeau ou des puces de résumé, puis le texte s'interrompt, typiquement derrière un accès payant) ? Quand l'équipe a elle-même limité la longueur du texte, c'est dit dans l'en-tête de la publication : cette coupe-là ne compte pas, jugez seulement ce qui la précède.",
   "mention_coupe": "[… suite non transmise : texte limité par l'équipe à {n} caractères]",
   "_texte_complet": "Arbitrage de l'utilisateur, 2026-11-18 : un aperçu d'article payant (mesuré : Reuters relu par le moteur, ~1 000 caractères, coupé avant le corps) ne se juge pas. Une publication déclarée incomplète ne compte pas ; s'il en manque, échec nommé, la source attend l'arbitrage à l'écran.",
+  "entete_reprise": "Lu chez : {lieu} — reprise sous licence de cette publication, reconnue par l'équipe (le diffuseur nomme la source et reproduit mot pour mot le début lu chez elle) ; jugez la publication de la source, pas le diffuseur",
+  "_entete_reprise": "M2 §7 (P6, accord de l'utilisateur du 2026-11-19) : une publication déclarée aperçu est remplacée par sa reprise sous licence reconnue (adaptateurs/apercus.py, aucun modèle), puis le modèle rejuge UNE fois, publications inchangées d'abord (cache du fournisseur).",
   "entete_coupe": "Longueur : texte limité par l'équipe à ses {n} premiers caractères (la publication continue au-delà ; ce n'est pas un aperçu)"
 }
