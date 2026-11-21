@@ -17,5 +17,11 @@
     "collecte": "collecte",
     "evaluation": "evaluation_des_sources",
     "lecture": "lecture"
-  }
+  },
+  "_libelles_actes": "Ce que l'écran dit de l'acte qui vous revient, en mots de gérant (M3 K12). La clé est celle de l'acte attendu par le dossier ; une clé absente se montre avec le libellé du chef de dossier, tel quel. Les documents « introuvables » sont les demandes que la collecte a déclarées indisponibles, raison nommée.",
+  "libelles_actes": {
+    "lecture:collecte": "Valider les documents trouvés ou introuvables"
+  },
+  "_passages_a_l_ecran": "Combien des derniers passages qui ont fait quelque chose l'écran montre (les plus récents d'abord).",
+  "passages_a_l_ecran": 10
 }

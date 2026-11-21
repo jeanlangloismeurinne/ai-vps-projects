@@ -38,6 +38,7 @@ from .contrat import (
     INTERROMPU,
     NON_ETUDIE,
     RIEN_DE_NEUF,
+    VERSION_CONTRAT,
     Etude,
     EtudeLue,
     GesteRefuse,
@@ -275,3 +276,32 @@ async def lire_etudes(monde: Monde) -> list[EtudeLue]:
         rendus.append(EtudeLue(etude=Etude(**e), dernier_passage=_passage(passages[-1]) if passages else None,
                                dossier_en_clair=CD.afficher(etat)))
     return rendus
+
+
+# ── L'écran ──────────────────────────────────────────────────────────────────────────────────
+
+def libelle_acte(cle: str, acte: str) -> str:
+    """L'acte en mots de gérant (référentiel) ; une clé absente garde le libellé du chef de dossier."""
+    return referentiel()["libelles_actes"].get(cle) or acte
+
+
+async def vue_ecran(monde: Monde, dossier: str) -> dict[str, Any]:
+    etude = await monde.etude.etude(dossier)
+    etat = await _peek(monde, dossier)
+    d = etat.vers_dict()
+    if d["arret"] is not None:
+        a = d["arret"]
+        a["libelle"] = libelle_acte(a["cle"], a["acte"]) if a["acte"] else ""
+        for x in a["attentes"]:
+            x["libelle"] = libelle_acte(x["cle"], x["acte"]) if x["acte"] else ""
+    passages = list(await monde.etude.passages(dossier)) if etude is not None else []
+    return {
+        "version_contrat": VERSION_CONTRAT,
+        "dossier": dossier,
+        "etude": etude,
+        "passages": list(reversed(passages))[:int(referentiel()["passages_a_l_ecran"])],
+        "etat": d,
+        "en_clair": CD.afficher(etat),
+        "intervalle_min": int(referentiel()["passage"]["intervalle_min"]),
+        "lecture_humaine": dict(referentiel()["lecture_humaine"]),
+    }

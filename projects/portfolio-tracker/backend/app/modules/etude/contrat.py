@@ -27,7 +27,9 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import Any, AsyncContextManager, Callable, Mapping, Protocol, Sequence
 
-VERSION_CONTRAT = "1.1.0"
+from app.modules.emetteurs.contrat import UTILISATEUR  # noqa: F401 — l'auteur des gestes de l'écran (détenteur : M1)
+
+VERSION_CONTRAT = "1.2.0"
 NOM_DU_MODULE = "etude"
 
 # Ce qu'un passage a fait sur un dossier.
@@ -241,6 +243,15 @@ async def relancer(monde: Monde, dossier: str, *, pas: str | None = None, le: st
     return await coeur.geste(monde, dossier, "relance", pas=pas, le=le)
 
 
+async def vue_ecran(monde: Monde, dossier: str) -> dict[str, Any]:
+    """Ce que l'écran montre pour une société : son étude (ou rien), ses derniers passages qui ont
+    fait quelque chose, l'état de son dossier avec, pour chaque acte qui vous revient, son libellé en
+    mots de gérant (`libelle`, référentiel) et la clé à renvoyer pour l'enregistrer. Une société non
+    mise à l'étude se lit aussi (étude vide, dossier vierge). Aucun module ne s'appuie sur cette vue."""
+    from . import coeur
+    return await coeur.vue_ecran(monde, dossier)
+
+
 def intervalle_min() -> int:
     """Tous les combien de minutes la tâche de fond repasse (référentiel)."""
     from . import coeur
@@ -254,9 +265,9 @@ def lecture_humaine() -> dict[str, bool]:
 
 
 __all__ = [
-    "VERSION_CONTRAT", "NOM_DU_MODULE", "AVANCE", "RIEN_DE_NEUF", "DEJA_EN_COURS", "NON_ETUDIE", "INTERROMPU",
+    "VERSION_CONTRAT", "NOM_DU_MODULE", "UTILISATEUR", "AVANCE", "RIEN_DE_NEUF", "DEJA_EN_COURS", "NON_ETUDIE", "INTERROMPU",
     "monde_en_base",
     "GesteRefuse", "Etude", "Passage", "EtudeLue", "Depot", "DepotMemoire", "depot_base", "Monde",
     "lire_etudes", "mettre_a_l_etude", "passer", "traiter_les_dossiers", "enregistrer_acte",
-    "lever_pause", "relancer", "lecture_humaine", "intervalle_min",
+    "lever_pause", "relancer", "vue_ecran", "lecture_humaine", "intervalle_min",
 ]

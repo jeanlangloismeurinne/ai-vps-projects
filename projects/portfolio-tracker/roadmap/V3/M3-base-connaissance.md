@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; restent écran, réel
+status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; écran (K12) construit et prouvé hors ligne le même jour (check_etude_api 24/0, négatif 12/12) ; reste réel
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -177,7 +177,7 @@ structurées). K10 et K11 sur société fictive : `check_etude.py` **39/0**, `ne
   son automate) ; chef 108/0, négatif 27/27.
 - Appris en lisant le parcours en texte : le libellé de l'acte (« relire la sortie du module
   recueil ») est du jargon ; il se dira en mots de gérant à l'écran (K12).
-- Reste : écran, lignes « réel » (le rangement en base et la tâche planifiée : ci-dessous).
+- Reste : lignes « réel » (le rangement en base, la tâche planifiée et l'écran : ci-dessous).
 
 ### Le rangement en base et la tâche planifiée (2026-11-21, suite)
 
@@ -202,6 +202,22 @@ sans clef de recherche rien de payant et le passage le dit. Appris en route :
   était au milieu d'un texte de trois lignes) ; les lignes de chaque lecture sont désormais comparées.
 - La mise en lecture tourne hors de la boucle principale (un rapport annuel de plusieurs Mo ne fige plus
   les écrans).
+
+### L'écran (2026-11-21, suite)
+
+Section « Étude de la société » de la page de l'émetteur (`frontend/components/v2/EtudeEmetteur.js`), servie
+par `app/api/etude_v2.py` (contrats `etude`, `recueil`, `connaissance`, `chef_de_dossier` seulement) :
+bouton « mettre à l'étude » (motif obligatoire, signé de l'utilisateur, daté du serveur) ; le dossier
+(étapes faites, dépense, coût restant, derniers passages) et le geste qui vous revient — « Valider les
+documents trouvés ou introuvables », autoriser un palier de dépense, réessayer ; les documents demandés
+(trouvés avec origine, dates et qualification au jour de la collecte ; introuvables avec leur raison et
+les essais) ; les documents lus (nombre de lignes, « sans objet » ou « impossible » avec la raison, texte
+lisible ligne par ligne) ; les pièces (extrait, lignes, période, ce que vaut la source aujourd'hui, le
+passage surligné dans son document). `check_etude_api.py` 24/0, négatif 12/12 ; rendu vérifié par capture
+sur la société fictive (serveur de démonstration, aucune base). Le bandeau « état du dossier » de M1 est
+remplacé par cette section (la route `/dossier` reste). Appris en route : un document d'une source
+inconnue s'affiche « non admise » même quand l'évaluateur l'a admise ensuite — c'est juste (qualification
+au jour de la collecte), l'en-tête le dit désormais.
 
 ## 6. Ce que M3 ne fait pas (dit, pas caché)
 

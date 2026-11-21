@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-21 nuit, suite (065 et tâche planifiée construites, prouvées sur base jetable ; prochain lot : écran, puis 064+065 en production et lignes « réel ») — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-21 nuit, fin (écran de l'étude construit et prouvé hors ligne ; prochain lot : 064+065 en production, déploiement, lignes « réel ») — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -30,20 +30,22 @@ base de production ; tout est prouvé hors ligne (société fictive) et sur base
 - **Rangement en base** de M3 et du déclencheur : migration **065 NON appliquée** (dépend de 064) ;
   `check_connaissance_persist` 73/0 sur base jetable, négatif 10/10 + 9/9. **Tâche planifiée câblée**
   (`app/main.py`, `_passage_des_etudes`, toutes les 5 min) et exécutée sur base jetable. Détail : M3 §5.
+- **Écran de l'étude** (B12/K12) : section « Étude de la société » de la page de l'émetteur
+  (`components/v2/EtudeEmetteur.js`, routes `app/api/etude_v2.py`, contrat `etude` 1.2.0) :
+  `check_etude_api` 24/0, négatif 12/12 ; rendu vérifié par capture sur la société fictive. NON déployé.
 
 ⚠️ **064 PUIS 065 doivent être appliquées AVANT tout rebuild du backend** : la tâche planifiée lit
 `etude_etudes` toutes les 5 minutes ; sans les tables, elle journalise une erreur à chaque passage
 (sans autre effet). Un rebuild pour un autre motif doit donc appliquer les deux migrations d'abord
 (commande : `CLAUDE.md`, #17 ; ordre : 064 puis 065).
 
-**Prochain lot** : (3) écran (B12/K12 : bouton « mettre à l'étude » sur la page de l'émetteur, documents
-lus et lectures impossibles, pièces et ce que vaut leur source, état du dossier, gestes acte / pause /
-relance — libellé de l'acte en mots de gérant : « valider les documents trouvés ou introuvables » ;
-API par les contrats `etude` et `connaissance`) ; (4) appliquer 064 puis 065, déployer, vérifier dans le
-conteneur, lignes « réel » (K13 : 57 fiches SEC de l'ancien système retrouvées ; K14 : NVDA, RVMD,
-SpaceX ; M2 B3/B6/B10/B13 ; vérifier le crédit DeepInfra par un appel minimal avant). Les demandes « au
-fil du dossier » (M3 §2, 1 bis) se construisent avec M4. Un dossier terminé ne repart pas quand le
-parcours s'allonge : à traiter avec M4.
+**Prochain lot** : appliquer 064 puis 065 en production, déployer backend ET frontend, vérifier dans
+le conteneur (route `/v2/emetteurs/{e}/etude`, constante `libelles_actes`), puis lignes « réel » (K13 :
+57 fiches SEC de l'ancien système retrouvées ; K14 : NVDA, RVMD, SpaceX mises à l'étude À L'ÉCRAN par
+vous — c'est là que la dépense commence ; M2 B3/B6/B10/B13 ; vérifier le crédit DeepInfra par un appel
+minimal avant). Les gestes de l'écran (valider les documents, autoriser un palier, réessayer) n'ont été
+joués que sur la société fictive. Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec
+M4. Un dossier terminé ne repart pas quand le parcours s'allonge : à traiter avec M4.
 
 **SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main ;
 le vrai passage l'écrira, signé du système (passage à blanc du 2026-11-16 : identité complète,
@@ -75,9 +77,8 @@ payante avant le module M6 (carte).**
 - 26 contrôles sans test négatif à leur nom ; deux modèles épinglés dans le code : soldés module par module.
 - `backend/tools/mesure_gate_capacite4.py` ne compile pas (erreur d'indentation, relevée par la garde des
   accès le 2026-11-13) : outil de l'ancien enchaînement, à supprimer ou réparer au tri de M6.
-- Chef de dossier : rangement en base (migration 063, appliquée le 2026-11-16) ; toujours ni déclencheur ni
-  geste à l'écran (lever une pause, enregistrer un acte, relancer). Le déclencheur se construit avec M2
-  (il range l'`Envoi` des pas de collecte dans la même transaction que l'état du dossier).
+- Chef de dossier : rangement en base (migration 063, appliquée le 2026-11-16) ; déclencheur (module
+  `etude`) et gestes à l'écran construits le 2026-11-21, pas encore en production.
 
 ## Où on en est (mesuré le 2026-10-16/17 — RE-REQUÊTER avant de s'en servir)
 
@@ -85,7 +86,7 @@ payante avant le module M6 (carte).**
   contrôle de reproduction) : note d'initiation (6 chapitres + fourchette), fonctionnement
   ET reproductibilité ; **roadmap active : `07-avant-comite.md`** (modules M0-M11) ; `roadmap/archive/V3-05-frameworks-complets.md` = ancien détail (archivé).
 - **Chapitres instruits de l'ancien enchaînement** (NVDA, RVMD, MSFT, mesurés le 2026-10-16/17) : archive, « 2026-11-21 — sorti de la reprise » ; ils ne sont pas repris (charte 7).
-- **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
+- **Suite** `bash backend/checks/run_all.sh` (rouges connus en production tant que 064/065 ne sont pas appliquées : `check_recueil_persist`, `check_connaissance_persist` ; et `check_signature_modele_persist`, données de l'ancien enchaînement) : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : rebuild de sécurité du 31/10 (`46a663f`) — embarque B4d, #143, B4f, B4g et le maillon 1 (vérifié fichier par fichier le 2026-11-16) ; M1 pas encore déployé. Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
 - **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; les suivantes : 064 (tables `recueil_*` de M2) puis 065 (`connaissance_*`, `etude_*`), écrites, NON appliquées (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.

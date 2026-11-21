@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Card, CardHeader, CardBody, Badge, KeyValue, Dl, EmptyState, ErrorState, MotifLigne } from '../../../components/v2'
+import EtudeEmetteur from '../../../components/v2/EtudeEmetteur'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
@@ -298,46 +299,6 @@ function TesterAdresse({ emetteur, natures }) {
   )
 }
 
-function EtatDossier({ emetteur }) {
-  const [etat, setEtat] = useState(undefined) // undefined : en cours ; null : indisponible
-
-  useEffect(() => {
-    setEtat(undefined)
-    fetch(`${API}/v2/emetteurs/${encodeURIComponent(emetteur)}/dossier`)
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(setEtat)
-      .catch(() => setEtat(null))
-  }, [emetteur])
-
-  const usd = v => `${Number(v || 0).toFixed(2)} $`
-  return (
-    <section className="space-y-3">
-      <Titre>État du dossier</Titre>
-      {etat === undefined && <p className="text-sm text-gray-500">Chargement…</p>}
-      {etat === null && <p className="text-sm text-gray-500">État indisponible.</p>}
-      {etat && (
-        <Card>
-          <CardBody>
-            <Dl cols={2}>
-              <KeyValue label="Pas faits" value={etat.faits.length ? etat.faits.join(', ') : 'aucun'} />
-              <KeyValue label="Dépense"
-                value={`${usd(etat.depense.modeles_usd + etat.depense.web_usd)} (modèles ${usd(etat.depense.modeles_usd)}, recherches ${usd(etat.depense.web_usd)})`} />
-              <KeyValue label="Arrêt en cours" value={
-                etat.arret ? (
-                  <span>
-                    <Badge variant="amber">à l'arrêt</Badge>{' '}
-                    {etat.arret.motif}
-                    {etat.arret.acte && <span className="block text-gray-400 mt-1">Acte attendu : {etat.arret.acte}</span>}
-                  </span>
-                ) : 'aucun'} />
-            </Dl>
-          </CardBody>
-        </Card>
-      )}
-    </section>
-  )
-}
-
 export default function FicheEmetteur() {
   const router = useRouter()
   const emetteur = router.query.emetteur
@@ -371,13 +332,13 @@ export default function FicheEmetteur() {
       {vue && (
         <>
           <FicheCard f={vue.fiche} />
+          <EtudeEmetteur emetteur={emetteur} />
           {/* key : le formulaire repart des valeurs de la révision en vigueur après chaque correction */}
           <Corriger key={vue.fiche.revision} f={vue.fiche} emetteur={emetteur} onFait={setVue} />
           <SourcesAdmises sources={vue.fiche.sources} />
           <SourcesRevoquees revocations={vue.fiche.revocations} />
           <Revisions revisions={vue.revisions} />
           <TesterAdresse emetteur={emetteur} natures={vue.referentiel.natures} />
-          <EtatDossier emetteur={emetteur} />
         </>
       )}
     </div>

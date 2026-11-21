@@ -1,10 +1,11 @@
 # Étude — `app/modules/etude/` (le déclencheur du chef de dossier)
 
-Contrat **1.1.0**. Construit avec M3 (`roadmap/V3/M3-base-connaissance.md` §2, « Le déclencheur » ;
+Contrat **1.2.0** (vue d'écran). Construit avec M3 (`roadmap/V3/M3-base-connaissance.md` §2, « Le déclencheur » ;
 acceptation K10, K11). **État (2026-11-21) : construit et prouvé hors ligne sur société fictive
 ; rangement en base (migration 065) prouvé sur base jetable, tâche planifiée câblée (`app/main.py`,
 toutes les `intervalle_min` minutes) et exécutée sur base jetable — 064/065 PAS ENCORE APPLIQUÉES en
-production. À construire : l'écran (bouton « mettre à l'étude », gestes), les lignes « réel ».**
+production. Écran construit le 2026-11-21 (`app/api/etude_v2.py`, section « Étude de la société » de la
+page de l'émetteur) et prouvé hors ligne. À construire : les lignes « réel ».**
 
 *Ce que ferait un vrai fonds* : c'est le gérant qui dit quoi analyser ; une fois un titre mis à
 l'étude, l'analyste fait avancer son dossier sans qu'on le relance — il relève le courrier, lit ce qui
@@ -68,6 +69,11 @@ tâche planifiée.
 ## Invariant → assert garant
 
 Contrôle : `checks/check_etude.py` (43) ; test négatif : `checks/negatif_etude.sh` (33 mutations).
+L'écran (`vue_ecran`, routes `app/api/etude_v2.py`) : `checks/check_etude_api.py` (24) ; test négatif :
+`checks/negatif_etude_api.sh` (12 mutations). L'acte qui vous revient se dit en mots de gérant
+(`libelles_actes` du référentiel ; une clé absente garde le libellé du chef de dossier) ; l'auteur des
+gestes (`UTILISATEUR`) est ré-exporté du contrat de M1, la route n'importe pas le module de la fiche
+(garde F6 de `check_fiche_lue`).
 En base : `checks/check_connaissance_persist.py` (mêmes gestes en mémoire et en base ; ensemble ou pas
 du tout par vrai ROLLBACK ; verrou entre deux connexions ; ordre des études octet par octet) ; test
 négatif : `checks/negatif_connaissance_persist.sh`.

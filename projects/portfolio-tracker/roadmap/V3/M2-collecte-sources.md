@@ -191,7 +191,7 @@ aucune écriture au journal des sources), ~0,01 $ par source :
   modèle prenait d'abord NOTRE coupe à 6 000 caractères pour un aperçu — elle est maintenant
   annoncée en tête de la publication.
 
-Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) le déclencheur et la tâche de fond qui rangent l'`Envoi` ; (4) l'écran (B12) ; (5) les
+Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) ~~le déclencheur et la tâche de fond qui rangent l'`Envoi`~~ (M3 §5) ; (4) ~~l'écran (B12)~~ (construit avec K12, M3 §5) ; (5) les
 lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).
 
 ## 6. Lire la presse payante — mesures et proposition (2026-11-18, question ouverte)
