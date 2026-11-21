@@ -78,6 +78,10 @@ mutations=(
 "$C¦        pannes.append(f\"mise en lecture : {type(exc).__name__}: {exc}\")¦        return Passage(dossier=dossier, le=le, issue=AVANCE, detail=f\"mise en lecture : {exc}\")¦[T2] la panne n'empêche pas le dossier d'avancer"
 # [T2] la lecture rend le premier passage, pas le dernier.
 "$C¦_passage(passages[-1]) if passages else None¦_passage(passages[0]) if passages else None¦[T2] la lecture du module"
+# [K10] un passage qui dépasse sa durée n'est plus arrêté proprement : la tâche entière tombe.
+"$C¦        except asyncio.TimeoutError:¦        except KeyError:¦[K10] un passage qui dépasse sa durée est arrêté"
+# [K10] l'arrêt n'est pas noté : un dossier qui bloque à chaque passage resterait muet.
+"$C¦            await monde.etude.noter_passage(asdict(p))¦            pass¦[K10] arrêté : le verrou est rendu, l'arrêt noté"
 )
 source "$(dirname "$0")/_negatif.sh"
 run_mutations

@@ -20,6 +20,7 @@ collecte. Rien ici ne connaît une société, un pays ni un formulaire.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -34,6 +35,7 @@ from app.modules.recueil import contrat as R
 from .contrat import (
     AVANCE,
     DEJA_EN_COURS,
+    INTERROMPU,
     NON_ETUDIE,
     RIEN_DE_NEUF,
     Etude,
@@ -204,10 +206,19 @@ async def _passer(monde: Monde, dossier: str, *, le: str) -> Passage:
     return passage
 
 
-async def traiter_les_dossiers(monde: Monde, *, le: str) -> list[Passage]:
+async def traiter_les_dossiers(monde: Monde, *, le: str, delai_par_dossier_s: float | None = None) -> list[Passage]:
+    delai = referentiel()["passage"]["delai_par_dossier_s"] if delai_par_dossier_s is None else delai_par_dossier_s
     rendus = []
     for e in await monde.etude.etudes():
-        rendus.append(await passer(monde, e["dossier"], le=le))
+        try:
+            rendus.append(await asyncio.wait_for(passer(monde, e["dossier"], le=le), timeout=delai))
+        except asyncio.TimeoutError:
+            # Arrêté en route : ce qui était en transaction est annulé, le verrou rendu (`passer`) ;
+            # le passage suivant reprend. Noté, pour qu'un dossier qui bloque à chaque fois se voie.
+            p = Passage(dossier=e["dossier"], le=le, issue=INTERROMPU,
+                        detail=f"passage arrêté après {delai:g} s : le dossier reprendra au passage suivant")
+            await monde.etude.noter_passage(asdict(p))
+            rendus.append(p)
     return rendus
 
 

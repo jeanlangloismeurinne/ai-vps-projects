@@ -10,6 +10,7 @@ Aucune horloge : la date est donnée par l'appelant.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from dataclasses import asdict
@@ -87,7 +88,9 @@ async def lire_documents(depot: Depot, *, recueil_depot: Any, emetteur: str, le:
         if d.empreinte in deja:
             continue
         contenu = await R.lire_contenu(recueil_depot, d.empreinte)
-        texte = L.lire(contenu, d.type_media, regles)
+        # Hors de la boucle principale : lire un rapport annuel de plusieurs mégaoctets prend du temps de
+        # calcul, et la tâche de fond tourne dans le même processus que les écrans.
+        texte = await asyncio.to_thread(L.lire, contenu, d.type_media, regles)
         lecture = Lecture(
             empreinte=d.empreinte, emetteur=emetteur, genre=d.genre, lecteur=regles["version"],
             statut=texte.statut, nb_lignes=len(texte.lignes), raison=texte.raison, detail=texte.detail,

@@ -95,12 +95,15 @@ class _Lecteur(HTMLParser):
 
 
 def _decoder(contenu: bytes, decodages: list[str]) -> str:
+    """Le texte du document. Un caractère nul devient « \ufffd », comme le rend un navigateur (et comme
+    `&#0;` l'est déjà) : la base refuse de ranger un texte qui en contient — sans ce remplacement, la
+    lecture d'un tel document échouerait à chaque passage, sans fin (lecteur 1.1.0)."""
     for enc in decodages[:-1]:
         try:
-            return contenu.decode(enc)
+            return contenu.decode(enc).replace("\x00", "\ufffd")
         except UnicodeDecodeError:
             continue
-    return contenu.decode(decodages[-1], errors="replace")
+    return contenu.decode(decodages[-1], errors="replace").replace("\x00", "\ufffd")
 
 
 _DEVISES = "$€£¥"

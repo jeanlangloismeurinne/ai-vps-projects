@@ -10,7 +10,8 @@ et `negatif_connaissance.sh` prouve que chacune vire au rouge.
        lecteur amélioré ajoute une lecture à côté, les pièces gardent la leur
   [K3] les formes réelles se lisent : communiqué réel (lignes de tableau citables, cellules recollées
        comme imprimées), masqué/script/en-tête de données structurées non lus, bloc dans une cellule,
-       texte brut ; données structurées « sans objet » ; vide → impossible nommé
+       texte brut ; données structurées « sans objet » ; vide → impossible nommé ;
+       un caractère nul se lit « \ufffd » (sinon la base refuserait la lecture)
   [K4] une pièce ne dit que ce que son document écrit : mot pour mot, texte du DOCUMENT ; court et
        unique → sa ligne ; ambigu ou introuvable → refusé ; une ligne répétée nomme ses autres lignes
   [K5] la même pièce citée deux fois n'est rangée qu'une fois
@@ -239,6 +240,11 @@ def main() -> int:
     conv = lect.get("convocation.htm")
     b.check(conv and conv.statut == K.IMPOSSIBLE and conv.raison == "vide" and conv.nb_lignes == 0,
             "[K3] une page sans texte visible : lecture impossible, raison nommée", f"{conv}")
+    from app.modules.connaissance import lecteur as KL
+    nuls = [KL.lire(c, t, KC.referentiel()["lecteur"]).lignes
+            for c, t in ((b"<p>Revenue\x00 $12</p>", "text/html"), (b"Revenue\x00 $12", "text/plain"))]
+    b.check(nuls == [("Revenue\ufffd $12",)] * 2,
+            "[K3] un caractère nul se lit « \ufffd » (comme un navigateur) : la base peut ranger la lecture", f"{nuls}")
 
     # ── [K1] rien sans origine ──────────────────────────────────────────────────────────────
     async def citer(nom, extrait, **kw):

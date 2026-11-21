@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from app.db.database import init_pool, close_pool
 from app.data_collection.data_cache import init_redis, close_redis
@@ -137,6 +138,15 @@ async def startup():
         CronTrigger(day_of_week="mon-fri", hour=17, minute=30, timezone="America/New_York"),
         id="nasdaq_daily", replace_existing=True,
     )
+    # Le déclencheur V3 (module `etude`, M3 §2) : toutes les quelques minutes, chaque société que
+    # l'utilisateur a mise à l'étude avance (relever, lire, avancer). Rien n'est à l'étude : rien ne se
+    # fait. Un passage à la fois (`max_instances`), et un verrou par dossier en base en plus.
+    from app.modules.etude import contrat as etude_contrat
+    scheduler.add_job(
+        _passage_des_etudes,
+        IntervalTrigger(minutes=etude_contrat.intervalle_min(), timezone="Europe/Paris"),
+        id="passage_des_etudes", replace_existing=True, max_instances=1, coalesce=True,
+    )
     scheduler.start()
     logger.info("Portfolio Tracker démarré")
 
@@ -166,6 +176,31 @@ async def _daily_check_v1():
 async def _daily_check_v2():
     from app.calendar.event_router_v2 import EventRouterV2
     await EventRouterV2().process_daily_events()
+
+
+async def _passage_des_etudes():
+    """La tâche de fond du module `etude` : construit le monde réel (une connexion, les outils de la
+    collecte et l'évaluateur avec les clefs du service) et fait passer chaque dossier à l'étude. Sans
+    clef de recherche, rien de payant ne se lance et chaque passage le dit."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from app.db.database import get_db_session
+    from app.modules.etude import contrat as T
+    from app.modules.recueil import contrat as R
+    outils = R.outils_reels(clef_moteur=settings.EXA_API_KEY) if settings.EXA_API_KEY else None
+    evaluateur = (R.evaluateur_reel(outils, clef_modele=settings.DEEPINFRA_API_KEY)
+                  if outils is not None and settings.DEEPINFRA_API_KEY else None)
+    le = datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
+    try:
+        async with get_db_session() as conn:
+            passages = await T.traiter_les_dossiers(T.monde_en_base(conn, outils=outils, evaluateur=evaluateur), le=le)
+    except Exception:  # noqa: BLE001 — la tâche suivante repassera ; la panne se lit au journal du service
+        logger.exception("passage des études : la tâche a échoué")
+        return
+    for p in passages:
+        if p.issue != T.RIEN_DE_NEUF:
+            logger.info("étude %s : %s%s%s", p.dossier, p.issue, f" — arrêt {p.arret}" if p.arret else "",
+                        f" — {p.detail}" if p.detail else "")
 
 
 async def _notes_flash_matin():

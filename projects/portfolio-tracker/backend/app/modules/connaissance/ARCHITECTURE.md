@@ -3,8 +3,8 @@
 Contrat **1.0.0**. Module M3 du plan `roadmap/V3/07-avant-comite.md` ; tri, interface « besoins →
 collecte » et acceptation : `roadmap/V3/M3-base-connaissance.md`. **État (2026-11-21) : le lecteur, les
 pièces, la recherche par les mots et le pas de lecture sont construits et prouvés hors ligne (société
-fictive, communiqué réel). À construire : le rangement en base (tables `connaissance_*`), les besoins,
-le déclencheur, l'écran, les lignes « réel » (K10-K14).**
+fictive, communiqué réel) ; le rangement en base (migration 065, `depot_base.py`) est prouvé sur base
+jetable — 065 PAS ENCORE APPLIQUÉE en production. À construire : l'écran, les lignes « réel » (K12-K14).**
 
 *Ce que ferait un vrai fonds* : on met le document en lecture une fois pour toutes, lignes numérotées ;
 chaque analyste cite sa ligne ; une citation qui ne se retrouve pas mot pour mot n'entre pas au dossier ;
@@ -25,6 +25,9 @@ lisent par `contrat.lire_lignes`.
 contrat.py        objets, dépôt (interface + mémoire), lecture, gestes, pas du chef de dossier
 coeur.py          mettre en lecture, citer, valeur au jour de la lecture, chercher, le pas
 lecteur.py        un document brut → des lignes (bibliothèque standard, aucune règle en dur)
+depot_base.py     le rangement en base (tables `connaissance_lectures`, `_lignes`, `_pieces`, migration 065) :
+                  ajout seul (la base refuse modification et suppression), une lecture nomme son document
+                  de la collecte et une pièce sa lecture par clé étrangère (rien sans origine, par la base)
 citation.py       la vérification mot pour mot — DÉTENTEUR UNIQUE (#126, #141), aussi lu par l'ancien
                   code par le contrat (`app/knowledge/citation.py` n'est plus qu'un ré-export)
 referentiel.json  la façon de lire (blocs, muets, masques, cellules, décodages), sa version, les raisons
@@ -63,10 +66,18 @@ détenteur, `citation.py`).
 | K8 | Tous les mots, classement stable, filtre par genre, recherche vide = rien | [K8] |
 | K9 | Pas de lecture : en cours / fait / indisponible sans document ; 0 $ ; ce qui n'en dépend pas avance | [K9] |
 
+Rangement en base : `checks/check_connaissance_persist.py` (mêmes gestes en mémoire et en base,
+comparés en entier ; ajout seul ; rien sans origine ; caractère nul ; [K5]) ; test négatif
+`checks/negatif_connaissance_persist.sh` (code et migration mutés, sur base jetable).
+
+- **Un caractère nul** dans un document se lit « \ufffd » (lecteur 1.1.0), comme un navigateur : la base
+  refuse de ranger un texte qui en contient, et la lecture aurait échoué à chaque passage, sans fin.
+- **La mise en lecture** tourne hors de la boucle principale (`asyncio.to_thread`) : la tâche de fond vit
+  dans le processus des écrans.
+
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- Le rangement en base (`connaissance_*`, migration 065) : `depot_base` est déclaré au contrat, pas écrit.
-- Les besoins des modules, le déclencheur, l'écran, les lignes « réel » (K10-K14).
+- L'écran, les lignes « réel » (K12-K14).
 - Une pièce dont le même texte figure à plusieurs lignes retient la première : le contexte (tableau
   comptable ou retraité) se juge à la relecture, les autres lignes sont nommées.
 - Un extrait exact sorti de son contexte (négation dans la phrase voisine) passe (#126).

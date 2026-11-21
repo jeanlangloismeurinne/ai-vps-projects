@@ -76,6 +76,8 @@ mutations=(
 "$C¦        if restants:¦        if False:¦[K9] collecte faite, documents pas encore lus"
 # [K9] sans document, le pas se dit fait.
 "$C¦        if not vue.documents:¦        if False:¦[K9] aucun document collecté"
+# [K3] le caractère nul passe tel quel : la base refuserait de ranger la lecture.
+"$L¦            return contenu.decode(enc).replace(\"\\x00\", \"\\ufffd\")¦            return contenu.decode(enc)¦[K3] un caractère nul se lit"
 )
 
 source "$(dirname "$0")/_negatif.sh"

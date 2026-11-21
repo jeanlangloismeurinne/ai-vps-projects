@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; restent base, tâche planifiée, écran, réel
+status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; restent écran, réel
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -177,7 +177,31 @@ structurées). K10 et K11 sur société fictive : `check_etude.py` **39/0**, `ne
   son automate) ; chef 108/0, négatif 27/27.
 - Appris en lisant le parcours en texte : le libellé de l'acte (« relire la sortie du module
   recueil ») est du jargon ; il se dira en mots de gérant à l'écran (K12).
-- Reste : rangement en base (`etude_*`, avec celui de M3), tâche planifiée, écran, lignes « réel ».
+- Reste : écran, lignes « réel » (le rangement en base et la tâche planifiée : ci-dessous).
+
+### Le rangement en base et la tâche planifiée (2026-11-21, suite)
+
+Migration **065** (`connaissance_lectures`, `_lignes`, `_pieces`, `etude_etudes`, `etude_passages`, toutes
+en ajout seul ; une lecture nomme son document de M2 et une pièce sa lecture par clé étrangère — « rien
+sans origine » tenu par la base elle-même). Le verrou par dossier est un verrou de session de la base,
+relâché si la connexion meurt. `check_connaissance_persist.py` **73/0** sur base jetable (063 → 064 →
+065) : le même parcours en mémoire et TOUS les dépôts en base donne les mêmes lectures (études,
+connaissance, collecte, état du dossier) ; ensemble ou pas du tout prouvé par vrai ROLLBACK ; deux
+passages sur deux connexions. Négatif : code 10/10, migration 9/9. La tâche (`app/main.py`, toutes les
+5 minutes) a été exécutée sur la base jetable avec le pool du service : dossier ouvert, collecte lancée,
+sans clef de recherche rien de payant et le passage le dit. Appris en route :
+- **Un caractère nul dans un document** passait le lecteur mais la base refuse de le ranger : la mise en
+  lecture aurait échoué à chaque passage, sans fin. Le lecteur le lit « � » comme un navigateur
+  (lecteur 1.1.0 ; K3 et [P2]).
+- **Un passage pouvait bloquer sans bruit** (réseau qui ne répond plus) et retenir la tâche entière :
+  durée bornée par dossier (référentiel, 10 min), passage arrêté et noté « interrompu », les autres
+  dossiers passent (contrat `etude` 1.1.0).
+- **La langue de la base trie autrement que le code** (« AB » avant « A-C ») : les études se lisent
+  octet par octet.
+- **Le test négatif a trouvé un trou** : des lignes rangées à l'envers ne se voyaient pas (la ligne citée
+  était au milieu d'un texte de trois lignes) ; les lignes de chaque lecture sont désormais comparées.
+- La mise en lecture tourne hors de la boucle principale (un rapport annuel de plusieurs Mo ne fige plus
+  les écrans).
 
 ## 6. Ce que M3 ne fait pas (dit, pas caché)
 

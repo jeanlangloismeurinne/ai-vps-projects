@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-21 nuit (déclencheur `etude` et besoins `comptes` construits hors ligne ; prochain lot : bases 065, tâche planifiée, écran) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-21 nuit, suite (065 et tâche planifiée construites, prouvées sur base jetable ; prochain lot : écran, puis 064+065 en production et lignes « réel ») — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,32 +18,32 @@ role: >
 
 ## ➜ Prochain pas
 
-**Où on en est (2026-11-21 soir)** — rien de M2, M3 ni du déclencheur n'est déployé ; tout est prouvé
-hors ligne sur société fictive :
-- **M2 collecte** (`app/modules/recueil/`) : `check_recueil` 63/0, négatif 43/43 ; moteur Exa, modèle
-  DeepInfra, évaluateur réel (`check_recueil_evaluateur` 101/0, négatif 80/80) ; migration **064 NON
-  appliquée**. Détail : `M2-collecte-sources.md`.
-- **M3 lecture et pièces** (`app/modules/connaissance/`) : `check_connaissance` 49/0, négatif 30/30.
-- **Déclencheur** (`app/modules/etude/`, construit ce soir) et **besoins** (`app/modules/comptes/`,
-  ouvert au registre avec son seul besoin : dernier annuel + données structurées) : `check_etude`
-  39/0, négatif 31/31. Mettre à l'étude (fiche exigée) ; passage = relever (payant, jamais sur un
-  dossier en pause) → lire → avancer et ranger l'état et ce qu'il lance dans UNE transaction ; verrou
-  par dossier ; relecture humaine en donnée (`etude/referentiel.json`) : **un seul arrêt, valider les
-  documents collectés** (arbitrage du 2026-11-21). Le chef de dossier expose ses gestes par son
-  contrat et accepte un interrupteur par pas (chef 108/0, négatif 27/27). Détail : M3 §5.
+**Où on en est (2026-11-21 nuit)** — rien de M2, M3 ni du déclencheur n'est déployé ni appliqué en
+base de production ; tout est prouvé hors ligne (société fictive) et sur base jetable :
+- **M2 collecte** (`app/modules/recueil/`) : `check_recueil` 63/0, négatif 43/43 ; évaluateur réel
+  101/0, négatif 80/80 ; migration **064 NON appliquée**. Détail : `M2-collecte-sources.md`.
+- **M3 lecture et pièces** (`app/modules/connaissance/`, lecteur 1.1.0) : `check_connaissance` 50/0,
+  négatif 31/31.
+- **Déclencheur** (`app/modules/etude/`, contrat 1.1.0) et **besoins** (`comptes`) : `check_etude`
+  43/0, négatif 33/33. Un seul arrêt pour vous : valider les documents collectés. Un passage trop long
+  (10 min) est arrêté et noté « interrompu ».
+- **Rangement en base** de M3 et du déclencheur : migration **065 NON appliquée** (dépend de 064) ;
+  `check_connaissance_persist` 73/0 sur base jetable, négatif 10/10 + 9/9. **Tâche planifiée câblée**
+  (`app/main.py`, `_passage_des_etudes`, toutes les 5 min) et exécutée sur base jetable. Détail : M3 §5.
 
-**Prochain lot (Sonnet suffit : le modèle existe en M1/M2, critère énonçable)** : (1) rangement en base
-de M3 (tables `connaissance_*`, migration **065**) et du déclencheur (tables `etude_*` : études en ajout
-seul, passages, verrou par dossier = `pg_try_advisory_lock` de session ; même migration 065 ou 066) —
-prouvés sur base jetable avec ROLLBACK (K5, K10 « base »), comme `check_recueil_persist` ; (2) la tâche
-planifiée (APScheduler de `app/main.py`, toutes les quelques minutes) qui construit le `Monde` (une
-connexion, `outils_reels`, `evaluateur_reel`, clefs du service) et appelle
-`etude.traiter_les_dossiers` ; (3) écran (B12/K12 : bouton « mettre à l'étude » sur la page de
-l'émetteur, documents, pièces, état du dossier, gestes acte / pause / relance — libellé de l'acte en
-mots de gérant : « valider les documents trouvés ou introuvables ») ; (4) appliquer 064+065(+066),
-déployer, lignes « réel » (K13 : 57 fiches SEC de l'ancien système retrouvées ; K14 : NVDA, RVMD,
-SpaceX ; M2 B3/B6/B10/B13). Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec
-M4. Un dossier terminé ne repart pas quand le parcours s'allonge : à traiter avec M4.
+⚠️ **064 PUIS 065 doivent être appliquées AVANT tout rebuild du backend** : la tâche planifiée lit
+`etude_etudes` toutes les 5 minutes ; sans les tables, elle journalise une erreur à chaque passage
+(sans autre effet). Un rebuild pour un autre motif doit donc appliquer les deux migrations d'abord
+(commande : `CLAUDE.md`, #17 ; ordre : 064 puis 065).
+
+**Prochain lot** : (3) écran (B12/K12 : bouton « mettre à l'étude » sur la page de l'émetteur, documents
+lus et lectures impossibles, pièces et ce que vaut leur source, état du dossier, gestes acte / pause /
+relance — libellé de l'acte en mots de gérant : « valider les documents trouvés ou introuvables » ;
+API par les contrats `etude` et `connaissance`) ; (4) appliquer 064 puis 065, déployer, vérifier dans le
+conteneur, lignes « réel » (K13 : 57 fiches SEC de l'ancien système retrouvées ; K14 : NVDA, RVMD,
+SpaceX ; M2 B3/B6/B10/B13 ; vérifier le crédit DeepInfra par un appel minimal avant). Les demandes « au
+fil du dossier » (M3 §2, 1 bis) se construisent avec M4. Un dossier terminé ne repart pas quand le
+parcours s'allonge : à traiter avec M4.
 
 **SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main ;
 le vrai passage l'écrira, signé du système (passage à blanc du 2026-11-16 : identité complète,
@@ -87,7 +87,7 @@ payante avant le module M6 (carte).**
 - **Chapitres instruits de l'ancien enchaînement** (NVDA, RVMD, MSFT, mesurés le 2026-10-16/17) : archive, « 2026-11-21 — sorti de la reprise » ; ils ne sont pas repris (charte 7).
 - **Suite** `bash backend/checks/run_all.sh` : total, date et commit du dernier passage dans `backend/checks/LIGNE_DE_BASE.md` (écrit par le lanceur — seule source du chiffre, ne pas le recopier ici). Négatifs (2026-10-23, après B4f : explorateur 5/5, architecte 51/51, modèle 71/71, architecture 6/6, périmètre 32/32, ventilation 19/19 — les négatifs se lancent DEPUIS `backend/`).
 - **Production** : rebuild de sécurité du 31/10 (`46a663f`) — embarque B4d, #143, B4f, B4g et le maillon 1 (vérifié fichier par fichier le 2026-11-16) ; M1 pas encore déployé. Migration 062 appliquée. Détail des déploiements et porte de l'architecte NVDA : archive, « 2026-11-13 — sortis de la reprise ».
-- **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; la suivante sera 064, réservée aux tables `recueil_*` de M2 (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
+- **Migration 063 APPLIQUÉE le 2026-11-16** (fiches des émetteurs, journal des sources avec évaluations et mises en suspens, état des dossiers) ; les suivantes : 064 (tables `recueil_*` de M2) puis 065 (`connaissance_*`, `etude_*`), écrites, NON appliquées (062 = PV de l'architecture, appliquée le 2026-10-22 ; 061 = registres du classeur : architectures, fourchettes, scénarios, déplacements ; 060 = geste `retablir` au PV ; 059 = classement décidé par le comité ; 058 = geste `reinitialiser` au PV ; 056/057 = prompt search-worker v5/v6). Catalogue d'événements **1.7.0** ; notes flash 1.7.0 : RVMD #730-#739,
   NVDA #740-#745, MSFT #746-#750.
 - **Réglage `v2_auto_enabled` = FALSE** (le matin ne fait que recenser). Crédit DeepInfra : vérifier par
   un appel minimal avant toute grosse dépense.

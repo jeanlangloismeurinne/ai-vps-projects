@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "_lecteur": "La version du lecteur fait partie de l'identité d'une lecture : un lecteur amélioré produit une lecture NOUVELLE, à côté ; les pièces déjà citées gardent la leur (K2). Toute modification de la façon de lire (blocs, éléments muets, cellules, décodage) monte cette version.",
   "lecteur": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "formats_html": ["text/html", "application/xhtml+xml"],
     "formats_texte": ["text/plain"],
     "formats_sans_objet": ["application/json", "application/xml", "text/xml"],

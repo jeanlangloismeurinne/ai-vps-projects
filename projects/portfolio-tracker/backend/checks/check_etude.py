@@ -7,7 +7,8 @@ sans réseau, sans dépense. Acceptation : `roadmap/V3/M3-base-connaissance.md` 
   [K10] mettre à l'étude : refusé sans fiche (motif), une seule étude par société ; un dossier non mis
         à l'étude n'avance jamais ; la tâche de fond relève, lit et fait avancer sans geste ; l'état
         du dossier et ce qu'il a lancé sont rangés ensemble ou pas du tout ; deux passages
-        simultanés : le second ne fait rien ; rien de payant sur un dossier en pause
+        simultanés : le second ne fait rien ; rien de payant sur un dossier en pause ; un passage qui
+        dépasse sa durée est arrêté, noté, et ne retient pas les autres dossiers
   [K11] les besoins : deux modules qui se recoupent → chaque genre une fois ; un troisième ne change
         aucun code ; un besoin mal formé ou d'un genre inconnu est refusé avec son module ; le besoin
         réel des comptes est celui de l'arbitrage (dernier annuel + données structurées)
@@ -404,6 +405,37 @@ def main() -> int:
     b.check(p_leve and not p_leve.payant_suspendu and f"{EMETTEUR}|derniers_comptes_annuels" in appels[-2:]
             and "autre-inconnue-fictive-etude.example" in ev_appels,
             "[K10] la pause levée, le travail payant reprend", f"{p_leve} {appels[-2:]} {ev_appels}")
+
+    # ── [K10] un passage qui bloque est arrêté, noté, et ne retient pas les autres dossiers ──
+    async def s_bloque():
+        monde, simule = await nouveau_monde()
+        for dossier in (EMETTEUR, AUTRE):
+            await T.mettre_a_l_etude(monde, dossier, par="gerant", motif="initiation", le=JOUR)
+        await T.traiter_les_dossiers(monde, le=JOUR)          # les collectes sont lancées
+        anc = simule.chercher
+
+        async def chercher_bloque(appel):
+            if appel.demande.emetteur == EMETTEUR:
+                await asyncio.sleep(3600)                    # le réseau ne répond plus (simulé)
+            return await anc(appel)
+        simule.chercher = chercher_bloque
+        rendus = await T.traiter_les_dossiers(monde, le=JOUR, delai_par_dossier_s=0.2)
+        reprise = await monde.etude.prendre(EMETTEUR)
+        await monde.etude.rendre(EMETTEUR)
+        return rendus, reprise, await monde.etude.passages(EMETTEUR), \
+            [t["statut"] for t in await monde.recueil.travaux(EMETTEUR)]
+    r = run(s_bloque())
+    rendus, reprise, journal, statuts = r if r else ([], False, [], [])
+    issues = {p.dossier: p.issue for p in rendus}
+    b.check(issues.get(EMETTEUR) == T.INTERROMPU and "reprendra" in rendus[0].detail,
+            "[K10] un passage qui dépasse sa durée est arrêté, motif nommé", f"{rendus[:1]}")
+    b.check(issues.get(AUTRE) == T.AVANCE,
+            "[K10] un dossier bloqué ne retient pas les autres dossiers", f"{issues}")
+    b.check(reprise and journal and journal[-1]["issue"] == T.INTERROMPU and R.LANCEE in statuts,
+            "[K10] arrêté : le verrou est rendu, l'arrêt noté au journal, la collecte reste à relever",
+            f"{reprise} {journal[-1:]} {statuts}")
+    b.check(TC.referentiel()["passage"]["delai_par_dossier_s"] > 0,
+            "[K10] la durée d'un passage est une donnée du référentiel")
 
     # ── [T1] les gestes ─────────────────────────────────────────────────────────────────────
     async def s_gestes():

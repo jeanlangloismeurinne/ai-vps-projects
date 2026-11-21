@@ -27,7 +27,7 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import Any, AsyncContextManager, Callable, Mapping, Protocol, Sequence
 
-VERSION_CONTRAT = "1.0.0"
+VERSION_CONTRAT = "1.1.0"
 NOM_DU_MODULE = "etude"
 
 # Ce qu'un passage a fait sur un dossier.
@@ -35,7 +35,8 @@ AVANCE = "avance"                 # quelque chose a bougé (un travail relevé, 
 RIEN_DE_NEUF = "rien_de_neuf"     # passage fait, rien n'a bougé (non journalisé)
 DEJA_EN_COURS = "deja_en_cours"   # un autre passage tient ce dossier : celui-ci ne fait rien
 NON_ETUDIE = "non_etudie"         # la société n'est pas à l'étude : rien ne se fait
-ISSUES = (AVANCE, RIEN_DE_NEUF, DEJA_EN_COURS, NON_ETUDIE)
+INTERROMPU = "interrompu"         # le passage a dépassé sa durée : arrêté, noté ; le suivant reprend
+ISSUES = (AVANCE, RIEN_DE_NEUF, DEJA_EN_COURS, NON_ETUDIE, INTERROMPU)
 
 
 class GesteRefuse(ValueError):
@@ -199,10 +200,26 @@ async def passer(monde: Monde, dossier: str, *, le: str) -> Passage:
     return await coeur.passer(monde, dossier, le=le)
 
 
-async def traiter_les_dossiers(monde: Monde, *, le: str) -> list[Passage]:
-    """La tâche de fond : un passage sur chaque société à l'étude, l'une après l'autre."""
+async def traiter_les_dossiers(monde: Monde, *, le: str, delai_par_dossier_s: float | None = None) -> list[Passage]:
+    """La tâche de fond : un passage sur chaque société à l'étude, l'une après l'autre. Un passage qui
+    dépasse sa durée (par défaut celle du référentiel) est arrêté et noté « interrompu » : un dossier
+    bloqué ne bloque ni les autres, ni la tâche suivante, et il se voit au journal."""
     from . import coeur
-    return await coeur.traiter_les_dossiers(monde, le=le)
+    return await coeur.traiter_les_dossiers(monde, le=le, delai_par_dossier_s=delai_par_dossier_s)
+
+
+def monde_en_base(connexion: Any, *, outils: Any = None, evaluateur: Any = None) -> Monde:
+    """Le monde de la tâche planifiée : tous les dépôts en base sur UNE connexion que l'appelant
+    possède (les transactions du passage s'y ouvrent). `outils` et `evaluateur` : ceux de la collecte
+    (`recueil.outils_reels`, `recueil.evaluateur_reel`), construits par l'appelant avec les clefs du
+    service ; absents, rien de payant ne se lance et le passage le dit."""
+    from app.modules.chef_de_dossier import contrat as CD
+    from app.modules.connaissance import contrat as K
+    from app.modules.emetteurs import contrat as E
+    from app.modules.recueil import contrat as R
+    return Monde(etude=depot_base(connexion), chef=CD.depot_base(connexion), emetteurs=E.depot_base(connexion),
+                 recueil=R.depot_base(connexion), connaissance=K.depot_base(connexion), outils=outils,
+                 evaluateur=evaluateur, transaction=connexion.transaction)
 
 
 async def enregistrer_acte(monde: Monde, dossier: str, cle: str, *, le: str) -> str:
@@ -224,6 +241,12 @@ async def relancer(monde: Monde, dossier: str, *, pas: str | None = None, le: st
     return await coeur.geste(monde, dossier, "relance", pas=pas, le=le)
 
 
+def intervalle_min() -> int:
+    """Tous les combien de minutes la tâche de fond repasse (référentiel)."""
+    from . import coeur
+    return int(coeur.referentiel()["passage"]["intervalle_min"])
+
+
 def lecture_humaine() -> dict[str, bool]:
     """Les interrupteurs de relecture humaine en vigueur (une copie du référentiel)."""
     from . import coeur
@@ -231,8 +254,9 @@ def lecture_humaine() -> dict[str, bool]:
 
 
 __all__ = [
-    "VERSION_CONTRAT", "NOM_DU_MODULE", "AVANCE", "RIEN_DE_NEUF", "DEJA_EN_COURS", "NON_ETUDIE",
+    "VERSION_CONTRAT", "NOM_DU_MODULE", "AVANCE", "RIEN_DE_NEUF", "DEJA_EN_COURS", "NON_ETUDIE", "INTERROMPU",
+    "monde_en_base",
     "GesteRefuse", "Etude", "Passage", "EtudeLue", "Depot", "DepotMemoire", "depot_base", "Monde",
     "lire_etudes", "mettre_a_l_etude", "passer", "traiter_les_dossiers", "enregistrer_acte",
-    "lever_pause", "relancer", "lecture_humaine",
+    "lever_pause", "relancer", "lecture_humaine", "intervalle_min",
 ]

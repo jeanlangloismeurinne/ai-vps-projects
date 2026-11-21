@@ -1,10 +1,10 @@
 # Étude — `app/modules/etude/` (le déclencheur du chef de dossier)
 
-Contrat **1.0.0**. Construit avec M3 (`roadmap/V3/M3-base-connaissance.md` §2, « Le déclencheur » ;
+Contrat **1.1.0**. Construit avec M3 (`roadmap/V3/M3-base-connaissance.md` §2, « Le déclencheur » ;
 acceptation K10, K11). **État (2026-11-21) : construit et prouvé hors ligne sur société fictive
-(`check_etude.py` 39/0, `negatif_etude.sh` 31/31). À construire : le rangement en base (tables
-`etude_*`), la tâche planifiée qui l'appelle, l'écran (bouton « mettre à l'étude », gestes), les
-lignes « réel ».**
+; rangement en base (migration 065) prouvé sur base jetable, tâche planifiée câblée (`app/main.py`,
+toutes les `intervalle_min` minutes) et exécutée sur base jetable — 064/065 PAS ENCORE APPLIQUÉES en
+production. À construire : l'écran (bouton « mettre à l'étude », gestes), les lignes « réel ».**
 
 *Ce que ferait un vrai fonds* : c'est le gérant qui dit quoi analyser ; une fois un titre mis à
 l'étude, l'analyste fait avancer son dossier sans qu'on le relance — il relève le courrier, lit ce qui
@@ -27,7 +27,14 @@ quelque chose, l'état du dossier en clair.
    ont décidé (demandes à lancer, dépense déclarée) ensemble ou pas du tout.
 
 Une panne en 2 ou 3 se dit dans le passage (`Passage.detail`) et n'empêche pas la 4. Seuls les
-passages qui ont fait quelque chose sont notés.
+passages qui ont fait quelque chose sont notés. **Un passage qui dépasse sa durée** (référentiel,
+`passage.delai_par_dossier_s`) est arrêté et noté `interrompu` (contrat 1.1.0) : ce qui était en
+transaction est annulé, le verrou rendu, les autres dossiers passent, le suivant reprend — un blocage
+ne reste jamais muet.
+
+**La tâche planifiée** (`app/main.py`, `_passage_des_etudes`) construit le monde par
+`contrat.monde_en_base` (tous les dépôts sur une connexion, les outils et l'évaluateur avec les clefs du
+service ; sans clef de recherche, rien de payant et le passage le dit). Une seule instance à la fois.
 
 **Le parcours** (`coeur.parcours`) : fiche → collecte des besoins → suivi de l'évaluation des sources
 (après la collecte) → mise en lecture (après la collecte). Chaque module accepté y ajoutera son pas.
@@ -48,7 +55,10 @@ dossier s'arrête une fois, après la collecte ; rétablir une relecture = bascu
 ```
 contrat.py        objets, dépôt (interface + mémoire), Monde (ce qui est injecté), lecture, gestes
 coeur.py          besoins, parcours, passage, gestes, lecture
-referentiel.json  relecture humaine, noms des pas
+referentiel.json  relecture humaine, noms des pas, durée d'un passage et intervalle de la tâche
+depot_base.py     le rangement en base (`etude_etudes`, `etude_passages`, migration 065, ajout seul) et le
+                  verrou par dossier : `pg_try_advisory_lock` de SESSION (tient entre connexions, relâché
+                  par la base si la connexion meurt ; la même connexion ne le reprend pas)
 ```
 
 Le `Monde` injecte les dépôts des modules, le rangement de l'état des dossiers, les outils de
@@ -57,7 +67,10 @@ tâche planifiée.
 
 ## Invariant → assert garant
 
-Contrôle : `checks/check_etude.py` ; test négatif : `checks/negatif_etude.sh` (31 mutations).
+Contrôle : `checks/check_etude.py` (43) ; test négatif : `checks/negatif_etude.sh` (33 mutations).
+En base : `checks/check_connaissance_persist.py` (mêmes gestes en mémoire et en base ; ensemble ou pas
+du tout par vrai ROLLBACK ; verrou entre deux connexions ; ordre des études octet par octet) ; test
+négatif : `checks/negatif_connaissance_persist.sh`.
 
 | Invariant | Assert |
 |---|---|
@@ -68,15 +81,14 @@ Contrôle : `checks/check_etude.py` ; test négatif : `checks/negatif_etude.sh` 
 | Bout en bout sans geste sauf la relecture de la collecte ; dépense déclarée | [K10] [L1] |
 | État et demandes lancées : ensemble ou pas du tout ; le refus se dit | [K10] |
 | Deux passages simultanés : le second ne fait rien | [K10] |
+| Un passage trop long : arrêté, noté, verrou rendu ; les autres dossiers passent | [K10] |
 | Rien de payant sur un dossier en pause, ni par le passage d'un autre dossier | [K10] |
 | Gestes : refus nommés | [T1] |
 | Journal : seuls les passages utiles ; une panne se dit et n'arrête pas | [T2] |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
-- **Le rangement en base** (`depot_base.py`, tables `etude_*`) : l'atomicité est prouvée en mémoire
-  par une transaction simulée ; la base le prouvera par ROLLBACK.
-- **La tâche planifiée et l'écran** : rien n'appelle encore `traiter_les_dossiers`.
+- **L'écran** : ni bouton « mettre à l'étude », ni gestes (acte, pause, relance) à l'écran.
 - **Le libellé de l'acte** de relecture est celui, générique, du chef de dossier (« relire la sortie
   du module « recueil » ») : à dire en mots de gérant à l'écran (« valider les documents trouvés ou
   introuvables »).
