@@ -45,6 +45,12 @@ Spec et docs : `docs/gmail-forward/` (`SPEC.md`, `TUTORIEL.md`, `CONSTATS.md`, `
 
 ## Reste à faire / dettes ouvertes
 
+- **2026-11-21 — version texte figée (livré, déployé, rattrapé)** : Payload (routeur Omeda) envoie un text/plain figé sur
+  un vieux numéro ; `_to_plain` résume désormais le HTML quand le texte en reprend < 50 % du vocabulaire (sains ≥ 0,69,
+  Payload ≤ 0,40 sur 449 mails). `check_text_html` + 4 mutations. Digest de rattrapage des 20 numéros envoyé le 21/11.
+  Mineur : l'avertissement est journalisé 2× par mail (`_prepare` puis `summarize_html` appellent chacun `_to_plain`).
+  Si un nouvel expéditeur s'approche du seuil, relancer la mesure de concordance avant de toucher au 0,5.
+
 - **2026-10-14 — destinataires fixes par alias (livré, déployé)** : `aliases.recipients` (liste, 50 max) ; vide = réponse à
   l'expéditeur. Un lot part en **un seul e-mail** (gateway : `to` en tableau, commit 777226a) ; en mode dev, une seule copie au
   compte Resend. Vérifié en prod par refus (API 400 sur l'alias par défaut / adresse invalide ; gateway 400 liste hors email).
