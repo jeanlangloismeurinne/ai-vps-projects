@@ -611,15 +611,17 @@ def main() -> int:
     b.check(not tr.trouves and "sans titre" in tr.detail and not [c for c in net.vers(U_RECH) if c.get("excludeDomains")],
             "[P5] un aperçu sans titre : nommé, aucune recherche payée", f"{tr.detail}")
 
-    # [P6] l'évaluateur remplace l'aperçu par sa reprise et rejuge une fois.
+    # [P6] l'évaluateur remplace l'aperçu par sa reprise et rejuge une fois. L'aperçu qui finit sur
+    # une phrase entière (coupé AVANT le corps) : rien ne le signale avant le modèle, c'est lui qui le dit.
     SR = "reuters.com"
     pubs = [f"https://www.{SR}/a{i}" for i in range(1, N + 1)]
+    AP_FIN = AP_TXT[: AP_TXT.rindex("call.") + len("call.")]
 
-    def monde_ev(modele, suivis, refus=1):
+    def monde_ev(modele, suivis, refus=1, texte=AP_FIN):
         pages = {u: article(u) for u in pubs}
         for u in pubs[:refus]:
             pages[u] = AD.Lu(401)
-        envois = {U_CONT: [js({"results": [{"id": u, "url": u, "title": AP_T, "text": AP_TXT} for u in pubs[:refus]],
+        envois = {U_CONT: [js({"results": [{"id": u, "url": u, "title": AP_T, "text": texte} for u in pubs[:refus]],
                                "costDollars": {"total": 0.001 * refus}})],
                   U_RECH: list(suivis), U_DI: modele}
         return Reseau(pages, envois)
@@ -654,6 +656,58 @@ def main() -> int:
             and len(net.vers(U_RECH)) == 1,
             "[P6] sans reprise pour chaque aperçu : échec nommé (V8) qui dit ce qui a été cherché ; un seul jugement, "
             "les recherches s'arrêtent au premier manque", f"{err} {len(net.vers(U_RECH))}")
+
+    # [P8] un texte relu par le moteur qui s'arrête en cours de phrase est suivi AVANT le modèle
+    # (M2 §8, accord de l'utilisateur du 2026-11-21) : le modèle avait jugé complet l'aperçu Visa réel.
+    plaf = EXA["caracteres_par_page"]
+    b.check(AP.interrompu(AP_TXT) and AP.interrompu("Results came in at We did n")
+            and AP.interrompu("The outlook is as follows:"),
+            "[P8] l'aperçu réel (« … jumped 9% in the »), un mot coupé, un deux-points final : interrompus",
+            repr(AP_TXT[-40:]))
+    b.check(not AP.interrompu(AP_FIN) and not AP.interrompu('He said "it is done."') and not AP.interrompu("Done (see note.)")
+            and not AP.interrompu("Fin de l'article !**") and not AP.interrompu(""),
+            "[P8] une fin de phrase, même suivie de guillemets, parenthèses ou emphase fermants, n'est pas interrompue", "")
+    b.check(not AP.interrompu("x" * plaf, plafond=plaf) and AP.interrompu("x" * (plaf - 10), plafond=plaf),
+            "[P8] un texte qui atteint le plafond demandé au moteur a été coupé par l'équipe : pas suspect", "")
+    long_coupe = ("Le chiffre d'affaires progresse au trimestre selon la société. " * (plaf // 40))[:plaf]
+    net = monde_ev([di(reponse_modele(pubs[1:] + pubs[:1]), cout=0.0004)], [exa_textes(REEL["resultats"])],
+                   texte=long_coupe)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    b.check(e is not None and AP.interrompu(long_coupe) and not net.vers(U_RECH),
+            "[P8] un texte qui atteint le plafond demandé au moteur n'est pas suivi par l'évaluateur (aucune recherche)",
+            f"{err} rech={len(net.vers(U_RECH))}")
+    # Reprise trouvée : le modèle ne voit jamais l'aperçu, un seul jugement.
+    net = monde_ev([di(reponse_modele(pubs), cout=0.0004)], [exa_textes(REEL["resultats"])], texte=AP_TXT)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    appels = net.vers(U_DI)
+    m1 = appels[0]["messages"][1]["content"] if appels else ""
+    b.check(e is not None and len(appels) == 1 and EVJ["entete_reprise"].format(lieu=R_REPRISE) in m1
+            and (AP_TXT[-60:] + "\n") not in m1 + "\n" and len(net.vers(U_RECH)) == 1,
+            "[P8] le texte interrompu est remplacé par sa reprise avant le modèle : un seul jugement, sur la reprise",
+            f"{err} appels={len(appels)} rech={len(net.vers(U_RECH))}")
+    b.check(abs(dep.modeles_usd - 0.0004) < 1e-9 and abs(dep.web_usd - 0.010) < 1e-9,
+            "[P8] dépense = un jugement + texte de l'aperçu + une recherche", f"{dep}")
+    # La reprise elle-même déclarée incomplète : nommé, rien n'est recherché une seconde fois.
+    net = monde_ev([di(reponse_modele(pubs[1:] + pubs[:1], incompletes=pubs[:1]), cout=0.0004)],
+                   [exa_textes(REEL["resultats"])],
+                   texte=AP_TXT)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    b.check(e is None and "elle-même incomplète" in str(err) and len(net.vers(U_RECH)) == 1,
+            "[P8] une reprise jugée incomplète n'est pas suivie à nouveau : échec nommé", f"{err}")
+    # Sans reprise : le modèle juge comme avant ; s'il le dit incomplet, la recherche n'est pas repayée.
+    net = monde_ev([di(reponse_modele(pubs), cout=0.0004)], [exa_textes([])], texte=AP_TXT)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    m1 = (net.vers(U_DI) or [{"messages": [{}, {"content": ""}]}])[0]["messages"][1]["content"]
+    b.check(e is not None and "jumped 9% in the" in m1 and len(net.vers(U_RECH)) == 1,
+            "[P8] sans reprise, le modèle juge le texte comme avant (accord : « sinon le modèle juge comme aujourd'hui »)",
+            f"{err}")
+    net = monde_ev([di(reponse_modele(pubs[1:] + pubs[:1], incompletes=pubs[:1]), cout=0.0004)], [exa_textes([])],
+                   texte=AP_TXT)
+    e, dep, err = run(evaluer(net, adresses=pubs, source=SR), n=6)
+    b.check(e is None and err is not None and "reprises cherchées" in str(err) and "aucune reprise reconnue" in str(err)
+            and len(net.vers(U_RECH)) == 1 and len(net.vers(U_DI)) == 1,
+            "[P8] déclaré aperçu après un suivi sans reprise : échec nommé qui dit ce qui a été cherché, "
+            "aucune recherche repayée", f"{err} rech={len(net.vers(U_RECH))}")
 
     # [P7] DeepInfra : niveau de service, cache, préfixe commun ; aucun modèle dans le suivi.
     net, _, _, _ = run(completer([di({"ok": True})]), n=4)

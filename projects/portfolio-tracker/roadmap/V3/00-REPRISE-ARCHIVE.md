@@ -9,6 +9,16 @@ role: Historique intégral des MàJ du chantier V2 (cartes de provenance), extra
 # Archive — journal du chantier V2 (provenance cards)
 
 
+
+## 2026-11-21 — sorti de la reprise
+
+**Fait le 2026-11-19** (accord de l'utilisateur sur §6) : un aperçu d'article payant est un signal
+(#149) — UNE recherche par son titre rend la pièce d'origine (lieux de la fiche) ou la reprise sous
+licence reconnue par le CODE (agence nommée, phrase entière commune, plus longue) ; collecte et
+évaluateur. DeepInfra : niveau « flex » (−20 %), partie fixe du message en tête (cache), le modèle
+désigne les publications par numéro. `check_recueil_evaluateur` 92/0, négatif 71/71. Essais réels en
+mémoire : Broadridge → communiqué d'origine ; Reuters → admise via deux reprises. Détail : M2 §7.
+
 ## 2026-10-19 — sortis à la clôture du point 13
 
 **Point 14 CONSTRUIT le 2026-10-18** (`8af6f4a`, CONVENTIONS #137) : une réponse écrite sert la demande

@@ -151,6 +151,24 @@ mutations=(
 "$EV¦        if p.lu_chez:¦        if False:¦[P6] le modèle sait où"
 # [P6] les publications inchangées ne passent plus d'abord.
 "$EV¦key=lambda p: p.adresse in reprises)¦key=lambda p: 0)¦[P6] les publications inchangées d'abord"
+# [P8] le texte interrompu n'est plus suivi avant le modèle.
+"$EV¦                        if AP.interrompu(t.texte, plafond=plafond) and hasattr(self._moteur, \"rechercher\"):¦                        if False:¦[P8] le texte interrompu est remplacé par sa reprise avant le modèle"
+# [P8] seule la coupe en plein mot compte (la proposition d'origine) : l'aperçu réel passe.
+"$APS¦    return t[-1] not in ref()[\"fins_de_phrase\"]¦    return t[-1].isalpha() and len(t.split()[-1]) < 3¦[P8] l'aperçu réel"
+# [P8] guillemets et parenthèses fermants ne sont plus retirés.
+"$APS¦    t = texte.strip().rstrip(ref()[\"fermants\"]).rstrip()¦    t = texte.strip()¦[P8] une fin de phrase, même suivie"
+# [P8] le plafond de l'équipe n'est plus reconnu.
+"$APS¦    if not t or (plafond and len(texte.strip()) >= plafond):¦    if not t:¦[P8] un texte qui atteint le plafond"
+# [P8] l'évaluateur ne passe plus le plafond.
+"$EV¦        plafond = int(getattr(self._moteur, \"caracteres_par_page\", 0) or 0)¦        plafond = 0¦[P8] un texte qui atteint le plafond demandé au moteur n'est pas suivi par l'évaluateur"
+# [P8] la reprise trouvée avant le modèle est jetée.
+"$EV¦                                t = suite.reprise¦                                pass¦[P8] le texte interrompu est remplacé"
+# [P8] le suivi d'avant le modèle n'est pas compté.
+"$EV¦                            depense = depense.plus(suite.depense)¦                            pass¦[P8] dépense = un jugement"
+# [P8] un suivi sans reprise est repayé après le jugement.
+"$EV¦        cherche = [f\"{a} : {d}\" for a, d in suivis.items() if a in apercus]¦        cherche = []¦[P8] déclaré aperçu après un suivi sans reprise"
+# [P8] une reprise jugée incomplète est suivie à nouveau.
+"$EV¦                if p.adresse in apercus and p.lu_chez:¦                if False:¦[P8] une reprise jugée incomplète"
 # [P7] le niveau de service n'est plus demandé.
 "$D¦                 \"service_tier\": _ref()[\"niveau_de_service\"],¦¦[P7] la demande porte le niveau de service"
 # [P7] les jetons en cache au prix plein.

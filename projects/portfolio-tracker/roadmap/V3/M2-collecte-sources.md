@@ -299,3 +299,36 @@ compté comme publication (les deux autres étaient de vraies reprises, le verdi
 Proposition : un texte lu par le moteur après un accès refusé et qui s'arrête en plein mot est
 suivi AVANT le modèle (code, ~0,008 $ Exa par page) ; sa reprise, si elle existe, le remplace, sinon
 le modèle juge comme aujourd'hui. Coût Exa contre rigueur : à trancher.
+
+## 8. Texte coupé en cours de phrase : suivi avant le modèle (accord de l'utilisateur, 2026-11-21)
+
+Accord : « ok pour ta proposition sur les sources tronquées » (§7, fin).
+
+**Précisé avant d'écrire** : la proposition disait « en plein mot ». L'aperçu Visa réel de la fixture
+(copié le 2026-11-19, 1 000 caractères) finit sur « … jumped 9% in the » : des mots entiers, une phrase
+interrompue. Une règle « en plein mot » l'aurait laissé passer. Règle construite : **un texte relu par
+le moteur après un accès refusé qui ne finit pas sur une fin de phrase** (`.!?…`, après guillemets,
+parenthèses et emphase fermants ; `apercus.json` 1.1.0) est interrompu — le mot coupé en est un cas.
+Un texte qui atteint le plafond demandé au moteur (12 000 caractères) a été coupé par nous : pas suspect.
+Les textes lus en direct ne sont pas concernés (aucune mesure ne les montre coupés).
+
+Ce que fait l'évaluateur : le texte interrompu est suivi (`apercus.suivre`, une recherche, aucun
+modèle) AVANT le jugement ; sa reprise reconnue le remplace (le modèle ne voit jamais l'aperçu, un seul
+jugement). Sans reprise, le modèle juge le texte comme avant ; s'il le déclare aperçu, l'échec nommé dit
+ce qui a été cherché et la recherche n'est pas repayée. Une reprise elle-même déclarée incomplète n'est
+pas suivie à nouveau.
+
+Preuve : `check_recueil_evaluateur.py` **101/0** ([P8], sept lignes ; [P6] passe désormais sur un aperçu
+qui finit sur une phrase entière, le cas que seul le modèle peut signaler), `negatif_recueil_evaluateur.sh`
+**80/80** (neuf mutations [P8], dont « la règle en plein mot seulement » : rouge sur l'aperçu réel) ;
+`check_recueil` 63/0, `negatif_recueil` 43/43, charte 22/0.
+
+**Essai réel en mémoire (2026-11-21, reuters.com, la dépêche Visa rencontrée)** : deux passages,
+~0,033 $ Exa et ~0,0011 $ de modèle au total. Au second (outil d'essai qui imprime désormais chaque
+publication lue, son lieu de lecture et sa fin) : la dépêche **Lennar** relue par le moteur était
+interrompue → suivie avant le modèle → reprise reconnue chez marketscreener.com → un seul jugement
+(0,0003 $), Reuters admise (presse financière, 15/15). La dépêche Visa a été lue en entier ce jour-là
+(6 000 caractères, coupe de l'équipe) : le cas du 2026-11-19 ne s'est pas reproduit, la règle l'est
+par la fixture copiée du réel.
+
+Reste ouvert (dit) : un aperçu qui finit sur une phrase entière et que le modèle juge complet.

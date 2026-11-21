@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-19 (presse payante : étages 1 et 2 construits, #149 ; DeepInfra : flex, cache, numéros ; question ouverte : aperçu jugé complet) ; 2026-11-18 soir (grille 1.3.0 appliquée ; V4.1-Flash retenu ; règle « un aperçu n'est pas une publication » ; question ouverte : lire la presse payante) ; 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-21 (texte du moteur coupé en cours de phrase : suivi avant le modèle, M2 §8, accord de l'utilisateur) ; 2026-11-19 (presse payante : étages 1 et 2 construits, #149 ; DeepInfra : flex, cache, numéros ; question ouverte : aperçu jugé complet) ; 2026-11-18 soir (grille 1.3.0 appliquée ; V4.1-Flash retenu ; règle « un aperçu n'est pas une publication » ; question ouverte : lire la presse payante) ; 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -25,15 +25,12 @@ VPS tant qu'elle ne l'est pas). **Moteur Exa, modèle DeepInfra et évaluateur r
 2026-11-18** (`check_recueil_evaluateur.py` 53/0, négatif 38/38 ; essais réels en mémoire :
 `tools/essai_evaluateur.sh <domaine>`).
 
-**Fait le 2026-11-19** (accord de l'utilisateur sur §6) : un aperçu d'article payant est un signal
-(#149) — UNE recherche par son titre rend la pièce d'origine (lieux de la fiche) ou la reprise sous
-licence reconnue par le CODE (agence nommée, phrase entière commune, plus longue) ; collecte et
-évaluateur. DeepInfra : niveau « flex » (−20 %), partie fixe du message en tête (cache), le modèle
-désigne les publications par numéro. `check_recueil_evaluateur` 92/0, négatif 71/71. Essais réels en
-mémoire : Broadridge → communiqué d'origine ; Reuters → admise via deux reprises. Détail : M2 §7.
+Le 2026-11-19 (#149, presse payante : pièce d'origine ou reprise sous licence) : archive, « 2026-11-21 ».
 
-**En attente de l'utilisateur** : le modèle a jugé complet un aperçu Reuters coupé en plein mot ;
-proposition (suivre avant le modèle un texte coupé en plein mot, ~0,008 $ Exa/page) : M2 §7, fin.
+**Fait le 2026-11-21** (accord de l'utilisateur) : un texte relu par le moteur qui s'arrête en cours de
+phrase (pas seulement « en plein mot » : l'aperçu Visa réel finit sur « in the ») est suivi AVANT le
+modèle ; sa reprise le remplace, sinon le modèle juge comme avant. `check_recueil_evaluateur` 101/0,
+négatif 80/80. Essai réel : Lennar (Reuters) → reprise marketscreener avant le jugement. Détail : M2 §8.
 
 **Prochain pas (Opus)** : le déclencheur + la tâche de fond qui rangent l'`Envoi` (appliquer 064
 avant), l'écran (B12), enfin les lignes « réel » (SpaceX B3/B10, une évaluation B6 en production,

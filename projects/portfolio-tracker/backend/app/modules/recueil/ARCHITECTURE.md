@@ -58,7 +58,9 @@ cumule sur la source ; deux essais manqués = échec nommé). **Un aperçu n'est
 (arbitrage du 2026-11-18) : le modèle dit d'abord si chaque texte est complet ; un aperçu d'article
 payant ne compte pas, et s'il en manque, `EvaluationImpossible` les désigne. Notre propre coupe
 (`caracteres_par_publication`) est annoncée en tête et en fin du texte pour ne pas passer pour un
-aperçu. Modèle : DeepSeek-V4.1-Flash (référentiel 1.1.0 ; mesures et raison du choix dans
+aperçu. Un texte relu par le moteur qui s'arrête en cours de phrase (`apercus.interrompu`, hors plafond
+demandé au moteur) est suivi AVANT le modèle (M2 §8) : sa reprise le remplace ; sans reprise, le
+modèle le juge, et s'il le déclare aperçu, la recherche n'est pas repayée. Modèle : DeepSeek-V4.1-Flash (référentiel 1.1.0 ; mesures et raison du choix dans
 `evaluateur.json`, `_modele`).
 
 - **Ordre d'autorité** : registre officiel, site de l'émetteur, web. On s'arrête à la première
@@ -118,10 +120,10 @@ de `depot_base.py` + 9 de la migration 064, toutes détectées le 2026-11-16).
 | B11 | PDF, page vide, registre en erreur deux fois : indisponible nommé ; une seule seconde tentative | [B11] |
 
 **Le moteur, le modèle et l'évaluateur réels** : contrôle `checks/check_recueil_evaluateur.py`
-(92 vérifications le 2026-11-19, transport simulé dont les réponses copient la forme réelle relevée
+(101 vérifications le 2026-11-21, transport simulé dont les réponses copient la forme réelle relevée
 les 18 et 19 novembre ; fixture d'aperçu Reuters et de ses reprises copiée du réel :
 `checks/fixtures/recueil/apercu_reuters.json`) ; test négatif `checks/negatif_recueil_evaluateur.sh`
-(71 mutations, toutes détectées le 2026-11-19).
+(80 mutations, toutes détectées le 2026-11-21).
 
 | Ligne | Invariant | Assert |
 |---|---|---|
@@ -142,14 +144,15 @@ les 18 et 19 novembre ; fixture d'aperçu Reuters et de ses reprises copiée du 
 | P4 | Le diffuseur n'est jamais une source rencontrée | [P4] |
 | P5 | Rien de reconnu ou sans titre : indisponibilité « apercu » nommée ; suivi payé et compté ; au plus `suivis_max_par_demande` | [P5] |
 | P6 | Évaluateur : aperçus remplacés par leurs reprises, un seul second jugement, publications inchangées d'abord ; recherches arrêtées au premier manque | [P6] |
+| P8 | Texte du moteur interrompu en cours de phrase (pas au plafond demandé) : suivi avant le modèle, remplacé par sa reprise (un seul jugement) ; sans reprise, jugé comme avant ; déclaré aperçu ensuite : échec nommé sans recherche repayée ; une reprise jugée incomplète n'est pas resuivie | [P8] |
 | P7 | DeepInfra : niveau de service, prix en cache, partie fixe du message en tête (cache d'une source à l'autre) ; aucun modèle dans le suivi | [P7] |
 
 ## Ce qui n'existe pas encore (dit, pas caché)
 
 - **Une source payante inconnue n'est évaluée que si ses aperçus ont des reprises reconnues** (étage 2,
-  #149) ; sinon échec nommé, arbitrage à l'écran. L'étage « abonnement » n'est pas construit. Le modèle
-  peut juger complet un aperçu coupé en milieu de phrase (relevé le 2026-11-19 sur une dépêche Reuters
-  de 1 000 caractères) : alors il n'est pas suivi.
+  #149) ; sinon échec nommé, arbitrage à l'écran. L'étage « abonnement » n'est pas construit. Un aperçu
+  qui finit sur une phrase entière et que le modèle juge complet n'est pas suivi (le texte coupé en
+  cours de phrase, lui, l'est depuis le 2026-11-21, M2 §8).
 - Le modèle rend parfois une réponse hors forme (2 sur ~20 appels mesurés) : échec nommé, la
   relance du cœur la rejoue.
 - **Le déclencheur** qui appelle le chef de dossier, la tâche de fond (`traiter_les_travaux`,

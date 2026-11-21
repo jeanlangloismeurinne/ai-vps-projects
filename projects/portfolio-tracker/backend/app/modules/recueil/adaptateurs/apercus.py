@@ -60,6 +60,16 @@ def phrases(texte: str) -> list[str]:
     return out
 
 
+def interrompu(texte: str, *, plafond: int = 0) -> bool:
+    """Le texte s'arrête-t-il en cours de phrase (en plein mot ou entre deux mots) ? C'est la marque
+    d'un texte que le site a coupé (M2 §8) ; un texte qui atteint `plafond` (ce que l'équipe demande
+    au moteur) a été coupé par nous, il n'est pas suspect."""
+    t = texte.strip().rstrip(ref()["fermants"]).rstrip()
+    if not t or (plafond and len(texte.strip()) >= plafond):
+        return False
+    return t[-1] not in ref()["fins_de_phrase"]
+
+
 def nom_de_l_agence(source: str) -> str:
     """« reuters.com » → reuters ; « nikkei.co.jp » → nikkei ; « markets.ft.com » → ft."""
     etiquettes = [e for e in source.lower().split(".") if e]

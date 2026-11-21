@@ -32,6 +32,11 @@ class MoteurExa:
     def __init__(self, transport: Poste, clef: str) -> None:
         self._transport, self._clef = transport, clef
 
+    @property
+    def caracteres_par_page(self) -> int:
+        """Ce que l'équipe demande au plus par page : un texte de cette longueur a été coupé par nous."""
+        return int(_ref()["caracteres_par_page"])
+
     async def _demander(self, quoi: str, corps: Mapping[str, Any]) -> Mapping[str, Any]:
         if not self._clef:
             raise MoteurInjoignable("Exa : aucune clef")

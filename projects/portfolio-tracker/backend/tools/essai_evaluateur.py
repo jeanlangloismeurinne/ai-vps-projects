@@ -37,8 +37,14 @@ class _Memo:
     async def publications(self, source, adresses, n):
         if self._lu is None:
             self._lu = await self._orig(source, adresses, n)
+            for t in self._lu[0]:
+                print(f"lue : {t.adresse} — {len(t.texte)} caractères"
+                      + (f" — reprise lue chez {t.lu_chez}" if t.lu_chez else "") + f" — fin : {t.texte[-50:]!r}")
+            for a, d in self._lu[3].items():
+                print(f"suivie sans reprise : {a} — {d}")
+            print(f"lecture : {self._lu[1]}")
             return self._lu
-        return self._lu[0], type(self._lu[1])(), self._lu[2]
+        return self._lu[0], type(self._lu[1])(), *self._lu[2:]
 
 
 async def main(source: str, adresses: list[str], repetitions: int, modele: str | None) -> int:

@@ -3805,7 +3805,10 @@ nomme l'agence, contient mot pour mot une phrase entière de l'aperçu (au moins
 plus longue que lui. Elle est rangée sous l'adresse de l'agence (c'est l'agence que M1 qualifie) et
 lue chez le diffuseur, qui n'est jamais une source rencontrée. Pour l'évaluateur, une publication
 déclarée aperçu est remplacée par sa reprise reconnue, et le modèle rejuge une fois. Sinon l'échec
-est nommé. L'étage « abonnement » n'est pas construit.
+est nommé. L'étage « abonnement » n'est pas construit. **Complément du 2026-11-21** (accord de
+l'utilisateur) : un texte relu par le moteur qui s'arrête en cours de phrase (pas au plafond qu'on
+demande au moteur) est un aperçu probable, suivi AVANT le modèle ; sa reprise le remplace, sinon le
+modèle juge comme avant et la recherche n'est pas repayée (M2 §8, `[P8]`).
 
 **Construit (2026-11-19, hors ligne + essais réels en mémoire).** `recueil/adaptateurs/apercus.py`
 (+ `apercus.json`), branché dans `web.py` et `evaluateur.py` ; preuve `check_recueil_evaluateur.py`

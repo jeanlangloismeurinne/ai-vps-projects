@@ -13,7 +13,9 @@ hors de la forme demandée, ou qui porte sur une page qu'on ne lui a pas donnée
 
 Un aperçu n'est pas une publication (arbitrage du 2026-11-18) : le modèle dit pour chaque texte s'il
 est complet ; une publication incomplète (un article payant dont le moteur ne rend que le début) ne
-compte pas, et s'il en manque, c'est un échec nommé qui les désigne.
+compte pas, et s'il en manque, c'est un échec nommé qui les désigne. Un texte relu par le moteur
+qui s'arrête en cours de phrase est suivi AVANT le modèle (M2 §8, accord du 2026-11-21) : le modèle
+avait jugé complet un aperçu Reuters coupé net ; sa reprise sous licence, si elle existe, le remplace.
 """
 from __future__ import annotations
 
@@ -164,12 +166,16 @@ class EvaluateurDeSources:
     def __init__(self, *, transport: Any, moteur: Any, modele: Any) -> None:
         self._transport, self._moteur, self._modele = transport, moteur, modele
 
-    async def _publications(self, source: str, adresses: Sequence[str], n: int) -> tuple[list[Texte], Depense, list[str]]:
+    async def _publications(self, source: str, adresses: Sequence[str],
+                            n: int) -> tuple[list[Texte], Depense, list[str], dict[str, str]]:
         """Au moins `n` publications lisibles de la source : celles rencontrées d'abord ; une recherche
         limitée au domaine seulement s'il en manque ; chaque page lue en direct, à défaut par le texte
-        du moteur. Rien hors du domaine de la source."""
+        du moteur. Rien hors du domaine de la source. Rend aussi les suivis faits sans reprise trouvée
+        (adresse → ce qui a été cherché) : ils ne se repaient pas après le jugement."""
         ref = referentiel()
         depense, notes = Depense(), []
+        suivis: dict[str, str] = {}
+        plafond = int(getattr(self._moteur, "caracteres_par_page", 0) or 0)
         lues: list[Texte] = []
         vues: set[str] = set()
         candidats = [a for a in dict.fromkeys(adresses) if _de_la_source(source, a)][: ref["candidats_max"]]
@@ -198,6 +204,15 @@ class EvaluateurDeSources:
                 depense = depense.plus(d)
                 for t in textes:
                     if len(lues) < n and len(t.texte) >= ref["caracteres_min"]:
+                        if AP.interrompu(t.texte, plafond=plafond) and hasattr(self._moteur, "rechercher"):
+                            # Le site a coupé ce texte en cours de phrase : un aperçu que le modèle
+                            # peut croire complet (mesuré le 2026-11-19). Suivi avant tout jugement.
+                            suite = await AP.suivre(self._moteur, t, source=source)
+                            depense = depense.plus(suite.depense)
+                            if suite.reprise is not None:
+                                t = suite.reprise
+                            else:
+                                suivis[t.adresse] = suite.detail
                         lues.append(t)
             if len(lues) >= n or not recherches:
                 break
@@ -210,7 +225,7 @@ class EvaluateurDeSources:
             # des publications) ; le moteur ne date que les publications : les pages datées d'abord.
             candidats = [x.adresse for x in sorted(trouves, key=lambda x: not x.publie_le)
                          if _de_la_source(source, x.adresse) and x.adresse not in vues]
-        return [_coupee(t) for t in lues[:n]], depense, notes
+        return [_coupee(t) for t in lues[:n]], depense, notes, suivis
 
     async def _juger(self, source: str, grille: Mapping[str, Any], publications: Sequence[Texte],
                      depense: Depense) -> tuple[E.Evaluation, dict[str, str], Depense]:
@@ -233,7 +248,7 @@ class EvaluateurDeSources:
         grille = E.grille_d_evaluation()
         n = grille["exemples_min"]
         try:
-            publications, depense, notes = await self._publications(source, adresses, n)
+            publications, depense, notes, suivis = await self._publications(source, adresses, n)
         except Exception as exc:  # noqa: BLE001 — le moteur en panne : nommé, la source reste à évaluer
             raise EvaluationImpossible(f"lecture des publications : {type(exc).__name__}: {exc}", Depense()) from exc
         if len(publications) < n:
@@ -241,13 +256,17 @@ class EvaluateurDeSources:
                 f"{len(publications)} publication(s) lisible(s) de {source} sur {n} exigées"
                 + (f" ({' ; '.join(notes[:4])})" if notes else ""), depense)
         evaluation, apercus, depense = await self._juger(source, grille, publications, depense)
-        cherche: list[str] = []
-        if apercus and hasattr(self._moteur, "rechercher"):
+        # Un aperçu déjà suivi sans reprise avant le jugement ne se repaie pas : il les faut toutes.
+        cherche = [f"{a} : {d}" for a, d in suivis.items() if a in apercus]
+        if apercus and not cherche and hasattr(self._moteur, "rechercher"):
             # Un aperçu n'est pas une publication, mais sa reprise sous licence en est une (M2 §7, P6) :
             # chaque aperçu est suivi (une recherche, aucun modèle) ; s'ils sont TOUS remplacés, le modèle
             # rejuge une fois. Les publications inchangées d'abord : le début du message reste en cache.
             reprises: dict[str, Texte] = {}
             for p in publications:
+                if p.adresse in apercus and p.lu_chez:
+                    cherche.append(f"{p.adresse} : la reprise lue chez {p.lu_chez} est elle-même incomplète")
+                    break
                 if p.adresse in apercus:
                     suite = await AP.suivre(self._moteur, p, source=source)
                     depense = depense.plus(suite.depense)

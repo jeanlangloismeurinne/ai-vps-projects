@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "_lisez_moi": "Suivi d'un aperçu d'article payant (M2 §7, accord de l'utilisateur du 2026-11-19). Un aperçu est un signal, pas une pièce : son titre sert à UNE recherche hors du domaine de l'agence, qui rend la pièce d'origine (sur un lieu de la fiche de l'émetteur) ou une reprise sous licence reconnue à son empreinte. Aucun modèle : la reconnaissance est du code.",
   "acces_refuses": [401, 402, 403],
   "nombre": 5,
@@ -7,5 +7,8 @@
   "mots_min_par_phrase": 8,
   "_mots_min_par_phrase": "Une phrase de l'aperçu compte pour l'empreinte si elle a au moins 8 mots (une phrase courte — « Sign up here. » — n'identifie rien). Mesuré le 2026-11-19 sur 4 dépêches Reuters : les reprises sous licence en contiennent 2 à 5 mot pour mot, les autres textes trouvés par la même recherche (8-K, page IR, AP, transcription) aucune.",
   "suffixes_de_second_niveau": ["co", "com", "org", "net", "gov", "ac", "ne", "or", "gouv"],
-  "_suffixes_de_second_niveau": "Pour nommer l'agence depuis son domaine : « reuters.com » → reuters, « nikkei.co.jp » → nikkei, « lesechos.fr » → lesechos (comparé aussi aux mots accolés : « Les Echos »)."
+  "_suffixes_de_second_niveau": "Pour nommer l'agence depuis son domaine : « reuters.com » → reuters, « nikkei.co.jp » → nikkei, « lesechos.fr » → lesechos (comparé aussi aux mots accolés : « Les Echos »).",
+  "fins_de_phrase": ".!?…",
+  "fermants": "\"'’”»)]*_",
+  "_fins_de_phrase": "Un texte relu par le moteur après un accès refusé qui ne finit pas sur une fin de phrase (après les guillemets, parenthèses et marques d'emphase fermants) est interrompu : il est suivi AVANT le modèle (M2 §8, accord de l'utilisateur du 2026-11-21). Mesuré : l'aperçu Visa de Reuters rendu par Exa finit sur « jumped 9% in the » (mots entiers, phrase coupée) ; le modèle l'avait jugé complet le 2026-11-19. Un texte qui atteint le plafond du moteur a été coupé par l'équipe : il n'est pas suspect."
 }
