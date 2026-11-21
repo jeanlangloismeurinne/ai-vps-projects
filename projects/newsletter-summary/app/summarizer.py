@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import html2text
 
@@ -16,13 +17,29 @@ _html2text.ignore_links = False
 _html2text.body_width = 0  # pas de césure automatique
 
 
+_WORD = re.compile(r"\w{4,}")
+# Mesuré sur la base (2026-11-21) : expéditeurs sains ≥ 0,69 ; Payload (texte figé sur un vieux numéro) ≤ 0,40.
+MIN_TEXT_HTML_OVERLAP = 0.5
+
+
+def _words(s: str) -> set[str]:
+    return set(_WORD.findall(s.lower()))
+
+
+def text_html_overlap(text: str, html_as_text: str) -> float:
+    """Part du vocabulaire de la version texte retrouvée dans la version HTML."""
+    t = _words(text)
+    return len(t & _words(html_as_text)) / len(t) if t else 0.0
+
+
 def _to_plain(email: Email) -> str:
-    """Préfère le corps texte ; sinon convertit le HTML en texte lisible."""
-    if email.text_body and email.text_body.strip():
-        return email.text_body.strip()
-    if email.html_body and email.html_body.strip():
-        return _html2text.handle(email.html_body).strip()
-    return ""
+    """Préfère le corps texte, sauf s'il ne raconte pas la même chose que le HTML (ce que le lecteur voit)."""
+    text = (email.text_body or "").strip()
+    html = _html2text.handle(email.html_body).strip() if (email.html_body or "").strip() else ""
+    if text and html and text_html_overlap(text, html) < MIN_TEXT_HTML_OVERLAP:
+        logger.warning("Mail %s : version texte sans rapport avec le HTML — résumé du HTML.", email.message_id)
+        return html
+    return text or html
 
 
 async def summarize(email: Email) -> str:

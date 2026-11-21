@@ -62,6 +62,11 @@ MUTATIONS = [
     ("ports internes autorisés", U, "ALLOWED_PORTS = {80, 443}", "ALLOWED_PORTS = {80, 443, 8000, 8443, 5432}", "check_urlfetch", "mauvaise raison"),
     ("lecture non plafonnée", U, "del buf[MAX_BYTES:]     # plafond STRICT même si un seul chunk le dépasse\n                            break", "pass", "check_urlfetch", "plafond de 2 Mo"),
     ("« lien + texte » pris pour un lien seul", U, "_BARE_URL = re.compile(r\"^<?(https?://[^\\s<>]+)>?$\", re.IGNORECASE)", "_BARE_URL = re.compile(r\"^<?(https?://[^\\s<>]+)>?\", re.IGNORECASE)", "check_urlfetch", "à tort reconnu"),
+    # ── version texte figée (Payload) ──
+    ("texte figé toujours préféré", "app/summarizer.py", "if text and html and text_html_overlap(text, html) < MIN_TEXT_HTML_OVERLAP:", "if False:", "check_text_html", "T1 (293)"),
+    ("seuil trop bas (0,30) : Payload laissé passer", "app/summarizer.py", "MIN_TEXT_HTML_OVERLAP = 0.5", "MIN_TEXT_HTML_OVERLAP = 0.3", "check_text_html", "T1 (293)"),
+    ("seuil trop haut (0,75) : texte sain écarté", "app/summarizer.py", "MIN_TEXT_HTML_OVERLAP = 0.5", "MIN_TEXT_HTML_OVERLAP = 0.75", "check_text_html", "T2 (120)"),
+    ("repli HTML supprimé", "app/summarizer.py", "return text or html", "return text", "check_text_html", "T3"),
     # ── pilotage des règles Gmail ──
     ("adresse mal formée acceptée", GR, "if not _FROM_RE.match(frm):", "if False:", "check_gmail_rules", "G1"),
     ("DENY_FROM ignoré", GR, 'if any(domain == d or domain.endswith("." + d) for d in csv(settings.DENY_FROM)):', "if False:", "check_gmail_rules", "G1"),
