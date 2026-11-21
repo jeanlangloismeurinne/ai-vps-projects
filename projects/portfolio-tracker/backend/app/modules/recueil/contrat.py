@@ -312,6 +312,14 @@ async def evaluer_les_sources_rencontrees(*, depot: Depot, emetteurs_depot: Any,
                                                        evaluateur=evaluateur, le=le)
 
 
+def genres() -> dict[str, dict[str, Any]]:
+    """Le vocabulaire des demandes : chaque genre de document, son libellé, son étendue (« dernier »,
+    « depuis » une date, « adresse ») et la nature d'information que M1 qualifie pour lui. C'est le
+    vocabulaire dans lequel un module déclare ses besoins (M3 §2) ; une copie, jamais le référentiel."""
+    from . import coeur
+    return {nom: dict(g) for nom, g in coeur.referentiel()["genres"].items()}
+
+
 async def vue_ecran(depot: Depot, emetteur: str) -> dict[str, Any]:
     """Ce que l'écran montre pour un émetteur : demandes, documents (origine, qualification, date),
     indisponibilités et leur raison, dépense. Aucun module ne s'appuie sur cette vue."""
@@ -400,7 +408,7 @@ def evaluateur_reel(outils: OutilsReels, *, clef_modele: str) -> Evaluateur:
 
 
 __all__ = [
-    "pas_evaluation", "OutilsReels", "outils_reels", "evaluateur_reel",
+    "pas_evaluation", "OutilsReels", "outils_reels", "evaluateur_reel", "genres",
     "VERSION_CONTRAT", "Demande", "Provenance", "Qualification", "Document", "Indisponibilite",
     "Reponse", "Recueil", "Depot", "DepotMemoire", "depot_base", "lire_recueil", "lire_contenu", "collecter",
     "traiter_les_travaux", "evaluer_les_sources_rencontrees", "vue_ecran", "pas_collecte", "Envoi",

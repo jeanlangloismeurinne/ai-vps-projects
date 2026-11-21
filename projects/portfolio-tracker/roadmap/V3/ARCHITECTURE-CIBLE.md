@@ -73,6 +73,7 @@ comptes**.
 | `chef_de_dossier` (M0) | État du dossier → pas suivant ; rangé en base (migration 063) | `check_chef_de_dossier.py`, `check_emetteurs_persist.py` [B5]-[B6] | `app/modules/chef_de_dossier/ARCHITECTURE.md` |
 | `emetteurs` (M1, accepté le 2026-11-16 sauf les gestes d'écriture à l'écran) | Fiche de l'émetteur, journal des sources admises et révoquées ; l'ancien code la lit par `knowledge/fiche_emetteur.py` | `check_emetteurs.py`, `check_emetteurs_persist.py`, `check_emetteurs_api.py`, `check_fiche_lue.py` | `app/modules/emetteurs/ARCHITECTURE.md` |
 | `recueil` (M2, construit hors ligne le 2026-11-16, pas encore accepté) | Recueil d'un émetteur : documents bruts avec leur origine ou indisponibilité nommée ; adaptateurs registre SEC, site, web | `check_recueil.py` | `app/modules/recueil/ARCHITECTURE.md` |
+| `connaissance` (M3, en construction depuis le 2026-11-21) | Base de connaissance d'un émetteur : chaque document collecté mis en lecture (lignes numérotées), pièces à extraits vérifiés mot pour mot, valeur de la source relue au jour de la lecture ; détenteur unique de la vérification d'un extrait | `check_connaissance.py` | `app/modules/connaissance/ARCHITECTURE.md` |
 
 ## Registre 2 — ancien code (la carrière)
 

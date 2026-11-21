@@ -7,7 +7,7 @@
 #
 #   bash checks/negatif_search_worker.sh
 #
-# La comparaison littérale est DÉLÉGUÉE à `app/knowledge/citation.py` : elle se mute chez son
+# La comparaison littérale est DÉLÉGUÉE à `app/modules/connaissance/citation.py` : elle se mute chez son
 # détenteur (#72), pas dans le worker — sinon la mutation mesurerait le câblage et croirait mesurer
 # la règle. Le câblage, lui, a ses propres mutations (worker, outils). Même principe pour #128 : la
 # relecture item par item est DÉLÉGUÉE à `runner.lecture_tolerante_liste` (partagée avec l'analyste) —
@@ -18,7 +18,7 @@ CHECK="checks/check_search_worker.py"
 W="app/agents/v2/worker.py"
 T="app/agents/v2/tools.py"
 C="app/contracts/worker_delegation_schema.py"
-CIT="app/knowledge/citation.py"
+CIT="app/modules/connaissance/citation.py"
 NF="app/agents/v2/note_flash.py"
 WS="app/knowledge/websearch.py"
 R="app/agents/v2/runner.py"

@@ -55,6 +55,16 @@ MODULES: tuple[Module, ...] = (
         # M1 : qui est l'émetteur, où il publie, ce que vaut une adresse ; chef : son pas.
         lit=("chef_de_dossier", "emetteurs"),
     ),
+    Module(
+        nom="connaissance",
+        rend="La base de connaissance d'un émetteur : chaque document collecté mis en lecture "
+             "(lignes numérotées), et les pièces — extraits vérifiés mot pour mot, rattachés à leur "
+             "document et à leurs lignes, jamais modifiés — avec ce que vaut leur source au jour de "
+             "la lecture.",
+        prefixe_tables="connaissance_",
+        # M2 : les documents à lire ; M1 : ce que vaut la source d'une pièce ; chef : son pas.
+        lit=("chef_de_dossier", "emetteurs", "recueil"),
+    ),
 )
 
 

@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "_lecteur": "La version du lecteur fait partie de l'identité d'une lecture : un lecteur amélioré produit une lecture NOUVELLE, à côté ; les pièces déjà citées gardent la leur (K2). Toute modification de la façon de lire (blocs, éléments muets, cellules, décodage) monte cette version.",
+  "lecteur": {
+    "version": "1.0.0",
+    "formats_html": ["text/html", "application/xhtml+xml"],
+    "formats_texte": ["text/plain"],
+    "formats_sans_objet": ["application/json", "application/xml", "text/xml"],
+    "blocs": ["p", "div", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "section", "article",
+              "table", "header", "footer", "blockquote", "pre", "hr", "dt", "dd", "ul", "ol", "title"],
+    "muets": ["script", "style", "head", "noscript", "template", "ix:header", "svg"],
+    "cellules": ["td", "th"],
+    "fins_de_ligne_de_tableau": ["tr", "table"],
+    "vides": ["br", "hr", "img", "meta", "link", "input", "col", "area", "base", "wbr", "source"],
+    "_masques": "Un élément dont le style le masque (display:none) n'est pas lu : il n'est pas imprimé, un lecteur ne le voit pas (relevé sur un 8-K réel : 469 cellules d'espacement masquées ; l'en-tête des données structurées est masqué ainsi).",
+    "masques": ["display:none"],
+    "decodages": ["utf-8", "cp1252"]
+  },
+  "raisons": {
+    "vide": "Le document ne contient aucun texte lisible : aucune pièce ne peut en être tirée.",
+    "format_non_lu": "Le document est dans un format que le lecteur ne sait pas lire : aucune pièce ne peut en être tirée.",
+    "sans_objet": "Données structurées : elles ne se lisent pas en lignes de texte ; le module qui les comprend (les comptes) les lit lui-même."
+  },
+  "recherche": {
+    "_mots": "Recherche par les mots (arbitrage du 2026-11-21 : par le sens quand M6 ou M8 en aura besoin). Une ligne répond si elle contient TOUS les mots demandés (forme comparable de la citation : casse, typographie) ; classement : nombre d'occurrences, puis document le plus récent, puis numéro de ligne.",
+    "resultats_max": 50
+  }
+}
