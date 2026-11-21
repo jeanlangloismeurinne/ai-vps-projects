@@ -32,9 +32,11 @@ phrase (pas seulement « en plein mot » : l'aperçu Visa réel finit sur « in 
 modèle ; sa reprise le remplace, sinon le modèle juge comme avant. `check_recueil_evaluateur` 101/0,
 négatif 80/80. Essai réel : Lennar (Reuters) → reprise marketscreener avant le jugement. Détail : M2 §8.
 
-**Prochain pas (Opus)** : le déclencheur + la tâche de fond qui rangent l'`Envoi` (appliquer 064
-avant), l'écran (B12), enfin les lignes « réel » (SpaceX B3/B10, une évaluation B6 en production,
-NVDA/RVMD B13, suite B14).
+**Prochain pas (Opus) — M3 OUVERT le 2026-11-21** (décision de l'utilisateur : tester la collecte sur
+un besoin réel) : `M3-base-connaissance.md` — tri, interface « besoins → collecte », acceptation K1-K14,
+3 questions à l'utilisateur. Arbitré le même jour : l'utilisateur met une société à l'étude, une tâche
+de fond la fait avancer ; 064 appliquée en production après les contrôles. Le déclencheur, l'écran
+(B12) et les lignes « réel » de M2 se construisent avec M3 (K10, K12, K14).
 
 **SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main.
 Le passage à blanc en mémoire (2026-11-16, registre gratuit, aucune écriture) l'a complétée
