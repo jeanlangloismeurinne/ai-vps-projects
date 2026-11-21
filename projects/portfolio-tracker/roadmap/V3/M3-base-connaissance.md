@@ -129,6 +129,15 @@ migration de M2 (064) est appliquée en production après les contrôles (accord
 3. **Retrouver un passage** : **par les mots maintenant** (gratuit) ; par le sens quand M6 ou M8 en aura
    besoin, en reprenant l'outil de l'ancien système.
 
+### Tranché ensuite (2026-11-21) : la relecture humaine des sorties de module
+
+Question posée pour le déclencheur (la charte : tout est relu tant que le taux d'erreur d'un poste n'est
+pas mesuré). *Logique de fonds* : on fait relire les premiers dossiers d'un analyste, puis par sondage
+une fois qu'il est fiable. **Réponse : le dossier s'arrête une fois, après la collecte** — vous validez
+les documents trouvés ou introuvables ; la fiche (M1, acceptée) et la mise en lecture (M3, code sans
+modèle, contrôlée par K13) ne s'arrêtent pas. Les interrupteurs par module sont une donnée (principe 3 :
+on rétablit la relecture d'un module en basculant une valeur).
+
 ## 5. Construit hors ligne (2026-11-21)
 
 Module `app/modules/connaissance/` (contrat 1.0.0), détail dans son `ARCHITECTURE.md`. K0-K9 sur

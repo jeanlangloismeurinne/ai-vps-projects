@@ -38,8 +38,10 @@ tranchées). **Construit hors ligne le même jour** : module `app/modules/connai
 pièces, recherche par les mots, pas de lecture (`check_connaissance` 49/0, négatif 30/30). La
 vérification d'un extrait (`citation.py`) vit désormais dans M3 (l'ancien chemin est un ré-export).
 
-**Prochain pas (Opus)** : (1) **réponse de l'utilisateur attendue** — quelles sorties de module il relit
-avant que le dossier continue (règle par défaut : toutes) ; (2) module `etude` : mettre à l'étude
+**Prochain pas (Opus)** : (1) ~~relecture humaine~~ **tranché le 2026-11-21** : le dossier
+s'arrête une fois, après la collecte (l'utilisateur valide les documents trouvés ou introuvables) ; la
+fiche (M1, acceptée) et la mise en lecture (M3, code sans modèle, contrôlée par K13) ne s'arrêtent
+pas — interrupteurs par module (principe 3), à tenir en donnée ; (2) module `etude` : mettre à l'étude
 (geste + table), passage du dossier (relever, lire, avancer, ranger dans une transaction ; rien de
 payant sur un dossier en pause), tâche planifiée, besoins initiaux déclarés en donnée (module
 `comptes` ouvert avec son seul besoin : le dernier annuel + données structurées) ; (3) rangement en
