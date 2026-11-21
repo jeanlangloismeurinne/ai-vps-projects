@@ -65,6 +65,20 @@ MODULES: tuple[Module, ...] = (
         # M2 : les documents à lire ; M1 : ce que vaut la source d'une pièce ; chef : son pas.
         lit=("chef_de_dossier", "emetteurs", "recueil"),
     ),
+    Module(
+        nom="comptes",
+        rend="Les besoins initiaux de documents du module des comptes (M4, pas encore ouvert) : ce "
+             "qu'il demande pour ouvrir un dossier, en donnée.",
+    ),
+    Module(
+        nom="etude",
+        rend="Les sociétés que vous avez mises à l'étude, et le passage de leurs dossiers : ce que la "
+             "tâche de fond a relevé, lu et fait avancer, et les gestes qui lèvent un arrêt.",
+        prefixe_tables="etude_",
+        # Le parcours qu'il conduit : la fiche, la collecte, la lecture, l'état du dossier ; et les
+        # besoins initiaux des modules consommateurs.
+        lit=("chef_de_dossier", "emetteurs", "recueil", "connaissance", "comptes"),
+    ),
 )
 
 

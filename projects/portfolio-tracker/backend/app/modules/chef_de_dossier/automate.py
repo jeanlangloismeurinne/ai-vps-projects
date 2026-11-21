@@ -42,23 +42,18 @@ from .contrat import (
     Depense,
     Depot,
     EtatDossier,
+    GesteRefuse,
     LigneJournal,
+    ParcoursInvalide,
     Pas,
     Resultat,
+    cle_lecture,
     lire_etat,
 )
 
 PALIER_USD = 1.0          # arbitrage du 2026-11-13 : une pause tous les 1 $ consommés sur un dossier
 ECHECS_AVANT_ARRET = 2    # « arrêt au premier refus répété »
 _EPS = 1e-9
-
-
-class ParcoursInvalide(ValueError):
-    """Le parcours déclaré ne peut pas être conduit (doublon, préalable inconnu, boucle)."""
-
-
-class GesteRefuse(ValueError):
-    """Le geste demandé ne correspond pas à l'arrêt en cours."""
 
 
 def verifier_parcours(parcours: Sequence[Pas]) -> None:
@@ -116,11 +111,17 @@ def ratio_constate(etat: EtatDossier, parcours: Sequence[Pas]) -> float | None:
 
 def _lecture_requise(pas: Pas, lecture_humaine: Mapping[str, bool] | None) -> bool:
     """La lecture humaine de la sortie d'un module est la règle simple ; s'en passer est le
-    raffinement (principe 3). Donc : requise SAUF si l'interrupteur du module est explicitement
-    levé. Un module absent de la table est lu."""
+    raffinement (principe 3). Donc : requise SAUF si l'interrupteur est explicitement levé. Un
+    interrupteur propre au pas (« module:pas ») prime sur celui de son module ; un module absent de
+    la table est lu."""
     if pas.nature == HUMAIN:
         return False
-    return True if lecture_humaine is None else bool(lecture_humaine.get(pas.module, True))
+    if lecture_humaine is None:
+        return True
+    propre = cle_lecture(pas.module, pas.nom)
+    if propre in lecture_humaine:
+        return bool(lecture_humaine[propre])
+    return bool(lecture_humaine.get(pas.module, True))
 
 
 def _ajouter_depense(etat: EtatDossier, pas: str, d: Depense) -> EtatDossier:

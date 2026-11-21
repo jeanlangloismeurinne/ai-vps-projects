@@ -264,6 +264,22 @@ def _d6(b: Bilan) -> None:
                          lecture_humaine={"carte": False})
     b.require([x for x in arrets if x.cle.startswith("lecture:")], 10,
               "[D6] un module absent de la table est lu (prudent par défaut)")
+    # Un interrupteur propre à UN pas prime sur celui de son module, dans les deux sens.
+    module_carte = next(p.module for p in parcours_fictif(Simulateur()) if p.nom == "carte")
+    for leve_module, leve_pas, attendu, libelle in (
+            (False, True, ["lecture:carte"], "[D6] un pas relu alors que son module ne l'est plus"),
+            (True, False, [], "[D6] un pas dispensé alors que son module est relu")):
+        table = dict(SANS_LECTURE, **{module_carte: leve_module, C.cle_lecture(module_carte, "carte"): leve_pas})
+        _, arrets = derouler(C.EtatDossier(DOSSIER), parcours_fictif(Simulateur()), palier_usd=100.0,
+                             lecture_humaine=table)
+        lus = [x.cle for x in arrets if x.cle.startswith("lecture:")
+               and next(p.module for p in parcours_fictif(Simulateur()) if p.nom == x.pas) == module_carte]
+        b.check(lus == attendu if attendu else "lecture:carte" not in lus, f"{libelle} — {lus}")
+    # Les gestes passent par le contrat : il délègue à l'automate, même résultat.
+    e1 = A.avancer(C.EtatDossier(DOSSIER), parcours_fictif(Simulateur()), palier_usd=100.0)
+    e2 = C.avancer(C.EtatDossier(DOSSIER), parcours_fictif(Simulateur()), palier_usd=100.0)
+    b.check(e1 == e2 and C.enregistrer_acte(e2, e2.arret.cle) == A.enregistrer_acte(e1, e1.arret.cle),
+            "[D6] les gestes exposés par le contrat sont ceux de l'automate")
 
 
 def _d7_d8(b: Bilan) -> None:
@@ -350,7 +366,10 @@ def _d10(b: Bilan) -> None:
                     b.check(alias.name.split(".")[0] in permis,
                             f"[D10] {src.name} importe `{alias.name}` : bibliothèque standard permise seulement")
             elif isinstance(noeud, ast.ImportFrom):
-                interne = noeud.level == 1 and noeud.module in ("contrat", "depot_base")
+                # `automate` : le contrat expose les gestes en déléguant à l'automate.
+                interne = noeud.level == 1 and (
+                    noeud.module in ("contrat", "depot_base")
+                    or (noeud.module is None and all(a.name == "automate" for a in noeud.names)))
                 b.check(interne or (noeud.level == 0 and (noeud.module or "").split(".")[0] in permis),
                         f"[D10] {src.name} importe depuis `{'.' * noeud.level}{noeud.module}` : "
                         "son contrat ou la bibliothèque standard seulement")

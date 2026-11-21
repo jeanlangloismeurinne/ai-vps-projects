@@ -304,12 +304,13 @@ async def traiter_les_travaux(*, depot: Depot, emetteurs_depot: Any, outils: Out
 
 
 async def evaluer_les_sources_rencontrees(*, depot: Depot, emetteurs_depot: Any, evaluateur: Evaluateur,
-                                          le: str) -> list[dict[str, Any]]:
+                                          le: str, emetteur: str | None = None) -> list[dict[str, Any]]:
     """Présente à l'évaluateur chaque source inconnue rencontrée en collectant, et range son jugement
-    chez M1 (admise au seuil, en suspens dessous). La collecte n'attend pas ce verdict."""
+    chez M1 (admise au seuil, en suspens dessous). La collecte n'attend pas ce verdict. `emetteur` :
+    seulement les sources rencontrées pour ce dossier (un dossier en pause ne paie rien)."""
     from . import coeur
     return await coeur.evaluer_les_sources_rencontrees(depot=depot, emetteurs_depot=emetteurs_depot,
-                                                       evaluateur=evaluateur, le=le)
+                                                       evaluateur=evaluateur, le=le, emetteur=emetteur)
 
 
 def genres() -> dict[str, dict[str, Any]]:

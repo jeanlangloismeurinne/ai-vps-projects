@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "_lecture_humaine": "Les interrupteurs de relecture humaine (principe 3 : la relecture est la règle simple, s'en passer le raffinement). Un module ou un pas (« module:pas ») absent est RELU. Arbitrage de l'utilisateur du 2026-11-21 : le dossier s'arrête une fois, après la collecte (vous validez les documents trouvés ou introuvables) ; la fiche (M1, acceptée) et la mise en lecture (M3, code sans modèle, contrôlée par K13) ne s'arrêtent pas ; le suivi de l'évaluation des sources ne s'arrête pas non plus (vous suivez les sources dans leur registre, #145). Rétablir une relecture : basculer la valeur à true.",
+  "lecture_humaine": {
+    "emetteurs": false,
+    "recueil": true,
+    "recueil:evaluation_des_sources": false,
+    "connaissance": false
+  },
+  "_pas": "Les noms des pas du parcours conduit par le déclencheur (ils nomment aussi les relectures : « lecture:collecte »).",
+  "pas": {
+    "collecte": "collecte",
+    "evaluation": "evaluation_des_sources",
+    "lecture": "lecture"
+  }
+}

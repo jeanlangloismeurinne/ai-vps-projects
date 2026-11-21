@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; restent base, besoins, déclencheur, écran, réel
+status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; restent base, tâche planifiée, écran, réel
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -157,6 +157,27 @@ société fictive, communiqué réel NVIDIA copié tel quel : `check_connaissanc
   détenteur (l'assert exige désormais le motif du détenteur).
 - **Les demandes au fil du dossier** (§2, 1 bis ; deuxième moitié de K11) se construisent avec M4, le
   premier module qui en aura besoin : aucun code sans appelant.
+
+### Le déclencheur et les besoins, construits hors ligne (2026-11-21, suite)
+
+Module `app/modules/etude/` (contrat 1.0.0, détail dans son `ARCHITECTURE.md`) et module `comptes`
+ouvert au registre avec son seul besoin (`referentiel.json` : le dernier annuel et ses données
+structurées). K10 et K11 sur société fictive : `check_etude.py` **39/0**, `negatif_etude.sh` **31/31**.
+- **Mettre à l'étude** exige une fiche (on n'ouvre pas de dossier sur une société non identifiée) ; une
+  seule étude par société.
+- **Un passage** : relever (payant, sauf dossier en pause ou terminé — ni par le passage d'un autre
+  dossier : l'évaluation des sources de M2 prend désormais le dossier en paramètre), lire (gratuit),
+  puis avancer et ranger l'état et ce qu'il lance dans une seule transaction ; un verrou par dossier
+  (le second passage ne fait rien).
+- **La relecture humaine en donnée**, un interrupteur par pas possible (le chef de dossier l'accepte
+  désormais, « module:pas » prime sur le module) : sans lui, le suivi de l'évaluation des sources,
+  du même module que la collecte, aurait imposé un second arrêt contre l'arbitrage. Sur la société
+  fictive, le seul acte demandé de bout en bout est la validation des documents collectés.
+- **Le chef de dossier expose ses gestes par son contrat** (le déclencheur n'a pas le droit d'importer
+  son automate) ; chef 108/0, négatif 27/27.
+- Appris en lisant le parcours en texte : le libellé de l'acte (« relire la sortie du module
+  recueil ») est du jargon ; il se dira en mots de gérant à l'écran (K12).
+- Reste : rangement en base (`etude_*`, avec celui de M3), tâche planifiée, écran, lignes « réel ».
 
 ## 6. Ce que M3 ne fait pas (dit, pas caché)
 

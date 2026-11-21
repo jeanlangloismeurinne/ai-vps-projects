@@ -356,10 +356,10 @@ async def traiter_les_travaux(*, depot: Depot, emetteurs_depot: Any, outils: Any
 
 
 async def evaluer_les_sources_rencontrees(*, depot: Depot, emetteurs_depot: Any, evaluateur: Any,
-                                          le: str) -> list[dict[str, Any]]:
+                                          le: str, emetteur: str | None = None) -> list[dict[str, Any]]:
     lignes = []
     for s in await depot.sources_rencontrees():
-        if s["statut"] != A_EVALUER:
+        if s["statut"] != A_EVALUER or (emetteur is not None and s["emetteur"] != emetteur):
             continue
         try:
             evaluation, depense = await evaluateur(s["source"], list(s["adresses"]))

@@ -2,8 +2,8 @@
 
 Ce fichier est **réécrit par `checks/run_all.sh`** à chaque passage. Aucun autre document ne recopie le total.
 
-- Date : 2026-11-19T22:16Z
-- Total d'assertions : 6793
+- Date : 2026-11-21T09:48Z
+- Total d'assertions : 6913
 - Sortie du lanceur : 1 (0 = aucun échec)
-- Scripts joués : 87 présents, hors contrôles « live »
-- Commit : 54bcdfc
+- Scripts joués : 89 présents, hors contrôles « live »
+- Commit : c121ab4

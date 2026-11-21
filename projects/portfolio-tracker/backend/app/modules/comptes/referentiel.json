@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "_besoins_initiaux": "Ce que le module des comptes (M4) demande pour OUVRIR un dossier, dans le vocabulaire des genres de la collecte (M2). Arbitrage du 2026-11-21 : pour initialiser, le dernier rapport annuel et les données comptables structurées qui l'accompagnent ; le reste (trimestriels depuis la clôture, exercices antérieurs) sera demandé par M4 au fil de son travail, quand il saura ce qui lui manque. Un genre « depuis » une date porte son champ `depuis` (date ISO).",
+  "besoins_initiaux": [
+    {"genre": "derniers_comptes_annuels"},
+    {"genre": "donnees_comptables_structurees"}
+  ]
+}

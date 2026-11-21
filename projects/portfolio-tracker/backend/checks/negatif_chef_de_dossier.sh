@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.." || exit 1
 CHECK="checks/check_chef_de_dossier.py"
 HOTE_SI_SANS_CONTENEUR=1
 AUT="app/modules/chef_de_dossier/automate.py"
+CON="app/modules/chef_de_dossier/contrat.py"
 CTR="app/modules/chef_de_dossier/contrat.py"
 
 mutations=(
@@ -26,9 +27,13 @@ mutations=(
 # [D5] « source indisponible » redevient un échec : la société sans dépôt ne traverserait plus.
 "$AUT¦    if rendu.issue in (FAIT, INDISPONIBLE):¦    if rendu.issue in (FAIT,):¦[D5] la réserve reste au dossier"
 # [D6] par défaut on ne lit plus rien : l'automatisation deviendrait la règle, la lecture l'exception.
-"$AUT¦    return True if lecture_humaine is None else¦    return False if lecture_humaine is None else¦[D6] par défaut, la première sortie de module attend votre lecture"
+"$AUT¦    if lecture_humaine is None:¦    if lecture_humaine is None:\n        return False¦[D6] par défaut, la première sortie de module attend votre lecture"
 # [D6] un module oublié dans la table des interrupteurs n'est plus lu.
 "$AUT¦lecture_humaine.get(pas.module, True))¦lecture_humaine.get(pas.module, False))¦[D6] un module absent de la table est lu"
+# [D6] l'interrupteur propre au pas est ignoré : seul compte celui du module.
+"$AUT¦    if propre in lecture_humaine:¦    if False:¦[D6] un pas relu alors que son module ne l'est plus"
+# [D6] le contrat ne délègue plus à l'automate (un geste à côté).
+"$CON¦    return automate.enregistrer_acte(etat, cle)¦    return etat¦[D6] les gestes exposés par le contrat sont ceux de l'automate"
 # [D7] un état d'une autre version de contrat est lu « au mieux ».
 "$CTR¦        if version != VERSION_CONTRAT:¦        if False:¦[D7] un état d'une autre version de contrat est refusé"
 # [D8] les recherches web sortent du total : le coût complet d'un dossier redevient invisible.

@@ -251,6 +251,14 @@ class EtatDossier:
         )
 
 
+class ParcoursInvalide(ValueError):
+    """Le parcours déclaré ne peut pas être conduit (doublon, préalable inconnu, boucle)."""
+
+
+class GesteRefuse(ValueError):
+    """Le geste demandé ne correspond pas à l'arrêt en cours."""
+
+
 class EcritureConcurrente(RuntimeError):
     """Deux passages ont voulu ranger l'état du même dossier depuis la même lecture : le second est
     refusé, rien n'est écrasé."""
@@ -285,8 +293,76 @@ def depot_base(connexion):
     return DepotBase(connexion)
 
 
+class RangementMemoire:
+    """Le rangement en mémoire, avec la même interface que `depot_base` (`ouvrir` / `refermer`, refus
+    de deux passages partis de la même lecture) : celui des contrôles du déclencheur."""
+
+    def __init__(self) -> None:
+        self._etats: dict[str, tuple[int, dict]] = {}
+        self._lues: dict[str, int] = {}
+
+    async def ouvrir(self, dossier: str) -> DepotMemoire:
+        revision, etat = self._etats.get(dossier, (0, None))
+        self._lues[dossier] = revision
+        depot = DepotMemoire()
+        if etat is not None:
+            depot.ranger(dossier, etat)
+        return depot
+
+    async def refermer(self, dossier: str, depot: DepotMemoire) -> None:
+        if dossier not in self._lues:
+            raise EcritureConcurrente(f"dossier {dossier} : rangé sans avoir été ouvert")
+        etat = depot.charger(dossier)
+        if etat is None:
+            return
+        lue = self._lues[dossier]
+        if self._etats.get(dossier, (0, None))[0] != lue:
+            raise EcritureConcurrente(
+                f"dossier {dossier} : un autre passage a rangé son état depuis la lecture (révision {lue})")
+        self._etats[dossier] = (lue + 1, dict(etat))
+        self._lues[dossier] = lue + 1
+
+
 def lire_etat(depot: Depot, dossier: str) -> EtatDossier:
     """LA fonction de lecture du contrat : l'état du dossier, ou un état vierge (« titre entré »)
     s'il n'a jamais avancé."""
     brut = depot.charger(dossier)
     return EtatDossier(dossier=dossier) if brut is None else EtatDossier.depuis_dict(brut)
+
+
+# ── Les gestes, exposés par le contrat (l'automate reste l'intérieur du module) ────────────────
+# Celui qui conduit un dossier (le déclencheur) et l'écran n'importent que ce fichier : ils passent
+# par ces fonctions, qui délèguent à l'automate.
+
+def cle_lecture(module: str, pas: str) -> str:
+    """La clé d'un interrupteur de lecture propre à UN pas (« module:pas »). Elle prime sur celle du
+    module : deux pas d'un même module peuvent ne pas appeler la même relecture (la collecte se
+    relit, le suivi de l'évaluation des sources non — vous suivez les sources dans leur registre)."""
+    return f"{module}:{pas}"
+
+
+def avancer(etat: EtatDossier, parcours, *, palier_usd: float | None = None,
+            lecture_humaine: Mapping[str, bool] | None = None) -> EtatDossier:
+    from . import automate
+    kw = {} if palier_usd is None else {"palier_usd": palier_usd}
+    return automate.avancer(etat, parcours, lecture_humaine=lecture_humaine, **kw)
+
+
+def enregistrer_acte(etat: EtatDossier, cle: str) -> EtatDossier:
+    from . import automate
+    return automate.enregistrer_acte(etat, cle)
+
+
+def lever_pause(etat: EtatDossier) -> EtatDossier:
+    from . import automate
+    return automate.lever_pause(etat)
+
+
+def relancer(etat: EtatDossier, pas: str | None = None) -> EtatDossier:
+    from . import automate
+    return automate.relancer(etat, pas)
+
+
+def afficher(etat: EtatDossier) -> str:
+    from . import automate
+    return automate.afficher(etat)

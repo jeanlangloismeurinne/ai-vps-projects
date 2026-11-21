@@ -124,6 +124,7 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | 2026-11-16 | M1 | Premier geste d'écriture joué en production par l'utilisateur : fiche SpaceX établie à l'écran (révision 1, minimale) | `emetteurs_fiches` id 110 |
 | 2026-11-16 | M2 | Ouvert : tri de l'ancien code et acceptation écrite AVANT la construction (B1-B14) ; SpaceX (introduite en juin 2026, aucun rapport annuel) proposée comme troisième cas | `M2-collecte-sources.md` |
 | 2026-11-16 | M2 | Construit hors ligne : module `recueil` (B1-B11 sur société fictive, 63/0, négatif 43/43) ; passage à blanc réel SpaceX (identité complétée, prospectus rendu) ; restent base, évaluateur et moteur réels, déclencheur, écran, lignes « réel » | `M2-collecte-sources.md` §5 |
+| 2026-11-21 | M3 | Déclencheur (`etude`) et besoins (`comptes`) construits hors ligne : mettre à l'étude, passage (relever, lire, avancer et ranger ensemble), rien de payant en pause, un seul arrêt (validation de la collecte) ; le chef de dossier expose ses gestes par son contrat et accepte un interrupteur de relecture par pas | `check_etude.py` 39/0, `negatif_etude.sh` 31/31 ; chef 108/0 et 27/27 (hôte) |
 
 **Réserve sur M1** (2026-11-16) : les gestes d'écriture de l'écran (admettre, révoquer, corriger une
 fiche) n'ont pas été joués en production — le registre est indélébile ; ils sont prouvés par

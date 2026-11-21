@@ -43,12 +43,22 @@ il n'écrit pas la partie qui en a besoin avant de les avoir.
 | Attente | plus rien ne peut avancer, un travail est en cours | rien : le passage suivant le reprend |
 
 La **lecture humaine** de chaque sortie de module est la règle par défaut ; elle se lève module par
-module (table `lecture_humaine`), quand le taux d'erreur du module est mesuré (principe 3).
+module, quand le taux d'erreur du module est mesuré (principe 3). Un interrupteur propre à UN pas
+(`contrat.cle_lecture(module, pas)`, « module:pas ») prime sur celui de son module, dans les deux sens
+(2026-11-21 : la collecte se relit, le suivi de l'évaluation des sources — même module — non). Les
+valeurs en vigueur sont une donnée du déclencheur (`app/modules/etude/referentiel.json`).
+
+## Les gestes passent par le contrat (2026-11-21)
+
+`contrat.avancer`, `enregistrer_acte`, `lever_pause`, `relancer`, `afficher` délèguent à l'automate :
+le déclencheur et l'écran n'importent que le contrat (charte, point 2). `contrat.RangementMemoire` a
+l'interface du rangement en base (`ouvrir` / `refermer`, refus de deux passages partis de la même
+lecture), pour les contrôles du déclencheur.
 
 ## Invariant → assert garant
 
 Contrôle : `check_chef_de_dossier.py` ; test négatif : `negatif_chef_de_dossier.sh`
-(25 mutations, toutes détectées sur leur assert — exécuté sur l'hôte le 2026-11-14, le module étant pur
+(27 mutations, toutes détectées sur leur assert — exécuté sur l'hôte le 2026-11-21, le module étant pur
 bibliothèque standard).
 
 | Invariant | Assert |
@@ -58,7 +68,7 @@ bibliothèque standard).
 | Pause à chaque palier, avec dépense totale, coût restant estimé, écart dépensé / estimé | [D3] |
 | Deux échecs de suite arrêtent ; un plantage est un échec motivé | [D4] |
 | « Source indisponible » : le dossier continue, la réserve reste | [D5] |
-| Lecture humaine par défaut, levée module par module | [D6] |
+| Lecture humaine par défaut, levée module par module ; un interrupteur de pas prime ; gestes du contrat = ceux de l'automate | [D6] |
 | L'état se range et se relit ; interrompu puis repris = un seul passage | [D7] |
 | Modèles et web comptés à part ; un essai échoué est compté | [D8] |
 | Un arrêt ne se lève que par son geste | [D9] |
@@ -74,11 +84,12 @@ bibliothèque standard).
   migration 063 (non appliquée). Prouvé sur une base locale : `check_emetteurs_persist.py` [B5]-[B6],
   rougi par `negatif_emetteurs_persist.sh`.
 - **L'automate reste synchrone et sans entrée-sortie** : un travail long ne se fait pas DANS un pas, il
-  est lancé par lui et suivi (`en_cours` / `suivre`). Où vit ce travail (une tâche de fond de la collecte)
-  et ce qui rappelle l'automate entre deux passages : à construire avec M2 et le déclencheur.
+  est lancé par lui et suivi (`en_cours` / `suivre`). Ce qui rappelle l'automate entre deux passages :
+  le déclencheur (`app/modules/etude/`), construit hors ligne le 2026-11-21.
 - **L'écran** : la page d'un émetteur montre l'état de son dossier en lecture seule ; aucun geste
   (lever une pause, enregistrer un acte) n'est encore offert à l'écran.
-- **Le déclencheur** : rien n'appelle encore `automate.conduire` (ni tâche planifiée, ni route).
+- **Le déclencheur** est construit hors ligne (`app/modules/etude/`) ; aucune tâche planifiée ne
+  l'appelle encore.
 - **L'estimation** du coût restant est la somme de ce que les modules déclarent : elle ne vaut que ce
   que valent leurs estimations. L'arrêt donne l'écart constaté, il ne corrige pas le chiffre.
 - Un pas ne s'interrompt pas en cours d'exécution : la pause tombe après le pas qui franchit le palier.
