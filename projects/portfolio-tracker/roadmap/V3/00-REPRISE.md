@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-21 (texte du moteur coupé en cours de phrase : suivi avant le modèle, M2 §8, accord de l'utilisateur) ; 2026-11-19 (presse payante : étages 1 et 2 construits, #149 ; DeepInfra : flex, cache, numéros ; question ouverte : aperçu jugé complet) ; 2026-11-18 soir (grille 1.3.0 appliquée ; V4.1-Flash retenu ; règle « un aperçu n'est pas une publication » ; question ouverte : lire la presse payante) ; 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
+updated: 2026-11-21 soir (M3 ouvert et construit hors ligne : lecteur, pièces, recherche ; question à l'utilisateur sur la lecture humaine) ; 2026-11-21 (texte du moteur coupé en cours de phrase : suivi avant le modèle, M2 §8, accord de l'utilisateur) ; 2026-11-19 (presse payante : étages 1 et 2 construits, #149 ; DeepInfra : flex, cache, numéros ; question ouverte : aperçu jugé complet) ; 2026-11-18 soir (grille 1.3.0 appliquée ; V4.1-Flash retenu ; règle « un aperçu n'est pas une publication » ; question ouverte : lire la presse payante) ; 2026-11-18 (M2 MOTEUR, MODÈLE ET ÉVALUATEUR RÉELS construits ; question à l'utilisateur sur la grille d'évaluation) ; 2026-11-16 (M2 RANGEMENT EN BASE construit, 064 non appliquée ; A15 « sans fiche » clos sans objet) ; 2026-11-16 (M2 CONSTRUIT HORS LIGNE : module recueil, B1-B11, passage à blanc SpaceX ; prochain pas : base, migration 064) ; 2026-11-16 (M2 OUVERT : tri + acceptation B1-B14, SpaceX cas réel ; questions à l'utilisateur) ; 2026-11-16 (M1 ACCEPTÉ sur le VPS : 063, reprise, A14, A15 — l'ancien code lit la fiche ; prochain pas M2) ; 2026-11-14 (deux arbitrages de M2 construits hors ligne : sources inconnues en suspens sous le seuil, dossier qui avance pendant une collecte ; reste l'acceptation de M1 sur le VPS, puis M2)
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -32,11 +32,22 @@ phrase (pas seulement « en plein mot » : l'aperçu Visa réel finit sur « in 
 modèle ; sa reprise le remplace, sinon le modèle juge comme avant. `check_recueil_evaluateur` 101/0,
 négatif 80/80. Essai réel : Lennar (Reuters) → reprise marketscreener avant le jugement. Détail : M2 §8.
 
-**Prochain pas (Opus) — M3 OUVERT le 2026-11-21** (décision de l'utilisateur : tester la collecte sur
-un besoin réel) : `M3-base-connaissance.md` — tri, interface « besoins → collecte », acceptation K1-K14,
-3 questions à l'utilisateur. Arbitré le même jour : l'utilisateur met une société à l'étude, une tâche
-de fond la fait avancer ; 064 appliquée en production après les contrôles. Le déclencheur, l'écran
-(B12) et les lignes « réel » de M2 se construisent avec M3 (K10, K12, K14).
+**M3 OUVERT le 2026-11-21** (décision de l'utilisateur : tester la collecte sur un besoin réel) :
+`M3-base-connaissance.md` (tri, interface « besoins → collecte », acceptation K1-K14, 3 questions
+tranchées). **Construit hors ligne le même jour** : module `app/modules/connaissance/` — lecteur,
+pièces, recherche par les mots, pas de lecture (`check_connaissance` 49/0, négatif 30/30). La
+vérification d'un extrait (`citation.py`) vit désormais dans M3 (l'ancien chemin est un ré-export).
+
+**Prochain pas (Opus)** : (1) **réponse de l'utilisateur attendue** — quelles sorties de module il relit
+avant que le dossier continue (règle par défaut : toutes) ; (2) module `etude` : mettre à l'étude
+(geste + table), passage du dossier (relever, lire, avancer, ranger dans une transaction ; rien de
+payant sur un dossier en pause), tâche planifiée, besoins initiaux déclarés en donnée (module
+`comptes` ouvert avec son seul besoin : le dernier annuel + données structurées) ; (3) rangement en
+base de M3 (065) — Sonnet suffit, le modèle existe (M1/M2) ; (4) écran (B12/K12 : documents, pièces,
+état du dossier, gestes acte / pause / relance) ; (5) appliquer 064+065, déployer, lignes « réel »
+(K13 : 57 fiches SEC de l'ancien système retrouvées ; K14 : NVDA, RVMD, SpaceX ; M2 B3/B6/B10/B13).
+Les demandes « au fil du dossier » (§2, 1 bis) se construisent avec M4, premier module qui en aura
+besoin (pas de code sans appelant).
 
 **SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main.
 Le passage à blanc en mémoire (2026-11-16, registre gratuit, aucune écriture) l'a complétée

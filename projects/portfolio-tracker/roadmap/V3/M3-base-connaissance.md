@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 — tri et acceptation écrits, trois questions tranchées le même jour ; rien de construit
+status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; restent base, besoins, déclencheur, écran, réel
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -129,7 +129,27 @@ migration de M2 (064) est appliquée en production après les contrôles (accord
 3. **Retrouver un passage** : **par les mots maintenant** (gratuit) ; par le sens quand M6 ou M8 en aura
    besoin, en reprenant l'outil de l'ancien système.
 
-## 5. Ce que M3 ne fait pas (dit, pas caché)
+## 5. Construit hors ligne (2026-11-21)
+
+Module `app/modules/connaissance/` (contrat 1.0.0), détail dans son `ARCHITECTURE.md`. K0-K9 sur
+société fictive, communiqué réel NVIDIA copié tel quel : `check_connaissance.py` **49/0**,
+`negatif_connaissance.sh` **30/30**. Ce que la construction a appris :
+- **`app/knowledge/` charge tout l'ancien paquet** (base, plongements) dès qu'on importe `citation.py` :
+  la vérification est passée dans M3 (détenteur unique, exposé par le contrat), l'ancien chemin n'est
+  plus qu'un ré-export ; ses deux anciens lecteurs restent verts (collecteur 145/0, note flash 113/0,
+  négatifs 51/51 et 54/54, mutations retargetées).
+- **Sur le communiqué réel, « 20 » et « % » sont dans deux cellules** ; le lecteur recolle une cellule
+  sans lettre ni chiffre comme elle est imprimée (« $ » et « ( » au nombre qui suit, le reste à la
+  cellule d'avant).
+- **La même ligne de chiffre d'affaires figure deux fois mot pour mot** (tableau comptable, tableau
+  retraité) : la pièce retient la première et nomme les autres lignes.
+- Le test négatif a trouvé deux faux verts, corrigés : un script placé dans l'en-tête de page (déjà
+  muet) n'éprouvait pas la règle « script muet » ; une seconde garde du cœur masquait le refus du
+  détenteur (l'assert exige désormais le motif du détenteur).
+- **Les demandes au fil du dossier** (§2, 1 bis ; deuxième moitié de K11) se construisent avec M4, le
+  premier module qui en aura besoin : aucun code sans appelant.
+
+## 6. Ce que M3 ne fait pas (dit, pas caché)
 
 - **Choisir quoi citer** : c'est l'analyste qui choisit ses extraits (un module, un modèle) ; M3 vérifie
   et range. Une pièce exacte sortie de son contexte (une négation dans la phrase voisine) passe : elle se
