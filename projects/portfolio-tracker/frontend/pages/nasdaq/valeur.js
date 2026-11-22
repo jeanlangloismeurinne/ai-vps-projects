@@ -21,25 +21,28 @@ const SORTS = [
 const lg = r => Math.log1p(r || 0)
 const TICKS = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 3, 5]
 
-function Bars({ rows, sp, watch, onOpen, refLabel }) {
+function Bars({ rows, sp, home, watch, onOpen, refLabel, homeLabel }) {
   const named = rows.some(r => r.name)
   const W = 1000, RH = 24, L = named ? 150 : 90, R0 = 560, top = 26
   const COL = { total: R0 + 14, an: R0 + 66, ratio: R0 + 140, part: R0 + 320 }
-  const H = top + rows.length * RH + 26
+  // deux références (CAC 40) : une ligne de plus sous le graphique, le S&P 500 remonte d'autant
+  const sh = home != null ? 12 : 0
+  const H = top + rows.length * RH + 26 + sh
   const vals = rows.flatMap(r => {
     const a = r.period.annual
     const pos = LAYERS.reduce((s, k) => s + Math.max(0, lg(a[k])), 0)
     const neg = LAYERS.reduce((s, k) => s + Math.min(0, lg(a[k])), 0)
     return [pos, neg, lg(a.total)]
   })
-  const lo = Math.min(0, ...vals), hi = Math.max(lg(0.05), ...vals, lg(sp))
+  const lo = Math.min(0, ...vals), hi = Math.max(lg(0.05), ...vals, lg(sp), lg(home))
   const x = v => L + ((v - lo) / (hi - lo)) * (R0 - L)
   const ticks = TICKS.filter(t => lg(t) >= lo - 1e-9 && lg(t) <= hi + 1e-9)
   const mid = (y) => y + RH / 2 + 4
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Décomposition annuelle de la hausse par titre">
       {ticks.map(t => <g key={t}><line x1={x(lg(t))} x2={x(lg(t))} y1={top - 6} y2={H - 26} stroke={t === 0 ? '#4b5563' : '#1f2937'} /><text x={x(lg(t))} y={top - 10} fontSize="10" fill="#9ca3af" textAnchor="middle">{t > 0 ? '+' : ''}{Math.round(t * 100)} %</text></g>)}
-      {sp != null && <g><line x1={x(lg(sp))} x2={x(lg(sp))} y1={top - 6} y2={H - 20} stroke={C.sp} strokeDasharray="4 3" /><text x={x(lg(sp))} y={H - 6} fontSize="10" fill={C.sp} textAnchor="middle">{refLabel} {pct(sp, 1)}/an</text></g>}
+      {sp != null && <g><line x1={x(lg(sp))} x2={x(lg(sp))} y1={top - 6} y2={H - 20 - sh} stroke={C.sp} strokeDasharray="4 3" /><text x={x(lg(sp))} y={H - 6 - sh} fontSize="10" fill={C.sp} textAnchor="middle">{refLabel} {pct(sp, 1)}/an</text></g>}
+      {home != null && <g><line x1={x(lg(home))} x2={x(lg(home))} y1={top - 6} y2={H - 20} stroke={C.home} strokeDasharray="4 3" /><text x={x(lg(home))} y={H - 6} fontSize="10" fill={C.home} textAnchor="middle">{homeLabel} {pct(home, 1)}/an</text></g>}
       <text x={COL.total} y={top - 10} fontSize="10" fill="#9ca3af">Mise ×</text>
       <text x={COL.an} y={top - 10} fontSize="10" fill="#9ca3af">Par an</text>
       <text x={COL.ratio} y={top - 10} fontSize="10" fill="#9ca3af">Cours / plancher</text>
@@ -108,6 +111,7 @@ export default function NasdaqValeur() {
   const ko = all.filter(r => !r.period?.ok)
   // Un départ décalé a son propre S&P 500 : la référence commune se lit sur un titre au départ de la période.
   const sp = ok.find(r => !r.period.shifted)?.period?.annual?.sp ?? null
+  const home = ok.find(r => !r.period.shifted)?.period?.annual?.home ?? null
 
   const mainView = (
     <div className="pb-8 space-y-4">
@@ -133,13 +137,13 @@ export default function NasdaqValeur() {
         D'où vient le rendement annuel de chaque titre : <span style={{ color: C.infl }}>l'inflation</span>, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> (méritée),{' '}
         <span style={{ color: C.mult }}>la variation du multiple</span> (empruntée) et <span style={{ color: C.div }}>les dividendes</span>. Le losange bleu est le total ; à droite, par combien la mise a été multipliée sur la période et le rapport du cours à son plancher.
         Les composantes se multiplient : l'échelle est logarithmique pour que leurs longueurs s'ajoutent exactement jusqu'au losange. Un clic ouvre le titre.
-        {eu && <> Pour le CAC 40 : bénéfice du dernier exercice publié ({L.source}), connu 4 mois après la clôture ; {L.infl} ; référence {L.ref}, dividendes réinvestis.</>}
+        {eu && <> Pour le CAC 40 : bénéfice du dernier exercice publié ({L.source}), connu 4 mois après la clôture ; {L.infl} ; références {L.ref} et {L.home}, dividendes réinvestis ({L.home_note}).</>}
       </p>
       {eu && <p className="text-xs text-amber-200/80 max-w-3xl">{FLOOR_CAVEAT}</p>}
       {err && <div className="rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">Erreur de chargement : {err}</div>}
       {!sum ? <p className="text-sm text-gray-500">Chargement…</p> : ok.length === 0
         ? <p className="text-sm text-gray-500">Aucun titre décomposable{sum.running ? ' — rafraîchissement en cours' : ''}.</p>
-        : <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3 overflow-x-auto"><div className="min-w-[760px]"><Bars rows={ok} sp={sp} watch={eu ? new Set() : watch} onOpen={openTicker} refLabel={L.ref} /></div></div>}
+        : <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3 overflow-x-auto"><div className="min-w-[760px]"><Bars rows={ok} sp={sp} home={home} watch={eu ? new Set() : watch} onOpen={openTicker} refLabel={L.ref} homeLabel={L.home} /></div></div>}
       {ok.some(r => r.period.shifted) && <p className="text-xs text-gray-500">* départ décalé au premier bénéfice positif mesurable.</p>}
       {ko.length > 0 && (
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3">

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
-export const C = { infl: '#9ca3af', real: '#34d399', mult: '#f59e0b', div: '#a78bfa', sp: '#e5e7eb', bad: '#ef4444', band: 'rgba(52,211,153,0.14)' }
+export const C = { infl: '#9ca3af', real: '#34d399', mult: '#f59e0b', div: '#a78bfa', sp: '#e5e7eb', home: '#f472b6', bad: '#ef4444', band: 'rgba(52,211,153,0.14)' }
 export const PERIODS = [{ v: '3y', l: '3 ans' }, { v: '5y', l: '5 ans' }, { v: '10y', l: '10 ans' }, { v: '2010', l: 'Depuis 2010' }]
 export const LABELS = { infl: 'Inflation', real: 'Bénéfices réels', mult: 'Multiple', div: 'Dividendes' }
 
@@ -42,12 +42,12 @@ export function Sentence({ d, name }) {
   const from = monthFr(p.start)
   const shift = p.shifted ? ` (départ décalé au premier bénéfice positif mesurable)` : ''
   if (!p.ok) {
-    return <p className="text-sm text-gray-300"><span className="text-red-400">{name} : décomposition impossible depuis {from}, {p.reason}.</span> Le cours a rapporté {pct(p.annual?.total)} par an dividendes compris, contre {pct(p.annual?.sp)} pour le {L.ref}.</p>
+    return <p className="text-sm text-gray-300"><span className="text-red-400">{name} : décomposition impossible depuis {from}, {p.reason}.</span> Le cours a rapporté {pct(p.annual?.total)} par an dividendes compris, contre {pct(p.annual?.sp)} pour le {L.ref}{p.annual?.home != null && <> et {pct(p.annual.home)} pour le {L.home}</>}.</p>
   }
   const a = p.annual
   return (
     <p className="text-sm text-gray-300 leading-relaxed">
-      Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le {L.ref}.{' '}
+      Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le {L.ref}{a.home != null && <> et {pct(a.home)} pour le {L.home}</>}.{' '}
       <span style={{ color: C.infl }}>L'inflation</span> explique {pct(a.infl)} par an, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> {pct(a.real)},{' '}
       <span style={{ color: C.mult }}>le multiple</span> {pct(a.mult)} (de {num(p.pe0)} à {num(p.pe1)} fois les bénéfices) et <span style={{ color: C.div }}>les dividendes</span> {pct(a.div)}.{' '}
       <Verdict p={p} />
@@ -83,7 +83,8 @@ function Waterfall({ d }) {
   steps.push({ l: "Cours aujourd'hui", a: 0, b: P1, c: C.sp })
   steps.push({ l: 'Dividendes', a: P1, b: P1 * f.div, c: C.div })
   steps.push({ l: 'Total', a: 0, b: P1 * f.div, c: '#38bdf8' })
-  if (f.sp) steps.push({ l: `Même mise ${L.ref}`, a: 0, b: P0 * f.sp, c: C.sp, outline: true })
+  if (f.sp) steps.push({ l: ['Même mise', L.ref], a: 0, b: P0 * f.sp, c: C.sp, outline: true })
+  if (f.home) steps.push({ l: ['Même mise', L.home], a: 0, b: P0 * f.home, c: C.home, outline: true })
   const W = 900, H = 230, ML = 54, MB = 34, top = 10
   const vmax = Math.max(...steps.map(s => Math.max(s.a, s.b))) * 1.05
   const y = v => top + (1 - v / vmax) * (H - top - MB)
@@ -99,7 +100,7 @@ function Waterfall({ d }) {
           <g key={i}>
             <rect x={x} y={y1} width={w} height={Math.max(1, y0 - y1)} rx="2" fill={s.outline ? 'none' : s.c} stroke={s.outline ? s.c : 'none'} strokeWidth="1.5" opacity={dn ? 0.55 : 1} />
             <text x={x + w / 2} y={y1 - 4} fontSize="10" fill="#d1d5db" textAnchor="middle">{s.a === 0 ? usd(s.b) : times(s.b / s.a, 2)}</text>
-            <text x={x + w / 2} y={H - MB + 14} fontSize="10" fill="#9ca3af" textAnchor="middle">{s.l}</text>
+            <text x={x + w / 2} y={H - MB + 14} fontSize="10" fill="#9ca3af" textAnchor="middle">{[].concat(s.l).map((t, k) => <tspan key={k} x={x + w / 2} dy={k ? 12 : 0}>{t}</tspan>)}</text>
           </g>
         )
       })}
@@ -201,7 +202,7 @@ function StackChart({ cu }) {
       if (v >= 0) { pos[j].push([pb, pb + v]); neg[j].push([nb, nb]); pb += v } else { neg[j].push([nb, nb + v]); pos[j].push([pb, pb]); nb += v }
     })
   }
-  const ext = [...pos.flat(2), ...neg.flat(2), ...cu.total.filter(v => v != null), ...cu.sp.filter(v => v != null)]
+  const ext = [...pos.flat(2), ...neg.flat(2), ...cu.total.filter(v => v != null), ...cu.sp.filter(v => v != null), ...(cu.home || []).filter(v => v != null)]
   const lo = Math.min(0, ...ext), hi = Math.max(0, ...ext)
   const y = v => top + (1 - (v - lo) / (hi - lo || 1)) * (H - top - MB)
   const x = i => ML + (i / (n - 1)) * (W - ML - MR)
@@ -217,6 +218,7 @@ function StackChart({ cu }) {
       {layers.map((k, j) => <polygon key={`p${k}`} points={poly(pos[j])} fill={C[k]} opacity="0.75" />)}
       {layers.map((k, j) => <polygon key={`n${k}`} points={poly(neg[j])} fill={C[k]} opacity="0.45" />)}
       <path d={line(cu.sp)} fill="none" stroke={C.sp} strokeWidth="1.2" strokeDasharray="4 3" />
+      {cu.home && <path d={line(cu.home)} fill="none" stroke={C.home} strokeWidth="1.2" strokeDasharray="4 3" />}
       <path d={line(cu.total)} fill="none" stroke="#38bdf8" strokeWidth="2" />
     </svg>
   )
@@ -313,7 +315,7 @@ export default function ValeurPanel({ ticker, name, market = 'nasdaq' }) {
         <button onClick={() => setMore(m => !m)} className="text-sm text-sky-300 hover:text-white">{more ? '▾' : '▸'} Quand la hausse a été méritée ou empruntée</button>
         {more && d.cumul && (
           <>
-            <Legend items={[[C.infl, 'Inflation'], [C.real, 'Bénéfices réels'], [C.mult, 'Multiple'], [C.div, 'Dividendes'], ['#38bdf8', 'Total (somme des couches)'], [C.sp, L.ref, true]]} />
+            <Legend items={[[C.infl, 'Inflation'], [C.real, 'Bénéfices réels'], [C.mult, 'Multiple'], [C.div, 'Dividendes'], ['#38bdf8', 'Total (somme des couches)'], [C.sp, L.ref, true], ...(L.home ? [[C.home, L.home, true]] : [])]} />
             <StackChart cu={d.cumul} />
             <p className="text-xs text-gray-500">Facteur cumulé depuis le départ (échelle logarithmique) : les couches s'empilent et leur somme est le rendement total. Au-dessus de ×1, ce qui a fait monter ; en dessous, ce qui a fait baisser.</p>
           </>
