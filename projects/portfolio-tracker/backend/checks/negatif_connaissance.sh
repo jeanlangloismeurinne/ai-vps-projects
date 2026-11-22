@@ -37,11 +37,19 @@ mutations=(
 # [K3] les cellules ne s'ouvrent plus sur une tabulation.
 "$L¦            self.morceaux.append(\"\\t\")¦            self.morceaux.append(\" \")¦[K3] une ligne de tableau du communiqué réel"
 # [K3] les cellules sans lettre ni chiffre ne sont plus recollées.
-"$L¦        if not any(ch.isalnum() for ch in c):¦        if False:¦[K3] une ligne de tableau du communiqué réel"
+"$L¦        if not any(ch.isalnum() for ch in c) and c not in _NEANT:¦        if False:¦[K3] une ligne de tableau du communiqué réel"
 # [K3] une parenthèse ouvrante part à la cellule d'avant.
 "$L¦_OUVRANTS = \"([\" + _DEVISES¦_OUVRANTS = _DEVISES¦[K3] symbole monétaire au nombre qui suit"
 # [K3] un bloc dans une cellule coupe la ligne.
 "$L¦            self._dans_cellule = 1¦            self._dans_cellule = 0¦[K3] un bloc dans une cellule"
+# [K3] les blancs du code source redeviennent des sauts de ligne (lecteur 1.1.0).
+"$L¦            self.morceaux.append(garde.sub(\" \", data))¦            self.morceaux.append(data)¦[K3] procuration réelle mise en forme ligne à ligne"
+# [K3] un saut de ligne (<br/>) dans une cellule ne vaut plus une espace : les mots se collent.
+"$L¦        if self._cache is None and tag in self._blocs:¦        if self._cache is None and tag in self._blocs and not self._dans_cellule:¦[K3] un saut de ligne dans une cellule vaut une espace"
+# [K3] un tiret seul est recollé à la cellule d'avant.
+"$L¦_NEANT = frozenset({¦_NEANT = frozenset() and frozenset({¦[K3] un tiret seul garde sa cellule"
+# [K3] le bloc préformaté perd ses retours à la ligne.
+"$L¦_BLANCS_PREFORMATES = re.compile(r\"[\\t\\f\\v]\")¦_BLANCS_PREFORMATES = _BLANCS¦[K3] les blancs du code source valent une espace"
 # [K3] les données structurées passent pour illisibles.
 "$J¦    \"formats_sans_objet\": [\"application/json\", ¦    \"formats_sans_objet\": [¦[K3] données structurées"
 # [K3] une page sans texte est « lue ».

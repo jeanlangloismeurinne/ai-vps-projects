@@ -7241,3 +7241,21 @@ updated: 2026-11-21 nuit (déclencheur `etude` et besoins `comptes` construits h
   rien. RVMD : qualité financière 1,00, défendabilité/modèle économique/secteur/management partiels.
   **MSFT : aucune réponse en vigueur.** Beaucoup de réponses sont « standard antérieur » (#127) : refaites
   à la reconstruction (premier passage du test), pas relues d'ici là.
+
+## 2026-11-22 — sorti de la reprise (trois vrais dossiers, relecture débrayée)
+
+**Trois vrais dossiers TERMINÉS le 2026-11-22** (NVDA, RVMD, SpaceX ; passages 13-19) — chacun : 2
+demandes (derniers comptes annuels + companyfacts, `sans_objet` à la lecture, voulu), tout depuis la
+SEC, **coût 0 $** (aucun modèle, aucune recherche web ; crédit DeepInfra inchangé ≈ 2,91 $) → le coût
+d'un dossier avec collecte web n'est PAS encore mesuré (aucune des trois n'en a eu besoin).
+NVDA : 10-K FY2026 (1 852 lignes, CA 215 938 M$ vérifié), validé à l'écran. RVMD : 10-K FY2025
+(4 259 lignes) ; fiche révision 2, cotations `RVMD` **et `RVMDW`** (bons de souscription : à exclure
+quand un module lira le cours coté). SpaceX : prospectus 424B4 du 2026-06-12 (#148 ; 15 458 lignes,
+CA 2025 18 674 M$) ; fiche complétée par le système en révision 2 (« SPACE EXPLORATION TECHNOLOGIES
+CORP », US, NASDAQ SPCX, CIK 1181412). Ses comptes intermédiaires postérieurs à l'introduction ne sont
+pas demandés (aucun besoin déclaré). 0 pièce de connaissance : normal avant M4.
+
+**Relecture de la collecte DÉBRAYÉE le 2026-11-22** (`lecture_humaine.recueil = false`, à la demande de
+l'utilisateur) : un dossier va au bout sans arrêt ; le raffinement « en cas de doute seulement » est à
+la feuille de route du module (`app/modules/recueil/ARCHITECTURE.md`). Contrôles qui jouent le geste à
+l'écran : relecture rétablie le temps du contrôle (`check_etude.relecture`).

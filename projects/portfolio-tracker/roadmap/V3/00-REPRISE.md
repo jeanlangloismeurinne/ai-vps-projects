@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-22 (064+065 appliquées, M2/M3/étude déployés ; prochain lot : mise à l'étude à l'écran, K14 puis K13) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-22 (K13 fait, lecteur 1.2.0 ; prochain lot : lignes « réel » de M2, B13 à reformuler) — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -26,24 +26,23 @@ vérifié dans les conteneurs : routes `/v2/emetteurs/{e}/etude`, `libelles_acte
 verts ; seul rouge connu : `check_signature_modele_persist` (données de l'ancien enchaînement).
 Détail des modules : `M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
 
-**Trois vrais dossiers TERMINÉS le 2026-11-22** (NVDA, RVMD, SpaceX ; passages 13-19) — chacun : 2
-demandes (derniers comptes annuels + companyfacts, `sans_objet` à la lecture, voulu), tout depuis la
-SEC, **coût 0 $** (aucun modèle, aucune recherche web ; crédit DeepInfra inchangé ≈ 2,91 $) → le coût
-d'un dossier avec collecte web n'est PAS encore mesuré (aucune des trois n'en a eu besoin).
-NVDA : 10-K FY2026 (1 852 lignes, CA 215 938 M$ vérifié), validé à l'écran. RVMD : 10-K FY2025
-(4 259 lignes) ; fiche révision 2, cotations `RVMD` **et `RVMDW`** (bons de souscription : à exclure
-quand un module lira le cours coté). SpaceX : prospectus 424B4 du 2026-06-12 (#148 ; 15 458 lignes,
-CA 2025 18 674 M$) ; fiche complétée par le système en révision 2 (« SPACE EXPLORATION TECHNOLOGIES
-CORP », US, NASDAQ SPCX, CIK 1181412). Ses comptes intermédiaires postérieurs à l'introduction ne sont
-pas demandés (aucun besoin déclaré). 0 pièce de connaissance : normal avant M4.
+**Trois vrais dossiers terminés le 2026-11-22** (NVDA, RVMD, SpaceX : comptes annuels + companyfacts,
+tout SEC, 0 $ ; le coût d'un dossier avec collecte web n'est PAS encore mesuré ; RVMD a aussi la cotation
+`RVMDW`, bons de souscription à exclure quand un module lira le cours). Relecture de la collecte
+débrayée (`lecture_humaine.recueil = false`). Détail : archive, « 2026-11-22 — sorti de la reprise ».
 
-**Relecture de la collecte DÉBRAYÉE le 2026-11-22** (`lecture_humaine.recueil = false`, à la demande de
-l'utilisateur) : un dossier va au bout sans arrêt ; le raffinement « en cas de doute seulement » est à
-la feuille de route du module (`app/modules/recueil/ARCHITECTURE.md`). Contrôles qui jouent le geste à
-l'écran : relecture rétablie le temps du contrôle (`check_etude.relecture`).
+**K13 FAIT le 2026-11-22** (gratuit ; `tools/controle_ancien_systeme.sh --en-memoire`) : 57 fiches de
+l'ancien système → 43 retrouvées, 12 écarts expliqués (l'ancien lecteur collait cellules et blocs), 0
+inexpliqué, 2 d'une autre société (#87). Il a révélé un **défaut du lecteur** : les retours à la ligne du
+code source HTML coupaient les lignes (procurations et 8-K Donnelley : une cellule par ligne), masqué par
+les 10-K Workiva → **lecteur 1.2.0** (déployé ; la tâche de fond relit les 6 documents à son passage
+suivant, les lectures 1.1.0 restent). Détail : `M3-base-connaissance.md` § « K13 ».
 
-**Prochain lot** : K13 (57 fiches SEC de l'ancien système retrouvées dans les dépôts recollectés —
-gratuit, NVDA et RVMD désormais collectées) et les lignes « réel » de M2 (B3/B6/B10/B13). Les demandes
+**Prochain lot** : lignes « réel » de M2. B3 (prospectus SpaceX), B10 (fiche SpaceX complétée) et B12
+(écran) sont déjà constatées sur les vrais dossiers du 2026-11-22 → à cocher après relecture. Restent
+B6 (une vraie évaluation de source : il faut une collecte web, payante) et **B13, à reformuler** : elle
+exige comptes intermédiaires et annonces depuis janvier, alors que l'utilisateur a tranché le 2026-11-21
+« initialiser = le dernier rapport annuel » (M3 §4 q.2) — question posée à l'utilisateur. Les demandes
 « au fil du dossier » (M3 §2, 1 bis) se construisent avec M4. Un dossier terminé ne repart pas quand le
 parcours s'allonge : à traiter avec M4.
 

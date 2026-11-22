@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; écran (K12) construit et prouvé hors ligne le même jour (check_etude_api 24/0, négatif 12/12) ; reste réel
+status: ouvert le 2026-11-21 ; K13 fait le 2026-11-22 (lecteur 1.2.0) ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; écran (K12) construit et prouvé hors ligne le même jour (check_etude_api 24/0, négatif 12/12) ; reste réel
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -218,6 +218,37 @@ sur la société fictive (serveur de démonstration, aucune base). Le bandeau «
 remplacé par cette section (la route `/dossier` reste). Appris en route : un document d'une source
 inconnue s'affiche « non admise » même quand l'évaluateur l'a admise ensuite — c'est juste (qualification
 au jour de la collecte), l'en-tête le dit désormais.
+
+### K13 — contrôle par l'ancien système (2026-11-22, réel, gratuit)
+
+`bash backend/tools/controle_ancien_systeme.sh [EMETTEUR…] [--en-memoire] [--detail]` (lecture seule ;
+les pièces d'essai sont établies par le vrai geste `citer` dans un dépôt EN MÉMOIRE). Les 57 fiches de
+l'ancien système à extraits vérifiés qui citent un dépôt SEC (NVDA 25, RVMD 32) : chaque extrait est
+rejoué contre la lecture M3 du même dépôt. La collecte n'a demandé que les derniers comptes annuels
+(14 fiches tombent sur le 10-K, ou sur une page « R » du même dépôt) ; `--en-memoire` relit les
+autres dépôts au registre (10-Q, 8-K, procuration, commentaire du directeur financier, formulaire 4) par
+le même lecteur, sans rien ranger.
+
+**Résultat (lecteur 1.2.0)** : 57 fiches — **43 retrouvées, 12 écarts expliqués, 0 inexpliqué, 2 d'une
+autre société**. Les 12 écarts expliqués : l'ancien lecteur collait les cellules d'un tableau
+(« Revenue$215,938$130,497$60,922 ») ou un paragraphe et le tableau qui le suit ; M3 garde les colonnes
+(#132), et le même texte est cité à sa ligne (« Revenue⇥$215,938⇥$130,497⇥$60,922 », 10-K NVDA ligne 879).
+Les 2 « autre société » (#1101, #1157) : un communiqué d'une autre société (numéro de registre 2022416)
+rangé au dossier RVMD par l'ancien système (#87), que le contrôle reconnaît par le numéro de la fiche.
+
+**Défaut du lecteur trouvé et corrigé (1.1.0 → 1.2.0)** : les retours à la ligne du CODE SOURCE HTML
+coupaient les lignes. Dans une procuration ou un 8-K mis en forme ligne à ligne (Donnelley), chaque cellule
+finissait seule sur sa ligne, et une rangée de tableau ne pouvait plus se citer (4 fiches RVMD rouges).
+Les 10-K NVDA et RVMD (Workiva, sans retour à la ligne entre balises) le masquaient. Désormais un blanc du
+code source vaut une espace, comme dans un navigateur, sauf dans un bloc préformaté ; un bloc dans une
+cellule vaut une espace (« Number of<br>Shares ») ; un tiret seul garde sa cellule (« néant »). Fixture
+copiée du réel : `checks/fixtures/connaissance/procuration_def14a_tableau.htm`. `check_connaissance` 54/0,
+négatif 35/35 (4 mutations neuves). Test négatif de l'outil : avec l'ancien lecteur, K13 sort en 1 sur les
+4 fiches (garde : une ligne sans lettre dans un passage multi-lignes est une cellule détachée de sa rangée,
+jamais une « différence expliquée »).
+
+Production : les lectures 1.1.0 restent (K2) ; la tâche de fond relit les documents en 1.2.0 à son passage
+suivant (l'étape « lire » tourne même sur un dossier terminé). Aucune pièce n'existait encore.
 
 ## 6. Ce que M3 ne fait pas (dit, pas caché)
 

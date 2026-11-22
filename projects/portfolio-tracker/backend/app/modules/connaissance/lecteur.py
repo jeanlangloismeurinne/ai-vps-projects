@@ -7,13 +7,18 @@ deux fois par la même version du lecteur donne donc les mêmes lignes, octet po
 Une ligne = un bloc (paragraphe, titre, élément de liste) ou une LIGNE DE TABLEAU, dont chaque
 cellule s'ouvre sur une tabulation (#132 : la normalisation des citations ramène tout blanc à une
 espace, la ligne du tableau se cite telle qu'imprimée, chiffres compris) ; un bloc DANS une cellule
-n'y coupe pas la ligne. Ce qui est masqué (style display:none), les scripts, les styles et l'en-tête
+n'y coupe pas la ligne, il y vaut une espace (« Number of<br>Shares » se lit « Number of Shares »).
+Les blancs du code source (retours à la ligne, tabulations entre deux balises) valent une espace,
+comme dans un navigateur — sauf dans un bloc préformaté, où le retour à la ligne est imprimé : seules
+les balises font les lignes (lecteur 1.2.0 ; relevé sur une procuration réelle mise en forme ligne à
+ligne, où chaque cellule finissait seule sur sa ligne). Ce qui est masqué (style display:none), les scripts, les styles et l'en-tête
 des données structurées ne sont pas lus : un lecteur ne les voit pas.
 
 Bibliothèque standard seulement ; tout ce qui décrit la façon de lire vient du référentiel.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Any, Mapping
@@ -45,6 +50,7 @@ class _Lecteur(HTMLParser):
         # Un élément muet ou masqué : (balise, profondeur de cette balise depuis son ouverture).
         self._cache: list | None = None
         self._dans_cellule = 0
+        self._preformate = 0
 
     def _masque(self, attrs: list[tuple[str, str | None]]) -> bool:
         for nom, valeur in attrs:
@@ -62,19 +68,21 @@ class _Lecteur(HTMLParser):
         if tag not in self._vides and (tag in self._muets or self._masque(attrs)):
             self._cache = [tag, 1]
             return
+        if tag == "pre":
+            self._preformate += 1
         if tag in self._cellules:
             self._dans_cellule = 1
             self.morceaux.append("\t")
         elif tag in self._fins_tableau:
             self._dans_cellule = 0
             self.morceaux.append("\n")
-        elif tag in self._blocs and not self._dans_cellule:
-            self.morceaux.append("\n")
+        elif tag in self._blocs:
+            self.morceaux.append(" " if self._dans_cellule else "\n")
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         # <br/> et consorts : un bloc vide, jamais un élément qui ouvre un masque.
-        if self._cache is None and tag in self._blocs and not self._dans_cellule:
-            self.morceaux.append("\n")
+        if self._cache is None and tag in self._blocs:
+            self.morceaux.append(" " if self._dans_cellule else "\n")
 
     def handle_endtag(self, tag: str) -> None:
         if self._cache is not None:
@@ -83,15 +91,18 @@ class _Lecteur(HTMLParser):
                 if self._cache[1] == 0:
                     self._cache = None
             return
+        if tag == "pre" and self._preformate:
+            self._preformate -= 1
         if tag in self._fins_tableau:
             self._dans_cellule = 0
             self.morceaux.append("\n")
-        elif tag in self._blocs and not self._dans_cellule:
-            self.morceaux.append("\n")
+        elif tag in self._blocs:
+            self.morceaux.append(" " if self._dans_cellule else "\n")
 
     def handle_data(self, data: str) -> None:
         if self._cache is None:
-            self.morceaux.append(data)
+            garde = _BLANCS_PREFORMATES if self._preformate and not self._dans_cellule else _BLANCS
+            self.morceaux.append(garde.sub(" ", data))
 
 
 def _decoder(contenu: bytes, decodages: list[str]) -> str:
@@ -106,8 +117,14 @@ def _decoder(contenu: bytes, decodages: list[str]) -> str:
     return contenu.decode(decodages[-1], errors="replace").replace("\x00", "\ufffd")
 
 
+# Les blancs du code source : une espace, comme dans un navigateur ; dans un bloc préformaté, le
+# retour à la ligne reste (il est imprimé), la tabulation devient une espace (elle n'ouvre pas de cellule).
+_BLANCS = re.compile(r"[\t\n\r\f\v]")
+_BLANCS_PREFORMATES = re.compile(r"[\t\f\v]")
+
 _DEVISES = "$€£¥"
 _OUVRANTS = "([" + _DEVISES
+_NEANT = frozenset({"—", "–", "-", "‒", "―"})
 
 
 def _ligne(brute: str) -> str:
@@ -115,12 +132,13 @@ def _ligne(brute: str) -> str:
     (plusieurs cellules vides de suite n'en font qu'une). Une cellule sans lettre ni chiffre se
     recolle comme elle est imprimée : un symbole monétaire ou une parenthèse ouvrante au nombre qui
     suit, le reste (« % », « ) ») à la cellule d'avant — relevé sur un 8-K réel : « 20 », « % » dans
-    deux cellules."""
+    deux cellules. Un tiret seul n'est pas une ponctuation : c'est une VALEUR (« néant ») et il garde sa
+    cellule — relevé sur une procuration réelle : « 11,356,054 », « — », « 11,356,054 » (lecteur 1.2.0)."""
     cellules = [c for c in (" ".join(c.split()) for c in brute.split("\t")) if c]
     recollees: list[str] = []
     devant = ""
     for c in cellules:
-        if not any(ch.isalnum() for ch in c):
+        if not any(ch.isalnum() for ch in c) and c not in _NEANT:
             if all(ch in _OUVRANTS for ch in c):
                 devant += c
             elif recollees:

@@ -11,7 +11,9 @@ et `negatif_connaissance.sh` prouve que chacune vire au rouge.
   [K3] les formes réelles se lisent : communiqué réel (lignes de tableau citables, cellules recollées
        comme imprimées), masqué/script/en-tête de données structurées non lus, bloc dans une cellule,
        texte brut ; données structurées « sans objet » ; vide → impossible nommé ;
-       un caractère nul se lit « \ufffd » (sinon la base refuserait la lecture)
+       un caractère nul se lit « \ufffd » (sinon la base refuserait la lecture) ; procuration réelle
+       mise en forme ligne à ligne : une rangée par ligne, saut de ligne dans une cellule = espace,
+       tiret seul = cellule ; bloc préformaté : son retour à la ligne reste
   [K4] une pièce ne dit que ce que son document écrit : mot pour mot, texte du DOCUMENT ; court et
        unique → sa ligne ; ambigu ou introuvable → refusé ; une ligne répétée nomme ses autres lignes
   [K5] la même pièce citée deux fois n'est rangée qu'une fois
@@ -23,7 +25,9 @@ et `negatif_connaissance.sh` prouve que chacune vire au rouge.
        document ; 0 $ ; ce qui n'en dépend pas avance
 
 Le communiqué est le EX-99.1 réel du 8-K NVIDIA 0001045810-26-000019 (copié tel quel :
-`fixtures/connaissance/communique_ex991.htm`) ; la société, ses domaines et les autres documents sont
+`fixtures/connaissance/communique_ex991.htm`) ; le tableau de détention est celui de la procuration
+DEF 14A réelle de Revolution Medicines 0001193125-26-182453 (`fixtures/connaissance/procuration_def14a_tableau.htm`,
+relevé par K13 le 2026-11-22) ; la société, ses domaines et les autres documents sont
 fictifs (`.example` est réservé), à la forme des documents réels (en-tête de données structurées
 masqué, cellules d'espacement masquées, symbole monétaire dans sa propre cellule).
 """
@@ -60,6 +64,7 @@ PRESSE = "presse-fictive.example"
 INCONNUE = "blog-inconnu.example"
 SANS_LECTURE = {"emetteurs": False, "recueil": False, "connaissance": False, "test": False}
 COMMUNIQUE = (BACKEND / "checks" / "fixtures" / "connaissance" / "communique_ex991.htm").read_bytes()
+PROCURATION = (BACKEND / "checks" / "fixtures" / "connaissance" / "procuration_def14a_tableau.htm").read_bytes()
 
 RAPPORT = """<html><head><title>Rapport annuel fictif</title><style>p{color:red}</style>
 <script>var cache = "SCRIPT-NON-LU";</script></head><body>
@@ -241,6 +246,17 @@ def main() -> int:
     b.check(conv and conv.statut == K.IMPOSSIBLE and conv.raison == "vide" and conv.nb_lignes == 0,
             "[K3] une page sans texte visible : lecture impossible, raison nommée", f"{conv}")
     from app.modules.connaissance import lecteur as KL
+    pro = KL.lire(PROCURATION, "text/html", regles).lignes
+    b.check("Mark A. Goldsmith, M.D., Ph.D.(4)\t798,456\t1,935,784\t2,734,240\t1.4%" in pro,
+            "[K3] procuration réelle mise en forme ligne à ligne : une rangée de tableau sur une ligne",
+            f"{[l for l in pro if 'Goldsmith' in l][:2] or pro[:8]}")
+    b.check(any(l.startswith("Name of Beneficial Owner\tNumber of Outstanding Shares Beneficially Owned") for l in pro),
+            "[K3] un saut de ligne dans une cellule vaut une espace (« Number of Outstanding »)", f"{pro[:3]}")
+    b.check("Entities affiliated with Janus Henderson Group PLC(3)\t11,356,054\t—\t11,356,054\t5.7%" in pro,
+            "[K3] un tiret seul garde sa cellule : c'est une valeur (néant)", f"{[l for l in pro if 'Janus' in l]}")
+    pre = KL.lire(b"<p>Revenue grew\nstrongly</p><pre>col A\tcol B\nligne 2</pre>", "text/html", regles).lignes
+    b.check(pre == ("Revenue grew strongly", "col A col B", "ligne 2"),
+            "[K3] les blancs du code source valent une espace, sauf le retour à la ligne d'un bloc préformaté", f"{pre}")
     nuls = [KL.lire(c, t, KC.referentiel()["lecteur"]).lignes
             for c, t in ((b"<p>Revenue\x00 $12</p>", "text/html"), (b"Revenue\x00 $12", "text/plain"))]
     b.check(nuls == [("Revenue\ufffd $12",)] * 2,
