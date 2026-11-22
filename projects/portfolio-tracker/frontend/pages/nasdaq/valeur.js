@@ -13,45 +13,54 @@ const SORTS = [
   { v: 'ratio', l: 'Rapport au plancher', f: r => -(r.ratio ?? 99) },
 ]
 
+// Échelle logarithmique : les composantes se multiplient, donc leurs logarithmes s'additionnent
+// exactement jusqu'au total ; une échelle en % linéaire empilerait des taux qui ne s'additionnent pas.
+const lg = r => Math.log1p(r || 0)
+const TICKS = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 3, 5]
+
 function Bars({ rows, sp, watch, onOpen }) {
-  const W = 1000, RH = 24, L = 170, R0 = 640, top = 26
-  const H = top + rows.length * RH + 8
+  const W = 1000, RH = 24, L = 90, R0 = 560, top = 26
+  const COL = { total: R0 + 14, an: R0 + 66, ratio: R0 + 140, part: R0 + 320 }
+  const H = top + rows.length * RH + 26
   const vals = rows.flatMap(r => {
     const a = r.period.annual
-    const pos = LAYERS.reduce((s, k) => s + Math.max(0, a[k] || 0), 0)
-    const neg = LAYERS.reduce((s, k) => s + Math.min(0, a[k] || 0), 0)
-    return [pos, neg, a.total]
+    const pos = LAYERS.reduce((s, k) => s + Math.max(0, lg(a[k])), 0)
+    const neg = LAYERS.reduce((s, k) => s + Math.min(0, lg(a[k])), 0)
+    return [pos, neg, lg(a.total)]
   })
-  const lo = Math.min(0, ...vals), hi = Math.max(0.05, ...vals, sp ?? 0)
+  const lo = Math.min(0, ...vals), hi = Math.max(lg(0.05), ...vals, lg(sp))
   const x = v => L + ((v - lo) / (hi - lo)) * (R0 - L)
-  const ticks = []
-  const step = hi - lo > 0.8 ? 0.2 : 0.1
-  for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) ticks.push(+t.toFixed(2))
+  const ticks = TICKS.filter(t => lg(t) >= lo - 1e-9 && lg(t) <= hi + 1e-9)
+  const mid = (y) => y + RH / 2 + 4
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Décomposition annuelle de la hausse par titre">
-      {ticks.map(t => <g key={t}><line x1={x(t)} x2={x(t)} y1={top - 6} y2={H - 8} stroke={t === 0 ? '#4b5563' : '#1f2937'} /><text x={x(t)} y={top - 10} fontSize="10" fill="#9ca3af" textAnchor="middle">{Math.round(t * 100)} %</text></g>)}
-      {sp != null && <g><line x1={x(sp)} x2={x(sp)} y1={top - 6} y2={H - 8} stroke={C.sp} strokeDasharray="4 3" /><text x={x(sp) + 3} y={H - 10} fontSize="10" fill={C.sp}>S&amp;P 500 {pct(sp, 1)}/an</text></g>}
-      <text x={R0 + 14} y={top - 10} fontSize="10" fill="#9ca3af">Total sur la période · par an · rapport au plancher</text>
+      {ticks.map(t => <g key={t}><line x1={x(lg(t))} x2={x(lg(t))} y1={top - 6} y2={H - 26} stroke={t === 0 ? '#4b5563' : '#1f2937'} /><text x={x(lg(t))} y={top - 10} fontSize="10" fill="#9ca3af" textAnchor="middle">{t > 0 ? '+' : ''}{Math.round(t * 100)} %</text></g>)}
+      {sp != null && <g><line x1={x(lg(sp))} x2={x(lg(sp))} y1={top - 6} y2={H - 20} stroke={C.sp} strokeDasharray="4 3" /><text x={x(lg(sp))} y={H - 6} fontSize="10" fill={C.sp} textAnchor="middle">S&amp;P 500 {pct(sp, 1)}/an</text></g>}
+      <text x={COL.total} y={top - 10} fontSize="10" fill="#9ca3af">Mise ×</text>
+      <text x={COL.an} y={top - 10} fontSize="10" fill="#9ca3af">Par an</text>
+      <text x={COL.ratio} y={top - 10} fontSize="10" fill="#9ca3af">Cours / plancher</text>
+      <text x={COL.part} y={top - 10} fontSize="10" fill="#9ca3af">Hausse</text>
       {rows.map((r, i) => {
         const a = r.period.annual, f = r.period.factor
         const y = top + i * RH
         let pb = 0, nb = 0
         const segs = LAYERS.map(k => {
-          const v = a[k] || 0
+          const v = lg(a[k])
           const s = v >= 0 ? [pb, pb + v] : [nb + v, nb]
           if (v >= 0) pb += v; else nb += v
-          return <rect key={k} x={x(s[0])} y={y + 4} width={Math.max(0, x(s[1]) - x(s[0]))} height={RH - 8} fill={C[k]} opacity={v >= 0 ? 0.9 : 0.5}><title>{`${LABELS[k]} : ${pct(v)} par an`}</title></rect>
+          return <rect key={k} x={x(s[0])} y={y + 4} width={Math.max(0, x(s[1]) - x(s[0]))} height={RH - 8} fill={C[k]} opacity={v >= 0 ? 0.9 : 0.5}><title>{`${LABELS[k]} : ${pct(a[k])} par an`}</title></rect>
         })
+        const xt = x(lg(a.total))
         return (
           <g key={r.ticker} className="cursor-pointer" onClick={() => onOpen(r.ticker, 'valeur')}>
             <rect x={0} y={y} width={W} height={RH} fill="transparent" />
-            <text x={L - 8} y={y + RH / 2 + 4} fontSize="12" fill={watch.has(r.ticker) ? '#fcd34d' : '#e5e7eb'} textAnchor="end">{watch.has(r.ticker) ? '★ ' : ''}{r.ticker}{r.period.shifted ? ' *' : ''}</text>
+            <text x={L - 8} y={mid(y)} fontSize="12" fill={watch.has(r.ticker) ? '#fcd34d' : '#e5e7eb'} textAnchor="end">{watch.has(r.ticker) ? '★ ' : ''}{r.ticker}{r.period.shifted ? ' *' : ''}</text>
             {segs}
-            <path d={`M${x(a.total)},${y + 3} l5,${RH / 2 - 3} l-5,${RH / 2 - 3} l-5,${-(RH / 2 - 3)} z`} fill="#38bdf8" stroke="#0c4a6e"><title>{`Total : ${pct(a.total)} par an`}</title></path>
-            <text x={R0 + 14} y={y + RH / 2 + 4} fontSize="12" fill="#e5e7eb">{times(f.total)}</text>
-            <text x={R0 + 80} y={y + RH / 2 + 4} fontSize="12" fill="#93c5fd">{pct(a.total)}</text>
-            <text x={R0 + 160} y={y + RH / 2 + 4} fontSize="12" fill={ratioHex(r.ratio, r.degraded)}>{r.ratio ? `${times(r.ratio)} le plancher${r.degraded ? ' · caduc' : ''}` : 'pas de plancher'}</text>
-            {r.period.borrowed != null && <text x={R0 + 300} y={y + RH / 2 + 4} fontSize="11" fill={r.period.borrowed > 0.05 ? C.mult : C.real}>{r.period.borrowed > 0.05 ? `${Math.round(100 * r.period.borrowed)} % emprunté` : 'méritée'}</text>}
+            <path d={`M${xt},${y + 3} l5,${RH / 2 - 3} l-5,${RH / 2 - 3} l-5,${-(RH / 2 - 3)} z`} fill="#38bdf8" stroke="#0c4a6e"><title>{`Total : ${pct(a.total)} par an`}</title></path>
+            <text x={COL.total} y={mid(y)} fontSize="12" fill="#e5e7eb">{times(f.total)}</text>
+            <text x={COL.an} y={mid(y)} fontSize="12" fill="#93c5fd">{pct(a.total)}</text>
+            <text x={COL.ratio} y={mid(y)} fontSize="12" fill={ratioHex(r.ratio, r.degraded)}>{r.ratio ? `${times(r.ratio)}${r.degraded ? ' · caduc' : ''}` : 'pas de plancher'}</text>
+            {r.period.borrowed != null && <text x={COL.part} y={mid(y)} fontSize="12" fill={r.period.borrowed > 0.05 ? C.mult : C.real}>{r.period.borrowed > 0.05 ? `${Math.round(100 * r.period.borrowed)} % empruntée` : 'méritée'}</text>}
           </g>
         )
       })}
@@ -82,7 +91,8 @@ export default function NasdaqValeur() {
   const all = (sum?.rows || []).filter(r => !onlyWatch || watch.has(r.ticker))
   const ok = all.filter(r => r.period?.ok).sort((a, b) => SORTS.find(s => s.v === sort).f(a) - SORTS.find(s => s.v === sort).f(b))
   const ko = all.filter(r => !r.period?.ok)
-  const sp = ok[0]?.period?.annual?.sp ?? null
+  // Un départ décalé a son propre S&P 500 : la référence commune se lit sur un titre au départ de la période.
+  const sp = ok.find(r => !r.period.shifted)?.period?.annual?.sp ?? null
 
   const mainView = (
     <div className="pb-8 space-y-4">
@@ -103,8 +113,8 @@ export default function NasdaqValeur() {
       </div>
       <p className="text-sm text-gray-400 max-w-3xl">
         D'où vient le rendement annuel de chaque titre : <span style={{ color: C.infl }}>l'inflation</span>, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> (méritée),{' '}
-        <span style={{ color: C.mult }}>la variation du multiple</span> (empruntée) et <span style={{ color: C.div }}>les dividendes</span>. Le losange bleu est le total ; à droite, ce que la mise a été multipliée par sur la période.
-        Les composantes se multiplient : leur somme approche le total sans l'égaler exactement. Un clic ouvre le titre.
+        <span style={{ color: C.mult }}>la variation du multiple</span> (empruntée) et <span style={{ color: C.div }}>les dividendes</span>. Le losange bleu est le total ; à droite, par combien la mise a été multipliée sur la période et le rapport du cours à son plancher.
+        Les composantes se multiplient : l'échelle est logarithmique pour que leurs longueurs s'ajoutent exactement jusqu'au losange. Un clic ouvre le titre.
       </p>
       {err && <div className="rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">Erreur de chargement : {err}</div>}
       {!sum ? <p className="text-sm text-gray-500">Chargement…</p> : ok.length === 0

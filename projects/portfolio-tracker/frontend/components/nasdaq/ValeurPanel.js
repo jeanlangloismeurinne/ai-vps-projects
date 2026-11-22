@@ -8,6 +8,7 @@ export const LABELS = { infl: 'Inflation', real: 'Bénéfices réels', mult: 'Mu
 
 export const pct = (x, d = 1) => x == null ? '—' : `${x >= 0 ? '+' : ''}${(100 * x).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })} %`
 export const times = (x, d = 1) => x == null ? '—' : `×${x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })}`
+const num = (x, d = 1) => x == null ? '—' : x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })
 const usd = (x) => x == null ? '—' : `${x.toLocaleString('fr-FR', { maximumFractionDigits: x < 10 ? 2 : 0 })} $`
 const monthFr = (m) => m ? `${m.slice(5)}/${m.slice(0, 4)}` : ''
 
@@ -44,7 +45,7 @@ export function Sentence({ d, name }) {
     <p className="text-sm text-gray-300 leading-relaxed">
       Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le S&amp;P 500.{' '}
       <span style={{ color: C.infl }}>L'inflation</span> explique {pct(a.infl)} par an, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> {pct(a.real)},{' '}
-      <span style={{ color: C.mult }}>le multiple</span> {pct(a.mult)} (de {p.pe0.toFixed(1)} à {p.pe1.toFixed(1)} fois les bénéfices) et <span style={{ color: C.div }}>les dividendes</span> {pct(a.div)}.{' '}
+      <span style={{ color: C.mult }}>le multiple</span> {pct(a.mult)} (de {num(p.pe0)} à {num(p.pe1)} fois les bénéfices) et <span style={{ color: C.div }}>les dividendes</span> {pct(a.div)}.{' '}
       {p.borrowed > 0.05
         ? <>Environ <b className="text-amber-300">{Math.round(100 * p.borrowed)} % de la hausse du cours est empruntée</b> au multiple.</>
         : <>La hausse est <b className="text-emerald-300">entièrement méritée</b> : le multiple n'a pas augmenté.</>}
@@ -217,8 +218,8 @@ function Forward({ d }) {
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
-        <div><div className="text-xs text-gray-500">PER des 12 derniers mois</div><div className="text-white font-semibold">{d.pe_ttm ? d.pe_ttm.toFixed(1) : 'perte'}</div></div>
-        <div><div className="text-xs text-gray-500">PER à terme (exercice suivant)</div><div className="text-white font-semibold">{f.pe ? f.pe.toFixed(1) : '—'}</div></div>
+        <div><div className="text-xs text-gray-500">PER des 12 derniers mois</div><div className="text-white font-semibold">{d.pe_ttm ? num(d.pe_ttm) : 'perte'}</div></div>
+        <div><div className="text-xs text-gray-500">PER à terme (exercice suivant)</div><div className="text-white font-semibold">{f.pe ? num(f.pe) : '—'}</div></div>
         <div><div className="text-xs text-gray-500">Soit, par rapport au multiple plancher de 15</div><div className={`font-semibold ${ratioColor(f.ratio)}`}>{times(f.ratio)} le plancher</div></div>
         <div><div className="text-xs text-gray-500">Analystes</div><div className="text-white font-semibold">{f.n_analysts}</div></div>
       </div>
@@ -230,7 +231,7 @@ function Forward({ d }) {
             <div className="absolute top-0 h-4 w-0.5 bg-white" style={{ left: `${X(f.pe)}%` }} />
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            Fourchette des analystes : de {f.pe_lo.toFixed(1)} (le plus optimiste) à {f.pe_hi.toFixed(1)} (le plus prudent) fois le bénéfice attendu ; échelle de 0 à 60, pointillé vert = 15.
+            Fourchette des analystes : de {num(f.pe_lo)} (le plus optimiste) à {num(f.pe_hi)} (le plus prudent) fois le bénéfice attendu ; échelle de 0 à 60, pointillé vert = 15.
             Plus la fourchette est large, moins le consensus est sûr. Photo du {f.as_of ? new Date(f.as_of).toLocaleDateString('fr-FR') : '—'}, enregistrée chaque semaine{d.forward_history?.length > 1 ? ` (${d.forward_history.length} photos)` : ''}.
           </p>
         </div>
