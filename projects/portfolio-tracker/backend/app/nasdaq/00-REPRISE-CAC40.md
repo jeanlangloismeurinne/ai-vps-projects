@@ -22,6 +22,9 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   (+0,59 €) ; le sondage lisait le bénéfice 12 mois de Yahoo (−2,98 €, qui inclut le 1er semestre 2026). C'est le
   retard propre à l'état annuel (jusqu'à 16 mois), pas un défaut.
 - Nasdaq : 87 lignes, 72 décomposables sur 10 ans, 21 caducs, aucune ligne CAC — identique à la ligne de base.
+- Écran (`fc6cc8d`) : une baisse du cours se dit par ce qui a reculé (`Verdict` dans `ValeurPanel.js`, à partir des
+  facteurs de l'API). LVMH 5 ans → « entièrement du multiple » (bénéfices réels +14,5 %/an, multiple −25 %/an) ;
+  Kering 5 ans → « des bénéfices » (multiple +49 %/an). Aucun check ne garde ce texte (affichage seul).
 
 ## Ce que le lot a appris (choix qui s'écartent du plan initial)
 
@@ -41,8 +44,6 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - **Revue Euronext du 10/12/2026** (effet 21/12) : relever la composition et mettre à jour `CAC40` + `CAC40_AS_OF`.
 - Résidu connu : TotalEnergies 2020 (−0,029 $ au lieu de −2,90 $, aucun chiffre sain pour le démentir ; perte dans
   les deux cas, sans effet).
-- Écran (hérité du Nasdaq) : quand le cours baisse, la phrase dit « hausse entièrement méritée : le multiple n'a pas
-  augmenté » (LVMH 5 ans) — à reformuler pour une baisse.
 - La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans.
 - Le recalibrage du multiple plancher par titre (multiple bas sur 15 ans) ou par secteur.
 - L'arbitrage commun avec le Nasdaq : bénéfice publié ou ajusté (dépréciations d'Engie, de Kering ; amortissement
