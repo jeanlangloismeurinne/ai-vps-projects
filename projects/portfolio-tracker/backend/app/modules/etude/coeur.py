@@ -301,7 +301,8 @@ async def vue_ecran(monde: Monde, dossier: str) -> dict[str, Any]:
         "etude": etude,
         "passages": list(reversed(passages))[:int(referentiel()["passages_a_l_ecran"])],
         "etat": d,
-        "en_clair": CD.afficher(etat),
+        # Sans étude, le dossier n'avance jamais : « en cours » serait faux.
+        "en_clair": CD.afficher(etat) if etude is not None else f"Dossier {dossier} — pas à l'étude",
         "intervalle_min": int(referentiel()["passage"]["intervalle_min"]),
         "lecture_humaine": dict(referentiel()["lecture_humaine"]),
     }

@@ -13,6 +13,8 @@ REF="app/modules/etude/referentiel.json"
 mutations=(
 # [E1] la vue ne sert plus la collecte.
 "$API¦            \"collecte\": await R.vue_ecran(monde.recueil, emetteur),¦            \"collecte\": {},¦[E1] ni collecte ni lecture"
+# [E1] le résumé d'une société non mise à l'étude la dit « en cours ».
+"$COEUR¦if etude is not None else f\"Dossier {dossier} — pas à l'étude\"¦if True else \"\"¦[E1] société non mise à l'étude : le résumé le dit"
 # [E2] le corps de la mise à l'étude accepte un auteur : ce qui est signé se déclarerait.
 "$API¦    motif: str¦    motif: str\n    par: str = \"\"\n    le: str = \"\"¦[E2] un corps qui porte par est refusé"
 # [E2] l'étude est signée d'un autre que l'utilisateur.

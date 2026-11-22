@@ -70,6 +70,8 @@ def main() -> int:
     b.check(r.status_code == 200 and e.get("etude") is None and e.get("etat", {}).get("arret") is None
             and e.get("etat", {}).get("faits") == [] and e.get("passages") == [],
             "[E1] société non mise à l'étude : étude vide, dossier vierge", f"{r.status_code} {r.text[:300]}")
+    b.check(e.get("en_clair", "").endswith("pas à l'étude") and "en cours" not in e.get("en_clair", ""),
+            "[E1] société non mise à l'étude : le résumé le dit", f"{e.get('en_clair')!r}")
     b.check(v.get("collecte", {}).get("reponses") == [] and v.get("connaissance", {}).get("lectures") == [],
             "[E1] ni collecte ni lecture", f"{v.get('collecte')} {v.get('connaissance')}")
 
