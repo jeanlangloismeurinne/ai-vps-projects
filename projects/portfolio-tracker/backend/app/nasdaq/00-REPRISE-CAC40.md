@@ -25,6 +25,11 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - Écran (`fc6cc8d`) : une baisse du cours se dit par ce qui a reculé (`Verdict` dans `ValeurPanel.js`, à partir des
   facteurs de l'API). LVMH 5 ans → « entièrement du multiple » (bénéfices réels +14,5 %/an, multiple −25 %/an) ;
   Kering 5 ans → « des bénéfices » (multiple +49 %/an). Aucun check ne garde ce texte (affichage seul).
+- Référence CAC 40 dividendes réinvestis (`1d7000a`, `899bc30`) à côté du S&P 500 en euros : champ facultatif
+  `home` (macro → `assemble` → `decompose`/`cumulative` ; absent du Nasdaq). Source `europe.HOME_INDEX = "CAC.PA"`
+  (fonds Amundi CAC 40 distribuant, cours ajustés, frais déduits) : Yahoo n'a pas le Gross Return (PX1GR.PA s'arrête
+  en 2015) et C40.PA suit le CAC 40 ESG. Mesuré : 5 ans +6,4 %/an (indice de prix +3,0 %), 3 ans +5,8 % ; 38/38
+  lignes décomposables l'ont ; Nasdaq 72 ok sur 10 ans, aucun facteur fantôme. Check 42 ok + 27/27 mutations.
 
 ## Ce que le lot a appris (choix qui s'écartent du plan initial)
 
@@ -48,4 +53,3 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - Le recalibrage du multiple plancher par titre (multiple bas sur 15 ans) ou par secteur.
 - L'arbitrage commun avec le Nasdaq : bénéfice publié ou ajusté (dépréciations d'Engie, de Kering ; amortissement
   d'acquisition chez EssilorLuxottica ; IFRS contre US GAAP chez STMicro).
-- Une référence CAC 40 dividendes réinvestis.
