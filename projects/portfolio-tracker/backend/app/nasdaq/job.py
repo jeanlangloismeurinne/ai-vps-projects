@@ -230,4 +230,9 @@ async def _run(log: _Log, today: date) -> dict:
         await valeur.refresh()
     except Exception:  # noqa: BLE001 — la valeur du temps passé ne doit jamais faire échouer le calcul du jour
         logging.getLogger("nasdaq").exception("valeur.refresh a échoué")
+    try:
+        from app.nasdaq import europe
+        await europe.refresh_eu()  # comptes ESEF en cache : seuls les cours et le consensus sont relus chaque jour
+    except Exception:  # noqa: BLE001 — le CAC 40 ne doit jamais faire échouer le calcul du jour
+        logging.getLogger("nasdaq").exception("europe.refresh_eu a échoué")
     return {"status": "ok", "run_date": str(ref_date), "shown": len(rows), "alerts": n_alert}

@@ -9,7 +9,10 @@ export const LABELS = { infl: 'Inflation', real: 'Bénéfices réels', mult: 'Mu
 export const pct = (x, d = 1) => x == null ? '—' : `${x >= 0 ? '+' : ''}${(100 * x).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })} %`
 export const times = (x, d = 1) => x == null ? '—' : `×${x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })}`
 const num = (x, d = 1) => x == null ? '—' : x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })
-const usd = (x) => x == null ? '—' : `${x.toLocaleString('fr-FR', { maximumFractionDigits: x < 10 ? 2 : 0 })} $`
+const money = (x, sym = '$') => x == null ? '—' : `${x.toLocaleString('fr-FR', { maximumFractionDigits: x < 10 ? 2 : 0 })} ${sym}`
+// Ce que l'écran écrit d'un marché vient de l'API (`valeur.MARKETS`) ; à défaut, le Nasdaq.
+export const NASDAQ_LABELS = { symbol: '$', ref: 'S&P 500', infl: 'inflation américaine', source: 'comptes SEC', periods: ['3y', '5y', '10y', '2010'] }
+export const FLOOR_CAVEAT = "Le multiple plancher de 15 a été calibré sur la technologie américaine : le luxe (Hermès se paie environ 50 fois ses bénéfices), les banques et les services publics s'en écartent durablement."
 const monthFr = (m) => m ? `${m.slice(5)}/${m.slice(0, 4)}` : ''
 
 export function ratioColor(r, degraded) {
@@ -33,17 +36,18 @@ export function useValeur(ticker, period) {
 }
 
 export function Sentence({ d, name }) {
+  const L = d.labels || NASDAQ_LABELS
   const p = d.period
   if (!p) return null
   const from = monthFr(p.start)
   const shift = p.shifted ? ` (départ décalé au premier bénéfice positif mesurable)` : ''
   if (!p.ok) {
-    return <p className="text-sm text-gray-300"><span className="text-red-400">{name} : décomposition impossible depuis {from}, {p.reason}.</span> Le cours a rapporté {pct(p.annual?.total)} par an dividendes compris, contre {pct(p.annual?.sp)} pour le S&P 500.</p>
+    return <p className="text-sm text-gray-300"><span className="text-red-400">{name} : décomposition impossible depuis {from}, {p.reason}.</span> Le cours a rapporté {pct(p.annual?.total)} par an dividendes compris, contre {pct(p.annual?.sp)} pour le {L.ref}.</p>
   }
   const a = p.annual
   return (
     <p className="text-sm text-gray-300 leading-relaxed">
-      Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le S&amp;P 500.{' '}
+      Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le {L.ref}.{' '}
       <span style={{ color: C.infl }}>L'inflation</span> explique {pct(a.infl)} par an, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> {pct(a.real)},{' '}
       <span style={{ color: C.mult }}>le multiple</span> {pct(a.mult)} (de {num(p.pe0)} à {num(p.pe1)} fois les bénéfices) et <span style={{ color: C.div }}>les dividendes</span> {pct(a.div)}.{' '}
       {p.borrowed > 0.05
@@ -54,6 +58,8 @@ export function Sentence({ d, name }) {
 }
 
 function Waterfall({ d }) {
+  const L = d.labels || NASDAQ_LABELS
+  const usd = (x) => money(x, L.symbol)
   const p = d.period
   if (!p?.ok) return null
   const f = p.factor
@@ -65,7 +71,7 @@ function Waterfall({ d }) {
   steps.push({ l: "Cours aujourd'hui", a: 0, b: P1, c: C.sp })
   steps.push({ l: 'Dividendes', a: P1, b: P1 * f.div, c: C.div })
   steps.push({ l: 'Total', a: 0, b: P1 * f.div, c: '#38bdf8' })
-  if (f.sp) steps.push({ l: 'Même mise S&P 500', a: 0, b: P0 * f.sp, c: C.sp, outline: true })
+  if (f.sp) steps.push({ l: `Même mise ${L.ref}`, a: 0, b: P0 * f.sp, c: C.sp, outline: true })
   const W = 900, H = 230, ML = 54, MB = 34, top = 10
   const vmax = Math.max(...steps.map(s => Math.max(s.a, s.b))) * 1.05
   const y = v => top + (1 - v / vmax) * (H - top - MB)
@@ -109,7 +115,8 @@ function yearTicks(ms) {
   return ms.map((m, i) => [m, i]).filter(([m]) => m.endsWith('-01') && (+m.slice(0, 4)) % every === 0)
 }
 
-function FloorChart({ s, i0 }) {
+function FloorChart({ s, i0, sym }) {
+  const usd = (x) => money(x, sym)
   const W = 900, H = 260, ML = 54, MR = 10, top = 10, MB = 22
   const idx = s.m.map((_, i) => i).filter(i => i >= i0)
   const all = idx.flatMap(i => [s.p[i], s.lo[i], s.hi[i], s.ghost[i]]).filter(v => v != null && v > 0)
@@ -240,8 +247,8 @@ function Forward({ d }) {
   )
 }
 
-export default function ValeurPanel({ ticker, name }) {
-  const [period, setPeriod] = useState('10y')
+export default function ValeurPanel({ ticker, name, market = 'nasdaq' }) {
+  const [period, setPeriod] = useState(market === 'cac40' ? '5y' : '10y')
   const [more, setMore] = useState(false)
   const { data: d, err } = useValeur(ticker, period)
   if (err) return <p className="text-sm text-gray-500">Valeur indisponible pour {ticker} ({err}).</p>
@@ -249,11 +256,15 @@ export default function ValeurPanel({ ticker, name }) {
   if (!d.series) return <p className="text-sm text-gray-400">Pas d'analyse de valeur pour {ticker}{d.note ? ` : ${d.note}` : ''}.</p>
   const i0 = Math.max(0, d.series.m.indexOf(d.cumul?.m?.[0]))
   const dg = d.degraded
+  const L = d.labels || NASDAQ_LABELS
+  const usd = (x) => money(x, L.symbol)
+  const eu = d.market === 'cac40'
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex rounded border border-gray-700 overflow-hidden">
-          {PERIODS.map(o => <button key={o.v} onClick={() => setPeriod(o.v)} className={`px-2.5 py-1 text-xs ${period === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>)}
+          {PERIODS.filter(o => L.periods.includes(o.v)).map(o => <button key={o.v} onClick={() => setPeriod(o.v)} className={`px-2.5 py-1 text-xs ${period === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>)}
         </div>
         {d.note && <span className="text-xs text-amber-300">⚠ {d.note}</span>}
       </div>
@@ -261,7 +272,7 @@ export default function ValeurPanel({ ticker, name }) {
       <section className="space-y-2">
         <Sentence d={d} name={name || ticker} />
         <Waterfall d={d} />
-        <p className="text-xs text-gray-500">Chaque marche multiplie la précédente : son ordre change sa hauteur en dollars, pas son rendement annuel. Bénéfices des 12 derniers mois (comptes SEC), inflation américaine, cours bruts.</p>
+        <p className="text-xs text-gray-500">Chaque marche multiplie la précédente : son ordre change sa hauteur en {eu ? 'euros' : 'dollars'}, pas son rendement annuel. {eu ? 'Bénéfice du dernier exercice publié' : 'Bénéfices des 12 derniers mois'} ({L.source}), {L.infl}, cours bruts{eu ? ' ; un exercice est compté connu 4 mois après sa clôture' : ''}.</p>
       </section>
 
       <section className="space-y-2">
@@ -269,27 +280,28 @@ export default function ValeurPanel({ ticker, name }) {
         <p className="text-sm text-gray-300">
           Aujourd'hui : cours {usd(d.price)}, plancher {usd(d.floor_lo)} à {usd(d.floor_hi)}, soit{' '}
           <b className={ratioColor(d.ratio, dg)}>{d.ratio ? `${times(d.ratio)} le plancher` : 'pas de plancher'}</b>.{' '}
-          {d.ratio == null ? "Bénéfice moyen sur 3 ans négatif ou nul : rien ne soutient le cours. Sur 2 118 titres du Nasdaq (2011-2025), après une chute de 20 % ou plus, une entreprise en perte a perdu plus de la moitié de sa valeur dans l'année 24 % du temps, contre 7 % pour une entreprise bénéficiaire." : dg
+          {d.ratio == null ? "Bénéfice moyen sur 3 ans négatif ou nul : rien ne soutient le cours. Mesuré sur 2 118 titres du Nasdaq (2011-2025), après une chute de 20 % ou plus, une entreprise en perte a perdu plus de la moitié de sa valeur dans l'année 24 % du temps, contre 7 % pour une entreprise bénéficiaire." : dg
             ? <span className="text-red-400">L'état actuel est inférieur de plus de 10 % au meilleur état des 10 ans : le plancher est caduc.</span>
             : 'Le plancher est valide : les bénéfices tiennent.'}
         </p>
         <Legend items={[[C.sp, 'Cours'], [C.real, 'Plancher : bénéfice moyen 3 ans × 12 à × 20'], [C.mult, "Si l'état avait tenu (meilleur des 10 ans, indexé, × 15)", true], [C.bad, 'État dégradé : plancher caduc']]} />
-        <FloorChart s={d.series} i0={i0} />
+        <FloorChart s={d.series} i0={i0} sym={L.symbol} />
         <h4 className="text-sm font-semibold text-white pt-1">Combien de fois le plancher</h4>
         <RatioChart s={d.series} i0={i0} />
-        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. Zone rouge, au-delà de ×3 : sur 42 valeurs de croissance de 2011 à 2025, une chute de 20 % ou plus dans l'année y a été plus fréquente (24 % des mois, contre 14 à 16 % entre ×1 et ×3), sans rendement moyen plus faible.</p>
+        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. Zone rouge, au-delà de ×3 : sur 42 valeurs de croissance du Nasdaq de 2011 à 2025, une chute de 20 % ou plus dans l'année y a été plus fréquente (24 % des mois, contre 14 à 16 % entre ×1 et ×3), sans rendement moyen plus faible.</p>
       </section>
 
       <section className="space-y-2">
         <h4 className="text-sm font-semibold text-white">Le PER à terme : cher par rapport aux perspectives ?</h4>
         <Forward d={d} />
+        {eu && <p className="text-xs text-amber-200/80">{FLOOR_CAVEAT}</p>}
       </section>
 
       <section className="space-y-2">
         <button onClick={() => setMore(m => !m)} className="text-sm text-sky-300 hover:text-white">{more ? '▾' : '▸'} Quand la hausse a été méritée ou empruntée</button>
         {more && d.cumul && (
           <>
-            <Legend items={[[C.infl, 'Inflation'], [C.real, 'Bénéfices réels'], [C.mult, 'Multiple'], [C.div, 'Dividendes'], ['#38bdf8', 'Total (somme des couches)'], [C.sp, 'S&P 500', true]]} />
+            <Legend items={[[C.infl, 'Inflation'], [C.real, 'Bénéfices réels'], [C.mult, 'Multiple'], [C.div, 'Dividendes'], ['#38bdf8', 'Total (somme des couches)'], [C.sp, L.ref, true]]} />
             <StackChart cu={d.cumul} />
             <p className="text-xs text-gray-500">Facteur cumulé depuis le départ (échelle logarithmique) : les couches s'empilent et leur somme est le rendement total. Au-dessus de ×1, ce qui a fait monter ; en dessous, ce qui a fait baisser.</p>
           </>

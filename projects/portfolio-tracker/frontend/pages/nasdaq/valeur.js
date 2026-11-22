@@ -1,12 +1,15 @@
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import SlidePanes, { useSelectedTicker } from '../../components/nasdaq/SlidePanes'
 import TickerSheet from '../../components/nasdaq/TickerSheet'
-import { C, LABELS, PERIODS, pct, times } from '../../components/nasdaq/ValeurPanel'
+import ValeurPanel, { C, FLOOR_CAVEAT, LABELS, NASDAQ_LABELS, PERIODS, pct, times } from '../../components/nasdaq/ValeurPanel'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const LAYERS = ['infl', 'real', 'mult', 'div']
 const ratioHex = (r, degraded) => (degraded || r == null ? '#f87171' : r <= 2 ? '#6ee7b7' : r <= 3 ? '#fcd34d' : '#fca5a5')
+const MARKETS = [['nasdaq', 'Nasdaq'], ['cac40', 'CAC 40']]
+const short = (s, n = 13) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const SORTS = [
   { v: 'total', l: 'Rendement total', f: r => -r.period.annual.total },
   { v: 'borrowed', l: 'Part empruntée', f: r => -(r.period.borrowed ?? -1) },
@@ -18,7 +21,7 @@ const SORTS = [
 const lg = r => Math.log1p(r || 0)
 const TICKS = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 3, 5]
 
-function Bars({ rows, sp, watch, onOpen }) {
+function Bars({ rows, sp, watch, onOpen, refLabel }) {
   const W = 1000, RH = 24, L = 90, R0 = 560, top = 26
   const COL = { total: R0 + 14, an: R0 + 66, ratio: R0 + 140, part: R0 + 320 }
   const H = top + rows.length * RH + 26
@@ -35,7 +38,7 @@ function Bars({ rows, sp, watch, onOpen }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Décomposition annuelle de la hausse par titre">
       {ticks.map(t => <g key={t}><line x1={x(lg(t))} x2={x(lg(t))} y1={top - 6} y2={H - 26} stroke={t === 0 ? '#4b5563' : '#1f2937'} /><text x={x(lg(t))} y={top - 10} fontSize="10" fill="#9ca3af" textAnchor="middle">{t > 0 ? '+' : ''}{Math.round(t * 100)} %</text></g>)}
-      {sp != null && <g><line x1={x(lg(sp))} x2={x(lg(sp))} y1={top - 6} y2={H - 20} stroke={C.sp} strokeDasharray="4 3" /><text x={x(lg(sp))} y={H - 6} fontSize="10" fill={C.sp} textAnchor="middle">S&amp;P 500 {pct(sp, 1)}/an</text></g>}
+      {sp != null && <g><line x1={x(lg(sp))} x2={x(lg(sp))} y1={top - 6} y2={H - 20} stroke={C.sp} strokeDasharray="4 3" /><text x={x(lg(sp))} y={H - 6} fontSize="10" fill={C.sp} textAnchor="middle">{refLabel} {pct(sp, 1)}/an</text></g>}
       <text x={COL.total} y={top - 10} fontSize="10" fill="#9ca3af">Mise ×</text>
       <text x={COL.an} y={top - 10} fontSize="10" fill="#9ca3af">Par an</text>
       <text x={COL.ratio} y={top - 10} fontSize="10" fill="#9ca3af">Cours / plancher</text>
@@ -54,7 +57,7 @@ function Bars({ rows, sp, watch, onOpen }) {
         return (
           <g key={r.ticker} className="cursor-pointer" onClick={() => onOpen(r.ticker, 'valeur')}>
             <rect x={0} y={y} width={W} height={RH} fill="transparent" />
-            <text x={L - 8} y={mid(y)} fontSize="12" fill={watch.has(r.ticker) ? '#fcd34d' : '#e5e7eb'} textAnchor="end">{watch.has(r.ticker) ? '★ ' : ''}{r.ticker}{r.period.shifted ? ' *' : ''}</text>
+            <text x={L - 8} y={mid(y)} fontSize="12" fill={watch.has(r.ticker) ? '#fcd34d' : '#e5e7eb'} textAnchor="end">{watch.has(r.ticker) ? '★ ' : ''}{r.name ? short(r.name) : r.ticker}{r.period.shifted ? ' *' : ''}{r.name && <title>{`${r.name} (${r.ticker})`}</title>}</text>
             {segs}
             <path d={`M${xt},${y + 3} l5,${RH / 2 - 3} l-5,${RH / 2 - 3} l-5,${-(RH / 2 - 3)} z`} fill="#38bdf8" stroke="#0c4a6e"><title>{`Total : ${pct(a.total)} par an`}</title></path>
             <text x={COL.total} y={mid(y)} fontSize="12" fill="#e5e7eb">{times(f.total)}</text>
@@ -69,6 +72,8 @@ function Bars({ rows, sp, watch, onOpen }) {
 }
 
 export default function NasdaqValeur() {
+  const router = useRouter()
+  const market = router.query.m === 'cac40' ? 'cac40' : 'nasdaq'
   const [period, setPeriod] = useState('10y')
   const [sum, setSum] = useState(null)
   const [snap, setSnap] = useState(null)
@@ -82,13 +87,22 @@ export default function NasdaqValeur() {
     fetch(`${API}/nasdaq/snapshot`).then(r => r.json()).then(setSnap).catch(e => setErr(String(e)))
     fetch(`${API}/nasdaq/watchlist`).then(r => r.json()).then(j => setWatch(new Set(j.tickers))).catch(() => {})
   }, [])
+  // Le CAC 40 n'a de comptes ESEF que depuis 2020 : ni 10 ans ni « depuis 2010 » (l'API le dit, `labels.periods`).
+  const per = market === 'cac40' && !['3y', '5y'].includes(period) ? '5y' : period
   useEffect(() => {
+    if (!router.isReady) return
     setSum(null)
-    fetch(`${API}/nasdaq/valeur/summary?period=${period}`).then(r => r.json()).then(setSum).catch(e => setErr(String(e)))
-  }, [period])
+    fetch(`${API}/nasdaq/valeur/summary?period=${per}&market=${market}`).then(r => r.json()).then(setSum).catch(e => setErr(String(e)))
+  }, [per, market, router.isReady])
+  const L = sum?.labels || NASDAQ_LABELS
+  const setMarket = (m) => {
+    const { m: _m, t: _t, v: _v, ...q } = router.query
+    router.replace({ pathname: router.pathname, query: m === 'nasdaq' ? q : { ...q, m } }, undefined, { shallow: true, scroll: false })
+  }
 
   const byTicker = useMemo(() => Object.fromEntries((snap?.rows || []).map(r => [r.ticker, r])), [snap])
-  const all = (sum?.rows || []).filter(r => !onlyWatch || watch.has(r.ticker))
+  const eu = market === 'cac40'
+  const all = (sum?.rows || []).filter(r => eu || !onlyWatch || watch.has(r.ticker))
   const ok = all.filter(r => r.period?.ok).sort((a, b) => SORTS.find(s => s.v === sort).f(a) - SORTS.find(s => s.v === sort).f(b))
   const ko = all.filter(r => !r.period?.ok)
   // Un départ décalé a son propre S&P 500 : la référence commune se lit sur un titre au départ de la période.
@@ -100,11 +114,14 @@ export default function NasdaqValeur() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold text-white">Valeur du temps passé</h1>
         <div className="flex rounded border border-gray-700 overflow-hidden">
-          {PERIODS.map(o => <button key={o.v} onClick={() => setPeriod(o.v)} className={`px-2.5 py-1 text-xs ${period === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>)}
+          {MARKETS.map(([v, l]) => <button key={v} onClick={() => setMarket(v)} className={`px-2.5 py-1 text-xs ${market === v ? 'bg-emerald-900 text-white' : 'text-gray-400 hover:text-white'}`}>{l}</button>)}
         </div>
         <div className="flex rounded border border-gray-700 overflow-hidden">
-          {[[false, 'Tous les titres'], [true, 'Ma liste']].map(([v, l]) => <button key={l} onClick={() => setOnlyWatch(v)} className={`px-2.5 py-1 text-xs ${onlyWatch === v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{l}</button>)}
+          {PERIODS.filter(o => L.periods.includes(o.v)).map(o => <button key={o.v} onClick={() => setPeriod(o.v)} className={`px-2.5 py-1 text-xs ${per === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>)}
         </div>
+        {!eu && <div className="flex rounded border border-gray-700 overflow-hidden">
+          {[[false, 'Tous les titres'], [true, 'Ma liste']].map(([v, l]) => <button key={l} onClick={() => setOnlyWatch(v)} className={`px-2.5 py-1 text-xs ${onlyWatch === v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{l}</button>)}
+        </div>}
         <label className="text-xs text-gray-400">Trier par{' '}
           <select value={sort} onChange={e => setSort(e.target.value)} className="ml-1 rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-white">
             {SORTS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
@@ -115,18 +132,20 @@ export default function NasdaqValeur() {
         D'où vient le rendement annuel de chaque titre : <span style={{ color: C.infl }}>l'inflation</span>, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> (méritée),{' '}
         <span style={{ color: C.mult }}>la variation du multiple</span> (empruntée) et <span style={{ color: C.div }}>les dividendes</span>. Le losange bleu est le total ; à droite, par combien la mise a été multipliée sur la période et le rapport du cours à son plancher.
         Les composantes se multiplient : l'échelle est logarithmique pour que leurs longueurs s'ajoutent exactement jusqu'au losange. Un clic ouvre le titre.
+        {eu && <> Pour le CAC 40 : bénéfice du dernier exercice publié ({L.source}), connu 4 mois après la clôture ; {L.infl} ; référence {L.ref}, dividendes réinvestis.</>}
       </p>
+      {eu && <p className="text-xs text-amber-200/80 max-w-3xl">{FLOOR_CAVEAT}</p>}
       {err && <div className="rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">Erreur de chargement : {err}</div>}
       {!sum ? <p className="text-sm text-gray-500">Chargement…</p> : ok.length === 0
         ? <p className="text-sm text-gray-500">Aucun titre décomposable{sum.running ? ' — rafraîchissement en cours' : ''}.</p>
-        : <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3 overflow-x-auto"><div className="min-w-[760px]"><Bars rows={ok} sp={sp} watch={watch} onOpen={openTicker} /></div></div>}
+        : <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3 overflow-x-auto"><div className="min-w-[760px]"><Bars rows={ok} sp={sp} watch={eu ? new Set() : watch} onOpen={openTicker} refLabel={L.ref} /></div></div>}
       {ok.some(r => r.period.shifted) && <p className="text-xs text-gray-500">* départ décalé au premier bénéfice positif mesurable.</p>}
       {ko.length > 0 && (
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-3">
           <h2 className="text-sm font-semibold text-white mb-2">Non décomposables sur la période ({ko.length})</h2>
           <ul className="grid gap-1 sm:grid-cols-2 text-xs text-gray-400">
             {ko.map(r => (
-              <li key={r.ticker}><button onClick={() => openTicker(r.ticker, 'valeur')} className="hover:text-white"><b className="text-gray-200">{r.ticker}</b> — {r.note || r.period?.reason || 'données insuffisantes'}</button></li>
+              <li key={r.ticker}><button onClick={() => openTicker(r.ticker, 'valeur')} className="hover:text-white"><b className="text-gray-200">{r.name || r.ticker}</b> — {r.note || r.period?.reason || 'données insuffisantes'}</button></li>
             ))}
           </ul>
         </div>
@@ -138,7 +157,16 @@ export default function NasdaqValeur() {
     <SlidePanes selected={selected} main={mainView}
       detail={(t) => (
         <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 mb-8">
-          {byTicker[t] ? <TickerSheet key={t} row={byTicker[t]} ticker={t} hot={6} onClose={closeTicker} /> : <p className="text-sm text-gray-500">Chargement…</p>}
+          {eu ? (
+            // La fiche Nasdaq (`TickerSheet`) dépend du suivi des cours du Nasdaq : en CAC 40, la valeur seule.
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">{(sum?.rows || []).find(r => r.ticker === t)?.name || t} <span className="text-sm text-gray-500">{t}</span></h2>
+                <button onClick={closeTicker} className="text-sm text-gray-400 hover:text-white">✕ Fermer</button>
+              </div>
+              <ValeurPanel key={t} ticker={t} market="cac40" name={(sum?.rows || []).find(r => r.ticker === t)?.name} />
+            </div>
+          ) : byTicker[t] ? <TickerSheet key={t} row={byTicker[t]} ticker={t} hot={6} onClose={closeTicker} /> : <p className="text-sm text-gray-500">Chargement…</p>}
         </section>
       )} />
   )

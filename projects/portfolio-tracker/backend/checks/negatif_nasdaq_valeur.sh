@@ -29,7 +29,7 @@ mutations=(
   "$VA¦        out[\"degraded\"].append(bool(a3[i] is not None and (not ok or (best and real[i] < DEGRADED_BELOW * best))))¦        out[\"degraded\"].append(bool(a3[i] is not None and (not ok or (best and real[i] <= best)))) ¦état qui progresse : plancher valide"
   "$VA¦    if i < 24 or e[i] is None or e[i - 12] is None or e[i - 24] is None:¦    if e[i] is None or e[i - 12] is None or e[i - 24] is None:¦avant 24 mois d'historique : pas de plancher"
   "$VA¦                        \"pe_lo\": d[\"p\"][n] / fwd[\"fwd_hi\"] if fwd.get(\"fwd_hi\") and fwd[\"fwd_hi\"] > 0 else None,¦                        \"pe_lo\": d[\"p\"][n] / fwd[\"fwd_lo\"] if fwd.get(\"fwd_lo\") and fwd[\"fwd_lo\"] > 0 else None,¦fourchette : l'analyste le plus optimiste donne le PER le plus bas"
-  "$VA¦    return bool(payload) and (payload.get(\"check\") or {}).get(\"ok\") is not False¦    return bool(payload)¦contrôle croisé en défaut : analyse masquée"
+  "$VA¦    return bool(payload) and \"m\" in payload and (payload.get(\"check\") or {}).get(\"ok\") is not False¦    return bool(payload) and \"m\" in payload¦contrôle croisé en défaut : analyse masquée"
 )
 
 source "$(dirname "$0")/_negatif.sh"

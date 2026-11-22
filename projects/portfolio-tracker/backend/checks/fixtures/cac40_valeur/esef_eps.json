@@ -1,0 +1,493 @@
+{
+ "_doc": "Copié du réel le 2026-11-22 : dépôts ESEF (filings.xbrl.org) réduits aux faits de BPA ; BPA Yahoo income_stmt et divisions Yahoo relevés le même jour. Ne pas retoucher à la main.",
+ "air_liquide": {
+  "filings": [
+   {
+    "source": "https://filings.xbrl.org/969500MMPQVHK671GT54/2022-12-31/ESEF/FR/0/airliquide-2022-12-31-fr.json",
+    "fxo_id": "969500MMPQVHK671GT54-2022-12-31-ESEF-FR-0",
+    "period_end": "2022-12-31",
+    "facts": {
+     "id3VybDovL2RvY3MudjEvZG9jOmMyZjhiYTZiMjJlMTRlMWZiYTY3MWFhNTI0MmIzMzhjL3NlYzpjMmY4YmE2YjIyZTE0ZTFmYmE2NzFhYTUyNDJiMzM4Y18zNzAvZnJhZzoxMDMwOGUzMGM5OWM0NGNjODkyZTZlMWY1YzQ5ZDNkNC90YWJsZTphMTM3MDg2ZDNlYzU0ZTU4OWI2NjZlZGRiZGJiNmJkNS90YWJsZXJhbmdlOmExMzcwODZkM2VjNTRlNTg5YjY2NmVkZGJkYmI2YmQ1XzMwLTItMS0xLTQ0MTQ0Nw_3fc66dcb-78d0-43c9-a2bc-af61d0583495": {
+      "value": "4.94",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMyZjhiYTZiMjJlMTRlMWZiYTY3MWFhNTI0MmIzMzhjL3NlYzpjMmY4YmE2YjIyZTE0ZTFmYmE2NzFhYTUyNDJiMzM4Y18zNzAvZnJhZzoxMDMwOGUzMGM5OWM0NGNjODkyZTZlMWY1YzQ5ZDNkNC90YWJsZTphMTM3MDg2ZDNlYzU0ZTU4OWI2NjZlZGRiZGJiNmJkNS90YWJsZXJhbmdlOmExMzcwODZkM2VjNTRlNTg5YjY2NmVkZGJkYmI2YmQ1XzMwLTMtMS0xLTQ0MTQ0Nw_5b3eaae1-8a8e-48e0-a8c0-04324dcd66c0": {
+      "value": "5.28",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMyZjhiYTZiMjJlMTRlMWZiYTY3MWFhNTI0MmIzMzhjL3NlYzpjMmY4YmE2YjIyZTE0ZTFmYmE2NzFhYTUyNDJiMzM4Y18zNzAvZnJhZzoxMDMwOGUzMGM5OWM0NGNjODkyZTZlMWY1YzQ5ZDNkNC90YWJsZTphMTM3MDg2ZDNlYzU0ZTU4OWI2NjZlZGRiZGJiNmJkNS90YWJsZXJhbmdlOmExMzcwODZkM2VjNTRlNTg5YjY2NmVkZGJkYmI2YmQ1XzMxLTItMS0xLTQ0MTQ0Nw_5b730929-30a6-4ee5-865b-4e79cfaa29d9": {
+      "value": "4.92",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMyZjhiYTZiMjJlMTRlMWZiYTY3MWFhNTI0MmIzMzhjL3NlYzpjMmY4YmE2YjIyZTE0ZTFmYmE2NzFhYTUyNDJiMzM4Y18zNzAvZnJhZzoxMDMwOGUzMGM5OWM0NGNjODkyZTZlMWY1YzQ5ZDNkNC90YWJsZTphMTM3MDg2ZDNlYzU0ZTU4OWI2NjZlZGRiZGJiNmJkNS90YWJsZXJhbmdlOmExMzcwODZkM2VjNTRlNTg5YjY2NmVkZGJkYmI2YmQ1XzMxLTMtMS0xLTQ0MTQ0Nw_60c88656-fca1-4949-b954-dd664b77ff57": {
+      "value": "5.27",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     }
+    }
+   },
+   {
+    "source": "https://filings.xbrl.org/969500MMPQVHK671GT54/2024-12-31/ESEF/FR/0/airliquide-2024-12-31-fr.json",
+    "fxo_id": "969500MMPQVHK671GT54-2024-12-31-ESEF-FR-0",
+    "period_end": "2024-12-31",
+    "facts": {
+     "f-39": {
+      "value": "5.35",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f-40": {
+      "value": "5.74",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f-41": {
+      "value": "5.33",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f-42": {
+      "value": "5.72",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:969500MMPQVHK671GT54",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     }
+    }
+   }
+  ],
+  "splits": [
+   [
+    "2000-06-15",
+    1.1
+   ],
+   [
+    "2002-06-17",
+    1.125
+   ],
+   [
+    "2004-06-14",
+    1.1
+   ],
+   [
+    "2006-06-12",
+    1.1
+   ],
+   [
+    "2007-06-13",
+    2.0
+   ],
+   [
+    "2008-06-09",
+    1.1
+   ],
+   [
+    "2010-05-28",
+    1.06828
+   ],
+   [
+    "2012-05-31",
+    1.10254
+   ],
+   [
+    "2014-06-02",
+    1.1
+   ],
+   [
+    "2017-10-02",
+    1.1
+   ],
+   [
+    "2019-10-07",
+    1.1
+   ],
+   [
+    "2022-06-06",
+    1.1
+   ],
+   [
+    "2024-06-10",
+    1.1
+   ],
+   [
+    "2026-06-08",
+    1.1
+   ]
+  ],
+  "yahoo": {
+   "2025-12-31": 6.08,
+   "2024-12-31": 5.2,
+   "2023-12-31": 4.845455,
+   "2022-12-31": 4.355372
+  }
+ },
+ "bouygues": {
+  "filings": [
+   {
+    "source": "https://filings.xbrl.org/969500MOCLNQFNZN0D63/2024-12-31/ESEF/FR/0/969500MOCLNQFNZN0D63-2024-12-31-0-fr.json",
+    "fxo_id": "969500MOCLNQFNZN0D63-2024-12-31-ESEF-FR-0",
+    "period_end": "2024-12-31",
+    "facts": {
+     "f0__s2__3__34": {
+      "value": "2.8",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShareFromContinuingOperations",
+       "entity": "scheme:969500MOCLNQFNZN0D63",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f0__s2__4__34": {
+      "value": "2.77",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShareFromContinuingOperations",
+       "entity": "scheme:969500MOCLNQFNZN0D63",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f0__s2__3__35": {
+      "value": "2.8",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShareFromContinuingOperations",
+       "entity": "scheme:969500MOCLNQFNZN0D63",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f0__s2__4__35": {
+      "value": "2.77",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShareFromContinuingOperations",
+       "entity": "scheme:969500MOCLNQFNZN0D63",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     }
+    }
+   }
+  ]
+ },
+ "lvmh": {
+  "filings": [
+   {
+    "source": "https://filings.xbrl.org/IOG4E947OATN0KJYSD45/2024-12-31/ESEF/FR/0/IOG4E947OATN0KJYSD45-2024-12-31-0-fr.json",
+    "fxo_id": "IOG4E947OATN0KJYSD45-2024-12-31-ESEF-FR-0",
+    "period_end": "2024-12-31",
+    "facts": {
+     "f1__s1__3__22": {
+      "value": "25.13",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f1__s1__4__22": {
+      "value": "30.34",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f1__s1__5__22": {
+      "value": "28.05",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f1__s1__3__24": {
+      "value": "25.12",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2024-01-01T00:00:00/2025-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f1__s1__4__24": {
+      "value": "30.33",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "f1__s1__5__24": {
+      "value": "28.03",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:IOG4E947OATN0KJYSD45",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     }
+    }
+   }
+  ]
+ },
+ "kering": {
+  "esef_through": "2023",
+  "yahoo": {
+   "2025-12-31": 0.59,
+   "2024-12-31": 9.24,
+   "2023-12-31": 24.37,
+   "2022-12-31": 29.31,
+   "2021-12-31": null
+  }
+ },
+ "totalenergies": {
+  "filings": [
+   {
+    "source": "https://filings.xbrl.org/529900S21EQ1BO4ESM68/2022-12-31/ESEF/FR/0/tot-2022-12-31AR.json",
+    "fxo_id": "529900S21EQ1BO4ESM68-2022-12-31-ESEF-FR-0",
+    "period_end": "2022-12-31",
+    "facts": {
+     "tag_8433043586500259_0": {
+      "value": "0.0791",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_8433043586517091_0": {
+      "value": "0.0595",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_8433043586534902_0": {
+      "value": "-0.029",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2020-01-01T00:00:00/2021-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_8433043586624205_0": {
+      "value": "0.0785",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_8433043586643022_0": {
+      "value": "0.0592",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_8433043586660542_0": {
+      "value": "-0.029",
+      "decimals": 4,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2020-01-01T00:00:00/2021-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     }
+    }
+   },
+   {
+    "source": "https://filings.xbrl.org/529900S21EQ1BO4ESM68/2023-12-31/ESEF/FR/0/tot-2023-12-31AR.json",
+    "fxo_id": "529900S21EQ1BO4ESM68-2023-12-31-ESEF-FR-0",
+    "period_end": "2023-12-31",
+    "facts": {
+     "tag_40069374391334649": {
+      "value": "8.72",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_40069374391418650": {
+      "value": "7.91",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_40069374391498963": {
+      "value": "5.95",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_40069374391769157": {
+      "value": "8.67",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2023-01-01T00:00:00/2024-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_40069374391853419": {
+      "value": "7.85",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     },
+     "tag_40069374391935979": {
+      "value": "5.92",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:529900S21EQ1BO4ESM68",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:USD/xbrli:shares"
+      }
+     }
+    }
+   }
+  ]
+ },
+ "capgemini": {
+  "filings": [
+   {
+    "source": "https://filings.xbrl.org/96950077L0TN7BAROX36/2022-12-31/ESEF/FR/0/capg-2022-12-31-fr.json",
+    "fxo_id": "96950077L0TN7BAROX36-2022-12-31-ESEF-FR-0",
+    "period_end": "2022-12-31",
+    "facts": {
+     "id3VybDovL2RvY3MudjEvZG9jOmMzZjBmN2MwNTVlMTQ1ZTVhNmFiNWZhOGE5OGYyZmI0L3NlYzpjM2YwZjdjMDU1ZTE0NWU1YTZhYjVmYThhOThmMmZiNF8xMy9mcmFnOmEyY2RlYTAzYzkyYzRkYTRiMjU3OTA1MzBiOGM1ODAwL3RhYmxlOjBiYTk3YTI0YzgzZjRlYWI4MTFhZTIwZTYyYjJmMTc0L3RhYmxlcmFuZ2U6MGJhOTdhMjRjODNmNGVhYjgxMWFlMjBlNjJiMmYxNzRfMjEtMi0xLTEtNTQ5Mw_c0030d1c-0e25-49cc-8b3b-002271a7ed99": {
+      "value": "6.87",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:96950077L0TN7BAROX36",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMzZjBmN2MwNTVlMTQ1ZTVhNmFiNWZhOGE5OGYyZmI0L3NlYzpjM2YwZjdjMDU1ZTE0NWU1YTZhYjVmYThhOThmMmZiNF8xMy9mcmFnOmEyY2RlYTAzYzkyYzRkYTRiMjU3OTA1MzBiOGM1ODAwL3RhYmxlOjBiYTk3YTI0YzgzZjRlYWI4MTFhZTIwZTYyYjJmMTc0L3RhYmxlcmFuZ2U6MGJhOTdhMjRjODNmNGVhYjgxMWFlMjBlNjJiMmYxNzRfMjEtNC0xLTEtNTQ5Mw_9dc81438-2f7c-4c23-b8e8-b058b9e6d5c5": {
+      "value": "9.09",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:BasicEarningsLossPerShare",
+       "entity": "scheme:96950077L0TN7BAROX36",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMzZjBmN2MwNTVlMTQ1ZTVhNmFiNWZhOGE5OGYyZmI0L3NlYzpjM2YwZjdjMDU1ZTE0NWU1YTZhYjVmYThhOThmMmZiNF8xMy9mcmFnOmEyY2RlYTAzYzkyYzRkYTRiMjU3OTA1MzBiOGM1ODAwL3RhYmxlOjBiYTk3YTI0YzgzZjRlYWI4MTFhZTIwZTYyYjJmMTc0L3RhYmxlcmFuZ2U6MGJhOTdhMjRjODNmNGVhYjgxMWFlMjBlNjJiMmYxNzRfMjMtMi0xLTEtNTQ5Mw_fd07b765-d119-4353-be2d-85447948042d": {
+      "value": "6.66",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:96950077L0TN7BAROX36",
+       "period": "2021-01-01T00:00:00/2022-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     },
+     "id3VybDovL2RvY3MudjEvZG9jOmMzZjBmN2MwNTVlMTQ1ZTVhNmFiNWZhOGE5OGYyZmI0L3NlYzpjM2YwZjdjMDU1ZTE0NWU1YTZhYjVmYThhOThmMmZiNF8xMy9mcmFnOmEyY2RlYTAzYzkyYzRkYTRiMjU3OTA1MzBiOGM1ODAwL3RhYmxlOjBiYTk3YTI0YzgzZjRlYWI4MTFhZTIwZTYyYjJmMTc0L3RhYmxlcmFuZ2U6MGJhOTdhMjRjODNmNGVhYjgxMWFlMjBlNjJiMmYxNzRfMjMtNC0xLTEtNTQ5Mw_4ba2c6e0-d9a8-426d-b295-218b122b1535": {
+      "value": "8790000",
+      "decimals": 2,
+      "dimensions": {
+       "concept": "ifrs-full:DilutedEarningsLossPerShare",
+       "entity": "scheme:96950077L0TN7BAROX36",
+       "period": "2022-01-01T00:00:00/2023-01-01T00:00:00",
+       "unit": "iso4217:EUR/xbrli:shares"
+      }
+     }
+    }
+   }
+  ],
+  "yahoo": {
+   "2025-12-31": 9.13,
+   "2024-12-31": 9.47,
+   "2023-12-31": 9.37,
+   "2022-12-31": 8.79,
+   "2021-12-31": null
+  }
+ }
+}

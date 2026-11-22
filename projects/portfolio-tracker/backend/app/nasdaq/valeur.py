@@ -38,6 +38,16 @@ START = "2007-01"
 PERIODS = {"3y": 36, "5y": 60, "10y": 120, "2010": None}
 EPS_CHECK = (0.7, 1.4)  # écart toléré avec le bénéfice des 12 derniers mois de Yahoo (ADR, devise, tag)
 
+# Ce qui distingue un marché : où lire l'inflation et la référence, la devise, les libellés, les périodes qui ont un
+# sens. Les formules ne changent pas. CAC 40 : comptes ESEF depuis 2020-2021, donc ni 10 ans ni « depuis 2010 ».
+MARKETS = {
+    "nasdaq": {"macro": "valeur", "currency": "USD", "symbol": "$", "ref": "S&P 500", "infl": "inflation américaine",
+               "source": "comptes SEC", "periods": ("3y", "5y", "10y", "2010")},
+    "cac40": {"macro": "valeur_cac40", "currency": "EUR", "symbol": "€", "ref": "S&P 500 en euros",
+              "infl": "inflation française", "source": "comptes ESEF, Yahoo en repli",
+              "periods": ("3y", "5y"), "no_history": "historique insuffisant : bénéfices publiés depuis 2020 seulement"},
+}
+
 state: dict = {"running": False, "error": None, "done": 0, "total": 0, "finished_at": None}
 
 
@@ -209,14 +219,16 @@ def cumulative(d: dict, period: str) -> dict:
     return out
 
 
-def summary(d: dict, fwd: dict | None) -> dict:
+def summary(d: dict, fwd: dict | None, market: str = "nasdaq") -> dict:
+    mk = MARKETS[market]
     fl = floor_series(d["e"], d["p"], d["cpi"])
     n = len(d["m"]) - 1
     s = {"ticker": d["ticker"], "as_of": d["m"][n], "price": d["p"][n],
          "ratio": fl["ratio"][n], "degraded": fl["degraded"][n], "floor": fl["mid"][n],
          "floor_lo": fl["lo"][n], "floor_hi": fl["hi"][n],
          "eps_ttm": d["e"][n], "pe_ttm": d["p"][n] / d["e"][n] if d["e"][n] and d["e"][n] > 0 else None,
-         "check": d.get("check"), "periods": {k: decompose(d, k) for k in PERIODS}}
+         "check": d.get("check"),
+         "periods": {k: decompose(d, k) if k in mk["periods"] else {"ok": False, "reason": mk["no_history"]} for k in PERIODS}}
     if fwd and fwd.get("fwd_eps"):
         pe = d["p"][n] / fwd["fwd_eps"] if fwd["fwd_eps"] > 0 else None
         s["forward"] = {**fwd, "pe": pe,
@@ -226,10 +238,27 @@ def summary(d: dict, fwd: dict | None) -> dict:
     return s
 
 
+def eps_check(ours: float | None, ref: float | None) -> bool:
+    """Deux bénéfices du même titre concordent : rapport dans `EPS_CHECK`, ou deux pertes."""
+    return bool(ours and ref and ref > 0 and ours > 0 and EPS_CHECK[0] <= ours / ref <= EPS_CHECK[1]) \
+        or bool(ours is not None and ref is not None and ours <= 0 and ref <= 0)
+
+
+def market_of(payload: dict | None) -> str:
+    """Une ligne sans marché déclaré est une ligne du Nasdaq (antérieure au CAC 40)."""
+    return (payload or {}).get("market", "nasdaq")
+
+
+def select(series: dict, market: str) -> dict:
+    """Les lignes d'UN marché : sans ce filtre, le CAC 40 entrerait dans la page Nasdaq et dans les badges de l'accueil."""
+    return {t: p for t, p in series.items() if market_of(p) == market}
+
+
 def usable(payload: dict | None) -> bool:
     """Un bénéfice que le contrôle croisé désavoue (certificat de dépôt ≠ une action, devise) ne s'affiche pas :
-    un plancher faux d'un facteur 2 ou 5 se lirait comme une propriété du titre."""
-    return bool(payload) and (payload.get("check") or {}).get("ok") is not False
+    un plancher faux d'un facteur 2 ou 5 se lirait comme une propriété du titre. Une ligne sans séries (échec de
+    collecte qui ne porte que son marché) non plus."""
+    return bool(payload) and "m" in payload and (payload.get("check") or {}).get("ok") is not False
 
 
 def assemble(ticker: str, payload: dict, macro: dict) -> dict | None:
@@ -342,6 +371,20 @@ def _yahoo_sync(symbol: str) -> dict:
     return {k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in res.items()}
 
 
+async def save_forward(conn, ticker: str, price: float | None, yh: dict) -> None:
+    """Photo hebdomadaire du consensus (la seule façon d'en avoir un historique)."""
+    if yh.get("fwd_eps") is None:
+        return
+    last = await conn.fetchval("SELECT max(as_of) FROM nasdaq_forward WHERE ticker=$1", ticker)
+    today = date.today()
+    if last is None or (today - last).days >= 6:
+        await conn.execute(
+            """INSERT INTO nasdaq_forward (ticker, as_of, price, fwd_eps, fwd_lo, fwd_hi, n_analysts, cur_eps, growth, currency)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (ticker, as_of) DO NOTHING""",
+            ticker, today, price, yh["fwd_eps"], yh.get("fwd_lo"), yh.get("fwd_hi"), yh.get("n_analysts"),
+            yh.get("cur_eps"), yh.get("growth"), yh.get("currency"))
+
+
 async def _published() -> list[str]:
     async with get_db_session() as conn:
         rd = await conn.fetchval("SELECT max(run_date) FROM nasdaq_indicators")
@@ -417,8 +460,7 @@ async def refresh(tickers: list[str] | None = None) -> dict:
                             e = state_by_month(ttm, months)
                             ours = e[-1]
                             ref = yh.get("trailing_eps")
-                            ok = bool(ours and ref and ref > 0 and ours > 0 and EPS_CHECK[0] <= ours / ref <= EPS_CHECK[1]) \
-                                or bool(ours is not None and ref is not None and ours <= 0 and ref <= 0)
+                            ok = eps_check(ours, ref)
                             payload = {"m": months, "p": [float(x) for x in pr["p"].values],
                                        "tr": [None if x != x else float(x) for x in pr["tr"].values], "e": e,
                                        "check": {"ours": ours, "yahoo": ref, "ok": ok, "currency": cur}}
@@ -430,15 +472,7 @@ async def refresh(tickers: list[str] | None = None) -> dict:
                                 """INSERT INTO nasdaq_valeur_series (ticker, payload, note, updated_at) VALUES ($1,$2,$3, now())
                                    ON CONFLICT (ticker) DO UPDATE SET payload=EXCLUDED.payload, note=EXCLUDED.note, updated_at=now()""",
                                 t, payload, note)
-                            if yh.get("fwd_eps") is not None:
-                                last = await conn.fetchval("SELECT max(as_of) FROM nasdaq_forward WHERE ticker=$1", t)
-                                today = date.today()
-                                if last is None or (today - last).days >= 6:
-                                    await conn.execute(
-                                        """INSERT INTO nasdaq_forward (ticker, as_of, price, fwd_eps, fwd_lo, fwd_hi, n_analysts, cur_eps, growth, currency)
-                                           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (ticker, as_of) DO NOTHING""",
-                                        t, today, float(pr["p"].iloc[-1]) if pr else None, yh["fwd_eps"], yh.get("fwd_lo"),
-                                        yh.get("fwd_hi"), yh.get("n_analysts"), yh.get("cur_eps"), yh.get("growth"), yh.get("currency"))
+                            await save_forward(conn, t, float(pr["p"].iloc[-1]) if pr else None, yh)
                     n_ok += payload is not None
                 except Exception as ex:  # noqa: BLE001 — un titre raté n'arrête pas les autres
                     logger.exception("valeur %s", t)
@@ -457,39 +491,48 @@ async def refresh(tickers: list[str] | None = None) -> dict:
 
 # ───────────────────────────── lecture ─────────────────────────────
 
+def labels(market: str) -> dict:
+    """Ce que les écrans écrivent : devise, référence, inflation, source, périodes possibles."""
+    return {k: v for k, v in MARKETS[market].items() if k != "macro"}
+
+
 async def load(tickers: list[str] | None = None) -> tuple[dict, dict, dict, dict]:
+    """→ (inflation et référence PAR MARCHÉ, séries, notes, dernier consensus)."""
     async with get_db_session() as conn:
-        macro = await conn.fetchval("SELECT payload FROM nasdaq_macro WHERE series='valeur'")
+        mrows = await conn.fetch("SELECT series, payload FROM nasdaq_macro WHERE series = ANY($1::text[])",
+                                 [m["macro"] for m in MARKETS.values()])
         rows = await conn.fetch(
             "SELECT ticker, payload, note FROM nasdaq_valeur_series" + (" WHERE ticker = ANY($1::text[])" if tickers else ""),
             *([tickers] if tickers else []))
         fw = await conn.fetch(
             """SELECT DISTINCT ON (ticker) ticker, as_of, fwd_eps, fwd_lo, fwd_hi, n_analysts, growth, currency
                FROM nasdaq_forward ORDER BY ticker, as_of DESC""")
-    if isinstance(macro, str):
-        macro = json.loads(macro)
+    by_series = {r["series"]: (json.loads(r["payload"]) if isinstance(r["payload"], str) else r["payload"]) for r in mrows}
+    macro = {k: by_series.get(m["macro"]) or {} for k, m in MARKETS.items()}
     series = {r["ticker"]: (json.loads(r["payload"]) if isinstance(r["payload"], str) else r["payload"]) for r in rows}
     notes = {r["ticker"]: r["note"] for r in rows}
     fwd = {r["ticker"]: {**dict(r), "as_of": r["as_of"].isoformat()} for r in fw}
-    return macro or {}, series, notes, fwd
+    return macro, series, notes, fwd
 
 
-def _fwd_usd(f: dict | None) -> dict | None:
-    if not f or (f.get("currency") or "USD") != "USD":
+def _fwd_in(f: dict | None, currency: str) -> dict | None:
+    """Un consensus dans une autre devise que le cours donnerait un PER faux du taux de change."""
+    if not f or (f.get("currency") or "USD") != currency:
         return None
     return f
 
 
-async def read_summary(period: str = "10y") -> list[dict]:
-    macro, series, notes, fwd = await load()
+async def read_summary(period: str = "10y", market: str = "nasdaq") -> list[dict]:
+    macros, series, notes, fwd = await load()
+    macro = macros.get(market)
     if not macro:
         return []
     out = []
-    for t, payload in series.items():
-        item = {"ticker": t, "note": notes.get(t)}
+    for t, payload in select(series, market).items():
+        item = {"ticker": t, "note": notes.get(t), "name": (payload or {}).get("name")}
         d = assemble(t, payload, macro) if usable(payload) else None
         if d:
-            s = summary(d, _fwd_usd(fwd.get(t)))
+            s = summary(d, _fwd_in(fwd.get(t), MARKETS[market]["currency"]), market)
             s["period"] = s.pop("periods")[period]
             item.update(s)
         out.append(item)
@@ -497,15 +540,18 @@ async def read_summary(period: str = "10y") -> list[dict]:
 
 
 async def read_one(ticker: str, period: str = "10y") -> dict | None:
-    macro, series, notes, fwd = await load([ticker])
+    macros, series, notes, fwd = await load([ticker])
     payload = series.get(ticker)
     if payload is None and ticker not in notes:
         return None
-    item = {"ticker": ticker, "note": notes.get(ticker)}
+    market = market_of(payload)
+    macro = macros.get(market)
+    item = {"ticker": ticker, "note": notes.get(ticker), "market": market, "name": (payload or {}).get("name"),
+            "labels": labels(market)}
     d = assemble(ticker, payload, macro) if usable(payload) and macro else None
     if not d:
         return item
-    s = summary(d, _fwd_usd(fwd.get(ticker)))
+    s = summary(d, _fwd_in(fwd.get(ticker), MARKETS[market]["currency"]), market)
     s["period"] = s.pop("periods")[period]
     fl = floor_series(d["e"], d["p"], d["cpi"])
     item.update(s)

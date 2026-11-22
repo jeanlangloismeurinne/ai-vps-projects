@@ -10,9 +10,10 @@
   GET  /nasdaq/proba/{t}       courbe de probabilité de nouveau plus haut à 12 mois (point par point, passé seul)
   GET  /nasdaq/proba-calib     qualité du modèle mesurée hors échantillon
   GET  /nasdaq/series          ancienneté et multiple de chaque titre aux ~260 dernières séances (reconstitués des cours)
-  GET  /nasdaq/valeur/summary  valeur du temps passé : écart au plancher + décomposition de la hausse, tous titres (?period=)
+  GET  /nasdaq/valeur/summary  valeur du temps passé : écart au plancher + décomposition de la hausse, tous titres
+                               d'un marché (?period=, ?market=nasdaq|cac40 — défaut nasdaq)
   GET  /nasdaq/valeur/{t}      idem pour un titre, avec les séries (plancher, ratio, aire empilée) et le PER à terme
-  GET  /nasdaq/valeur-status   état du dernier rafraîchissement ; POST /nasdaq/valeur/run le relance
+  GET  /nasdaq/valeur-status   état du dernier rafraîchissement ; POST /nasdaq/valeur/run le relance (?market=)
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Response
 
 from app.db.database import get_db_session
-from app.nasdaq import job, proba, valeur
+from app.nasdaq import europe, job, proba, valeur
 from app.nasdaq.indicators import series_tail, to_daynum
 from app.nasdaq.universe import yf_symbol
 
@@ -246,22 +247,34 @@ def _period(period: str) -> str:
     return period
 
 
+def _market(market: str) -> str:
+    if market not in valeur.MARKETS:
+        raise HTTPException(status_code=422, detail="market ∈ " + ", ".join(valeur.MARKETS))
+    return market
+
+
+def _state(market: str) -> dict:
+    return europe.state if market == europe.MARKET else valeur.state
+
+
 @router.get("/valeur/summary")
-async def valeur_summary(period: str = "10y") -> dict:
-    rows = await valeur.read_summary(_period(period))
-    return {"period": period, "rows": rows, "running": valeur.state["running"], "error": valeur.state["error"]}
+async def valeur_summary(period: str = "10y", market: str = "nasdaq") -> dict:
+    st = _state(_market(market))
+    rows = await valeur.read_summary(_period(period), market)
+    return {"period": period, "market": market, "labels": valeur.labels(market), "rows": rows,
+            "running": st["running"], "error": st["error"]}
 
 
 @router.get("/valeur-status")
-async def valeur_status() -> dict:
-    return dict(valeur.state)
+async def valeur_status(market: str = "nasdaq") -> dict:
+    return dict(_state(_market(market)))
 
 
 @router.post("/valeur/run", status_code=202)
-async def valeur_run() -> dict:
-    if valeur.state["running"]:
+async def valeur_run(market: str = "nasdaq") -> dict:
+    if _state(_market(market))["running"]:
         raise HTTPException(status_code=409, detail="Un rafraîchissement est déjà en cours.")
-    t = asyncio.create_task(valeur.refresh())
+    t = asyncio.create_task(europe.refresh_eu() if market == europe.MARKET else valeur.refresh())
     _tasks.add(t)
     t.add_done_callback(_tasks.discard)
     return {"started": True}

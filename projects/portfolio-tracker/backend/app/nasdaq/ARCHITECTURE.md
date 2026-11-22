@@ -38,3 +38,15 @@ Question : d'où vient la hausse du cours (inflation, croissance réelle des bé
 - **API** : `/nasdaq/valeur/summary?period=3y|5y|10y|2010`, `/nasdaq/valeur/{t}`, `/nasdaq/valeur-status`, `POST /nasdaq/valeur/run`.
 - **Front** : onglet « Valeur » de la fiche (`ValeurPanel.js` : phrase, cascade, cours face au plancher, rapport au plancher, PER à terme, aire empilée repliée), badge des cartes (`ValeurBadge.js`, `?v=valeur` ouvre l'onglet), page comparative `pages/nasdaq/valeur.js`.
 - **Garde** : `checks/check_nasdaq_valeur.py` (fixture réelle Nvidia : deux divisions, dont une au milieu d'un exercice) + `negatif_nasdaq_valeur.sh` (16 mutations).
+
+## Valeur du temps passé — CAC 40 (`europe.py`, 2026-11-22)
+
+Sous-projet `00-REPRISE-CAC40.md`. `europe.py` ne porte que des SOURCES ; les formules restent dans `valeur.py`.
+- **Univers** : `CAC40` (composition datée, relevée le 2026-11-22 ; prochaine revue Euronext le 10/12/2026) + `EXTRA` (Mersen, Puma), chacun avec ISIN et LEI (GLEIF par l'ISIN ; ArcelorMittal : LEI de la mère).
+- **Bénéfice** : BPA dilué ANNUEL, connu 4 mois après la clôture. ESEF d'abord (`filings.xbrl.org` par LEI ; concept dilué → de base → « activités poursuivies » ; fin de période xBRL-JSON EXCLUSIVE), chiffre du plus ancien dépôt qui le porte, divisions ajustées selon la publication du DÉPÔT source (un comparatif est déjà retraité) ; Yahoo `income_stmt` comble (déjà retraité des divisions). Erreur d'échelle (facteur ≥ 10 entre deux chiffres d'un exercice : TotalEnergies 2022 ÷ 100, Capgemini 2022) → le chiffre qui le répète. Écart > 5 % → note. Cache ESEF dans le payload (`esef.ids`) : rien n'est retéléchargé tant que la liste des dépôts ne change pas ; un index injoignable garde le cache et le dit.
+- **Contrôle croisé** : ESEF contre Yahoo sur le dernier exercice COMMUN (`EPS_CHECK`), pas contre le bénéfice 12 mois de Yahoo (le semestre suivant y entre). Sans exercice commun : `ok = None`, affiché.
+- **Macro** : inflation France (FRED `CP0000FRM086NEST`, +1 mois), S&P 500 dividendes réinvestis ÷ EURUSD → `nasdaq_macro` série `valeur_cac40`. Pas de migration.
+- **Marchés** (`valeur.MARKETS`) : macro, devise, libellés, périodes (CAC 40 : 3 et 5 ans ; 10 ans → « historique insuffisant »). `select()` filtre par `payload.market` (absent = Nasdaq) : la page Nasdaq et ses badges ne voient pas le CAC 40.
+- **API** : `?market=nasdaq|cac40` sur `/nasdaq/valeur/summary`, `/valeur-status`, `POST /valeur/run` ; `/nasdaq/valeur/{t}` déduit le marché de la ligne. Rafraîchi chaque jour après le Nasdaq (`job.py`, échec isolé).
+- **Front** : choix Nasdaq | CAC 40 sur `pages/nasdaq/valeur.js` (`?m=cac40`), détail = `ValeurPanel` seul ; libellés venus de l'API.
+- **Garde** : `checks/check_cac40_valeur.py` (fixture réelle : Air Liquide, Bouygues, LVMH, TotalEnergies, Capgemini, Kering) + `negatif_cac40_valeur.sh` (20 mutations).
