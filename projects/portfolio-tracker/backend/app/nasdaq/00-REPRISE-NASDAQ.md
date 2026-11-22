@@ -16,3 +16,4 @@ ni n'écrit rien du reste du système. Ce qu'il fait et ce qui le garde : `ARCHI
 - Arbitrer « bénéfice publié ou d'exploitation » (plus-values sur participations d'Alphabet et d'Amazon en 2026).
 - Émetteurs étrangers (20-F) : bénéfice annuel seulement, l'état retarde jusqu'à un an (ASML).
 - Le consensus à terme n'a d'historique qu'à partir du 2026-11-22 (photo hebdomadaire).
+- Extension au CAC 40 : sous-projet dédié, voir `00-REPRISE-CAC40.md` (même dossier).
