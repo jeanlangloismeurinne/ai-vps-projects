@@ -132,6 +132,11 @@ def avail_date(end: str) -> str:
     return (pd.Period(end[:7], "M") + AVAIL_MONTHS).end_time.strftime("%Y-%m-%d")
 
 
+def _n(v: float) -> str:
+    """Un nombre lisible en français dans une note (8 790 000,00)."""
+    return f"{v:,.2f}".replace(",", " ").replace(".", ",")
+
+
 def scale_error(a: float | None, b: float | None) -> bool:
     return bool(a and b) and not (1 / SCALE < abs(a / b) < SCALE)
 
@@ -175,7 +180,7 @@ def merge(esef: list[dict], yahoo: list[dict]) -> tuple[list[dict], list[str]]:
     commun, un écart de plus de 5 % se signale : on garde l'ESEF, l'écart se lit dans la note du titre — sauf erreur
     d'échelle (`SCALE`), où Yahoo remplace le chiffre du dépôt, et la note le dit."""
     by = {p["end"][:7]: p for p in esef}
-    warn = [f"{p['end'][:4]} : ESEF {p['scale']:,.2f} écarté (erreur d'échelle), repris du dépôt suivant {p['v']:.2f}".replace(",", " ")
+    warn = [f"{p['end'][:4]} : ESEF {_n(p['scale'])} écarté (erreur d'échelle), repris du dépôt suivant {_n(p['v'])}"
             for p in esef if "scale" in p]
     for y in yahoo:
         k = y["end"][:7]
@@ -184,7 +189,7 @@ def merge(esef: list[dict], yahoo: list[dict]) -> tuple[list[dict], list[str]]:
             by[k] = y
         elif e["cur"] == y["cur"] and scale_error(e["v"], y["v"]):
             by[k] = {**y, "scale": e["v"]}
-            warn.append(f"{k[:4]} : ESEF {e['v']:,.2f} écarté (erreur d'échelle), Yahoo {y['v']:.2f}".replace(",", " "))
+            warn.append(f"{k[:4]} : ESEF {_n(e['v'])} écarté (erreur d'échelle), Yahoo {_n(y['v'])}")
         elif e["cur"] == y["cur"] and abs(y["v"] - e["v"]) > GAP_WARN * max(abs(e["v"]), 1e-9):
             warn.append(f"{k[:4]} : ESEF {e['v']:.2f} / Yahoo {y['v']:.2f}")
     return [by[k] for k in sorted(by)], warn
@@ -197,7 +202,7 @@ def drop_outliers(points: list[dict]) -> tuple[list[dict], list[str]]:
         return points, []
     med = vals[len(vals) // 2]
     out = [p for p in points if abs(p["v"]) < OUTLIER * med]
-    warn = [f"{p['end'][:4]} : {p['v']:,.2f} écarté (hors d'échelle de la série)".replace(",", " ")
+    warn = [f"{p['end'][:4]} : {_n(p['v'])} écarté (hors d'échelle de la série)"
             for p in points if abs(p["v"]) >= OUTLIER * med]
     return out, warn
 
