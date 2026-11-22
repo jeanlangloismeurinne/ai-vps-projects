@@ -13,7 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
+import threading
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -37,6 +41,10 @@ SCALE = 10
 # mesurée au sondage : ×13 la médiane (Renault 2025).
 OUTLIER = 100
 ESEF = "https://filings.xbrl.org"
+# filings.xbrl.org limite le débit : ~6 requêtes, puis 429 sans Retry-After ; la fenêtre se rouvre en ~10 s (mesuré
+# le 2026-11-22 : sans pacing, les mêmes 3 titres sur 42 tombaient à chaque passage).
+ESEF_PACE = 2.0
+ESEF_BACKOFF = (15, 30, 60)
 # Premier concept présent dans le dépôt : Bouygues ne déclare que le BPA « des activités poursuivies ».
 EPS_CONCEPTS = ("DilutedEarningsLossPerShare", "BasicEarningsLossPerShare",
                 "DilutedEarningsLossPerShareFromContinuingOperations",
@@ -253,10 +261,31 @@ def _macro_eur_sync() -> dict:
             "sp": [None if v != v else float(v) for v in sp_eur.reindex(months).values]}
 
 
+_esef_lock = threading.Lock()
+_esef_last = [0.0]
+
+
+def _esef_json(url: str):
+    """Une requête toutes les `ESEF_PACE` s ; sur 429 ou erreur réseau, attentes `ESEF_BACKOFF`, puis None (borné :
+    l'appelant garde son cache et le dit)."""
+    for wait in (0, *ESEF_BACKOFF):
+        with _esef_lock:
+            time.sleep(max(wait, ESEF_PACE - (time.monotonic() - _esef_last[0])))
+            _esef_last[0] = time.monotonic()
+        try:
+            return json.loads(urllib.request.urlopen(urllib.request.Request(url, headers=V.SEC_UA), timeout=60).read())
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+        except Exception:  # noqa: BLE001 — réseau : on retente, puis on abandonne CE dépôt
+            pass
+    return None
+
+
 def _esef_sync(lei: str, cached: dict | None) -> dict:
     """BPA de chaque dépôt annuel ; rien n'est retéléchargé tant que la liste des dépôts n'a pas changé. Un index
-    injoignable n'est PAS « aucun dépôt » (il refuse sous charge, mesuré au sondage) : on garde le cache et on le dit."""
-    idx = V._get_json(f"{ESEF}/api/entities/{lei}/filings?page[size]=100")
+    injoignable n'est PAS « aucun dépôt » (il limite le débit, `_esef_json`) : on garde le cache et on le dit."""
+    idx = _esef_json(f"{ESEF}/api/entities/{lei}/filings?page[size]=100")
     if idx is None:
         return {**(cached or {"ids": [], "filings": []}), "error": "index ESEF injoignable"}
     last: dict[str, dict] = {}
@@ -269,7 +298,7 @@ def _esef_sync(lei: str, cached: dict | None) -> dict:
         return cached
     ids, filings = [], []
     for pe, a in sorted(last.items()):
-        doc = V._get_json(ESEF + a["json_url"])
+        doc = _esef_json(ESEF + a["json_url"])
         if doc is None:
             continue  # absent de `ids` : retenté au prochain passage
         filings.append([pe, esef_eps(doc)])
