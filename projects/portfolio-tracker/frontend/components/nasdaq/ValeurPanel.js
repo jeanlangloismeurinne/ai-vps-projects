@@ -50,11 +50,23 @@ export function Sentence({ d, name }) {
       Depuis {from}{shift}, {name} a rapporté <b className="text-white">{pct(a.total)} par an</b> dividendes compris, contre {pct(a.sp)} pour le {L.ref}.{' '}
       <span style={{ color: C.infl }}>L'inflation</span> explique {pct(a.infl)} par an, <span style={{ color: C.real }}>la croissance réelle des bénéfices</span> {pct(a.real)},{' '}
       <span style={{ color: C.mult }}>le multiple</span> {pct(a.mult)} (de {num(p.pe0)} à {num(p.pe1)} fois les bénéfices) et <span style={{ color: C.div }}>les dividendes</span> {pct(a.div)}.{' '}
-      {p.borrowed > 0.05
-        ? <>Environ <b className="text-amber-300">{Math.round(100 * p.borrowed)} % de la hausse du cours est empruntée</b> au multiple.</>
-        : <>La hausse est <b className="text-emerald-300">entièrement méritée</b> : le multiple n'a pas augmenté.</>}
+      <Verdict p={p} />
     </p>
   )
+}
+
+// `borrowed` n'existe que pour une hausse ; une baisse se dit par ce qui a reculé (bénéfices nominaux, multiple).
+function Verdict({ p }) {
+  const f = p.factor
+  if (f.price < 1) {
+    const eps = f.infl * f.real
+    if (f.mult < 1 && eps >= 1) return <>La baisse vient <b className="text-amber-300">entièrement du multiple</b> : les bénéfices ont progressé, mais le marché les paie moins cher.</>
+    if (f.mult >= 1) return <>La baisse vient <b className="text-red-300">des bénéfices</b> : le multiple a augmenté, le marché a amorti leur recul.</>
+    return <>La baisse vient à la fois <b className="text-red-300">des bénéfices</b> et <b className="text-amber-300">du multiple</b>, qui ont tous deux reculé.</>
+  }
+  if (p.borrowed > 0.05) return <>Environ <b className="text-amber-300">{Math.round(100 * p.borrowed)} % de la hausse du cours est empruntée</b> au multiple.</>
+  if (p.borrowed >= 0.005) return <>La hausse est <b className="text-emerald-300">presque entièrement méritée</b> : le multiple n'en explique que {Math.round(100 * p.borrowed)} %.</>
+  return <>La hausse est <b className="text-emerald-300">entièrement méritée</b> : le multiple n'a pas augmenté.</>
 }
 
 function Waterfall({ d }) {
