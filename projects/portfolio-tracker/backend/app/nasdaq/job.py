@@ -225,4 +225,9 @@ async def _run(log: _Log, today: date) -> dict:
         await proba.ensure_models()
     except Exception:  # noqa: BLE001 — le modèle de probabilité ne doit jamais faire échouer le calcul du jour
         logging.getLogger("nasdaq").exception("ensure_models a échoué")
+    try:
+        from app.nasdaq import valeur
+        await valeur.refresh()
+    except Exception:  # noqa: BLE001 — la valeur du temps passé ne doit jamais faire échouer le calcul du jour
+        logging.getLogger("nasdaq").exception("valeur.refresh a échoué")
     return {"status": "ok", "run_date": str(ref_date), "shown": len(rows), "alerts": n_alert}

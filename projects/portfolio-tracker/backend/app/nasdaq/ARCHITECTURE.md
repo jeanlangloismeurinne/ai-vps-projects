@@ -27,3 +27,14 @@ Régression logistique unique (IRLS numpy, ridge 1) sur six variables connues à
 - **Tables** (`nasdaq_02_watchlist_proba.sql`, à appliquer à la main) : `nasdaq_watchlist`, `nasdaq_proba_model` (un modèle par année), `nasdaq_proba_calib` (AUC, fiabilité, taux de réussite par seuil, hors échantillon).
 - **Cycle** : `ensure_models()` en fin de `run_daily` réapprend si aucun modèle n'existe pour l'année en cours (échec isolé : ne fait pas échouer le job).
 - **Front** : `pages/nasdaq/index.js` (accueil : cartes de la liste + recherche + « Explorer »), `pages/nasdaq/explorer.js` (graphiques, segmentation capitalisation par défaut) ; `SlidePanes.js` fait glisser la page vers la fiche (`?t=` en routage superficiel, le retour navigateur referme la fiche) ; `ProbaChart.js`, `ProbaPanel.js`, `WatchButton.js`.
+
+## Valeur du temps passé (`valeur.py`, 2026-11-22)
+
+Question : d'où vient la hausse du cours (inflation, croissance réelle des bénéfices, multiple, dividendes), et à combien de fois son « plancher » le titre se paie-t-il. Détenteur UNIQUE des formules (docstring du module) ; les écrans ne font que dessiner.
+
+- **Données** (rafraîchies en fin de `run_daily`, échec isolé) : BPA dilué déposé à la SEC (`companyfacts`, première publication, T4 = exercice − 9 mois, divisions d'actions ajustées valeur par valeur à SA date de dépôt), cours BRUTS mensuels yfinance (`auto_adjust=False` : un cours ajusté des dividendes abaisse le passé et fabrique des percées), inflation CPI (décalée d'un mois de publication), S&P 500 dividendes réinvestis, consensus +1 an (photo hebdomadaire `nasdaq_forward`). Contrôle croisé : bénéfice des 12 derniers mois comparé à celui de Yahoo (`EPS_CHECK`) → note « incohérent » (certificats de dépôt, devise, élément exceptionnel).
+- **Tables** (`nasdaq_03_valeur.sql`, appliquée le 2026-11-22) : `nasdaq_valeur_series` (une ligne par titre, payload mensuel), `nasdaq_macro`, `nasdaq_forward`.
+- **Choix mesurés** (mémoire `project_nasdaq_valeur_temps_passe`) : plancher = moyenne 3 ans × 12/15/20 (percé 4 % du temps sur les 7 géants à ×15 contre 8 % sur 12 mois) ; « meilleur état des 10 ans » seulement en ligne fantôme (percé 11 %) ; décomposition et PER sur les 12 derniers mois ; bénéfice PUBLIÉ (le choix publié / exploitation reste à arbitrer).
+- **API** : `/nasdaq/valeur/summary?period=3y|5y|10y|2010`, `/nasdaq/valeur/{t}`, `/nasdaq/valeur-status`, `POST /nasdaq/valeur/run`.
+- **Front** : onglet « Valeur » de la fiche (`ValeurPanel.js` : phrase, cascade, cours face au plancher, rapport au plancher, PER à terme, aire empilée repliée), badge des cartes (`ValeurBadge.js`, `?v=valeur` ouvre l'onglet), page comparative `pages/nasdaq/valeur.js`.
+- **Garde** : `checks/check_nasdaq_valeur.py` (fixture réelle Nvidia : deux divisions, dont une au milieu d'un exercice) + `negatif_nasdaq_valeur.sh` (16 mutations).

@@ -9,13 +9,14 @@ export function useSelectedTicker() {
   const pushed = useRef(false)
   const raw = router.query.t
   const selected = typeof raw === 'string' && raw ? raw.toUpperCase() : null
-  const open = (t) => {
+  const open = (t, v) => {
     pushed.current = true
-    router.push({ pathname: router.pathname, query: { ...router.query, t } }, undefined, { shallow: true, scroll: false })
+    const { v: _old, ...q } = router.query
+    router.push({ pathname: router.pathname, query: { ...q, t, ...(v ? { v } : {}) } }, undefined, { shallow: true, scroll: false })
   }
   const close = () => {
     if (pushed.current) { pushed.current = false; router.back() } else {
-      const { t, ...rest } = router.query
+      const { t, v, ...rest } = router.query
       router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true, scroll: false })
     }
   }

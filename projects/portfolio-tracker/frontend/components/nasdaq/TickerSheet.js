@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import ProbaPanel from './ProbaPanel'
+import ValeurPanel from './ValeurPanel'
 import WatchButton from './WatchButton'
 
 const DPM = 30.4375
@@ -39,6 +41,8 @@ function decimate(s) {
 }
 
 export default function TickerSheet({ row, ticker, hot, onClose }) {
+  const router = useRouter()
+  const [tab, setTab] = useState(router.query.v === 'valeur' ? 'valeur' : 'cours')
   const [range, setRange] = useState('1y')
   const [cache, setCache] = useState({})
   const [err, setErr] = useState(null)
@@ -59,18 +63,25 @@ export default function TickerSheet({ row, ticker, hot, onClose }) {
     <div className="flex items-center gap-3 mb-2 flex-wrap">
       <h3 className="text-sm font-semibold text-white">{row.ticker} <span className="font-normal text-gray-400">{row.name.replace(/ - .*$/, '')}</span></h3>
       <div className="flex rounded border border-gray-700 overflow-hidden">
+        {[['cours', 'Cours'], ['valeur', 'Valeur']].map(([v, l]) => (
+          <button key={v} onClick={() => setTab(v)}
+            className={`px-3 py-1 text-xs font-semibold ${tab === v ? 'bg-emerald-900 text-white' : 'text-gray-400 hover:text-white'}`}>{l}</button>
+        ))}
+      </div>
+      {tab === 'cours' && <div className="flex rounded border border-gray-700 overflow-hidden">
         {RANGES.map(o => (
           <button key={o.v} onClick={() => setRange(o.v)}
             className={`px-2.5 py-1 text-xs ${range === o.v ? 'bg-sky-900 text-white' : 'text-gray-400 hover:text-white'}`}>{o.l}</button>
         ))}
-      </div>
-      {full && <span className="text-xs text-gray-500">{full.d.length} séances · sauts ≥ {hot} mois sur 5 séances en rouge{range !== '1y' ? ' (les 6 plus forts)' : ''}</span>}
+      </div>}
+      {tab === 'cours' && full && <span className="text-xs text-gray-500">{full.d.length} séances · sauts ≥ {hot} mois sur 5 séances en rouge{range !== '1y' ? ' (les 6 plus forts)' : ''}</span>}
       <div className="ml-auto flex items-center gap-2">
         <WatchButton ticker={ticker} />
         <button onClick={onClose} className="text-xs px-2 py-1 rounded border border-gray-700 text-gray-300 hover:text-white">← Retour</button>
       </div>
     </div>
   )
+  if (tab === 'valeur') return <div>{head}<ValeurPanel ticker={ticker} name={row.name.replace(/ - .*$/, '')} /></div>
   if (!s) return <div>{head}<p className="text-sm text-gray-500">{err ? `Série indisponible pour ${row.ticker} (${err}).` : 'Chargement…'}</p><ProbaPanel ticker={ticker} /></div>
 
   const n = s.d.length

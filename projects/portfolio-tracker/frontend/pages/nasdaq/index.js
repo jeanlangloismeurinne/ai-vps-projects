@@ -5,10 +5,11 @@ import ProbaChart, { Legend } from '../../components/nasdaq/ProbaChart'
 import { Explain, useProba } from '../../components/nasdaq/ProbaPanel'
 import SlidePanes, { useSelectedTicker } from '../../components/nasdaq/SlidePanes'
 import TickerSheet from '../../components/nasdaq/TickerSheet'
+import { ValeurBadge } from '../../components/nasdaq/ValeurBadge'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 
-function Card({ row, onOpen, onRemove }) {
+function Card({ row, val, onOpen, onRemove }) {
   const { data, err } = useProba(row.ticker, 5)
   const p = data ? data.p[data.p.length - 1] : null
   return (
@@ -23,6 +24,7 @@ function Card({ row, onOpen, onRemove }) {
         <button onClick={e => { e.stopPropagation(); onRemove(row.ticker) }} title="Retirer de ma liste"
           className="ml-auto text-amber-300 hover:text-white text-sm">★</button>
       </div>
+      <ValeurBadge v={val} onClick={e => { e.stopPropagation(); onOpen(row.ticker, 'valeur') }} />
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-xl font-bold text-sky-300">{p === null ? '—' : `${Math.round(p * 100)} %`}</span>
         <span className="text-xs text-gray-500">chance d'un nouveau plus haut à 12 mois</span>
@@ -67,6 +69,7 @@ export default function NasdaqHome() {
   const [snap, setSnap] = useState(null)
   const [watch, setWatch] = useState(null)
   const [calib, setCalib] = useState(null)
+  const [val, setVal] = useState({})
   const [err, setErr] = useState(null)
   const [selected, openTicker, closeTicker] = useSelectedTicker()
 
@@ -77,6 +80,7 @@ export default function NasdaqHome() {
     loadWatch()
     fetch(`${API}/nasdaq/snapshot`).then(r => r.json()).then(setSnap).catch(e => setErr(String(e)))
     fetch(`${API}/nasdaq/proba-calib`).then(r => r.json()).then(setCalib).catch(() => {})
+    fetch(`${API}/nasdaq/valeur/summary?period=10y`).then(r => r.json()).then(j => setVal(Object.fromEntries((j.rows || []).map(x => [x.ticker, x])))).catch(() => {})
   }, [loadWatch])
   // revient de la fiche : la liste a pu changer (étoile)
   useEffect(() => { if (!selected) loadWatch() }, [selected, loadWatch])
@@ -95,7 +99,8 @@ export default function NasdaqHome() {
         <span className="text-3xl">🫧</span>
         <h1 className="text-2xl font-bold text-white">Suivi NASDAQ</h1>
         <Search onOpen={openTicker} />
-        <Link href="/nasdaq/explorer" className="ml-auto px-4 py-2 rounded bg-sky-800 hover:bg-sky-700 text-sm text-white">Explorer →</Link>
+        <Link href="/nasdaq/valeur" className="ml-auto px-4 py-2 rounded bg-emerald-900 hover:bg-emerald-800 text-sm text-white">Valeur →</Link>
+        <Link href="/nasdaq/explorer" className="px-4 py-2 rounded bg-sky-800 hover:bg-sky-700 text-sm text-white">Explorer →</Link>
       </div>
       {err && <div className="mb-4 rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">Erreur de chargement : {err}</div>}
       {watch && watch.length === 0 && (
@@ -104,7 +109,7 @@ export default function NasdaqHome() {
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map(r => <Card key={r.ticker} row={r} onOpen={openTicker} onRemove={remove} />)}
+        {cards.map(r => <Card key={r.ticker} row={r} val={val[r.ticker]} onOpen={openTicker} onRemove={remove} />)}
       </div>
       <p className="mt-2 text-xs text-gray-600">La recherche couvre les {snap?.rows?.length ?? '…'} entreprises publiées (capitalisation ≥ 50 Md$).</p>
       <div className="mt-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4 space-y-2">

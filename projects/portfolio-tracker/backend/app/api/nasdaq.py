@@ -10,6 +10,9 @@
   GET  /nasdaq/proba/{t}       courbe de probabilité de nouveau plus haut à 12 mois (point par point, passé seul)
   GET  /nasdaq/proba-calib     qualité du modèle mesurée hors échantillon
   GET  /nasdaq/series          ancienneté et multiple de chaque titre aux ~260 dernières séances (reconstitués des cours)
+  GET  /nasdaq/valeur/summary  valeur du temps passé : écart au plancher + décomposition de la hausse, tous titres (?period=)
+  GET  /nasdaq/valeur/{t}      idem pour un titre, avec les séries (plancher, ratio, aire empilée) et le PER à terme
+  GET  /nasdaq/valeur-status   état du dernier rafraîchissement ; POST /nasdaq/valeur/run le relance
 """
 from __future__ import annotations
 
@@ -21,7 +24,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Response
 
 from app.db.database import get_db_session
-from app.nasdaq import job, proba
+from app.nasdaq import job, proba, valeur
 from app.nasdaq.indicators import series_tail, to_daynum
 from app.nasdaq.universe import yf_symbol
 
@@ -234,4 +237,39 @@ async def proba_one(ticker: str, years: int = 5) -> dict:
     out = proba.curve(d[keep], c[keep], models, years=years)
     if not out:
         raise HTTPException(status_code=404, detail=f"Historique insuffisant pour `{ticker}`.")
+    return out
+
+
+def _period(period: str) -> str:
+    if period not in valeur.PERIODS:
+        raise HTTPException(status_code=422, detail="period ∈ 3y, 5y, 10y, 2010")
+    return period
+
+
+@router.get("/valeur/summary")
+async def valeur_summary(period: str = "10y") -> dict:
+    rows = await valeur.read_summary(_period(period))
+    return {"period": period, "rows": rows, "running": valeur.state["running"], "error": valeur.state["error"]}
+
+
+@router.get("/valeur-status")
+async def valeur_status() -> dict:
+    return dict(valeur.state)
+
+
+@router.post("/valeur/run", status_code=202)
+async def valeur_run() -> dict:
+    if valeur.state["running"]:
+        raise HTTPException(status_code=409, detail="Un rafraîchissement est déjà en cours.")
+    t = asyncio.create_task(valeur.refresh())
+    _tasks.add(t)
+    t.add_done_callback(_tasks.discard)
+    return {"started": True}
+
+
+@router.get("/valeur/{ticker}")
+async def valeur_one(ticker: str, period: str = "10y") -> dict:
+    out = await valeur.read_one(_tk(ticker), _period(period))
+    if out is None:
+        raise HTTPException(status_code=404, detail=f"Pas encore de données de valeur pour `{ticker}`.")
     return out
