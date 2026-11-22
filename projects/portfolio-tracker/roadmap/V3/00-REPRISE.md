@@ -26,27 +26,26 @@ vérifié dans les conteneurs : routes `/v2/emetteurs/{e}/etude`, `libelles_acte
 verts ; seul rouge connu : `check_signature_modele_persist` (données de l'ancien enchaînement).
 Détail des modules : `M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
 
-**NVDA — premier vrai dossier, TERMINÉ le 2026-11-22** (mise à l'étude 08:53 UTC → `parcours_termine`
-09:10, passages 13-15) : 2 demandes (derniers comptes annuels = 10-K FY2026 `0001045810-26-000021`,
-lu en 1 852 lignes, CA 215 938 M$ vérifié ; données structurées = companyfacts, `sans_objet` à la
-lecture, voulu) ; validation faite à l'écran ; **coût 0 $** (SEC gratuite, aucun modèle appelé,
-crédit DeepInfra inchangé ≈ 2,91 $) — le coût d'un dossier n'est donc PAS mesuré : le mesurer sur
-SpaceX (collecte web). 0 pièce de connaissance : normal, aucun consommateur ne cite avant M4.
+**Trois vrais dossiers TERMINÉS le 2026-11-22** (NVDA, RVMD, SpaceX ; passages 13-19) — chacun : 2
+demandes (derniers comptes annuels + companyfacts, `sans_objet` à la lecture, voulu), tout depuis la
+SEC, **coût 0 $** (aucun modèle, aucune recherche web ; crédit DeepInfra inchangé ≈ 2,91 $) → le coût
+d'un dossier avec collecte web n'est PAS encore mesuré (aucune des trois n'en a eu besoin).
+NVDA : 10-K FY2026 (1 852 lignes, CA 215 938 M$ vérifié), validé à l'écran. RVMD : 10-K FY2025
+(4 259 lignes) ; fiche révision 2, cotations `RVMD` **et `RVMDW`** (bons de souscription : à exclure
+quand un module lira le cours coté). SpaceX : prospectus 424B4 du 2026-06-12 (#148 ; 15 458 lignes,
+CA 2025 18 674 M$) ; fiche complétée par le système en révision 2 (« SPACE EXPLORATION TECHNOLOGIES
+CORP », US, NASDAQ SPCX, CIK 1181412). Ses comptes intermédiaires postérieurs à l'introduction ne sont
+pas demandés (aucun besoin déclaré). 0 pièce de connaissance : normal avant M4.
 
 **Relecture de la collecte DÉBRAYÉE le 2026-11-22** (`lecture_humaine.recueil = false`, à la demande de
 l'utilisateur) : un dossier va au bout sans arrêt ; le raffinement « en cas de doute seulement » est à
 la feuille de route du module (`app/modules/recueil/ARCHITECTURE.md`). Contrôles qui jouent le geste à
 l'écran : relecture rétablie le temps du contrôle (`check_etude.relecture`).
 
-**Prochain lot** : RVMD et SpaceX mis à l'étude le 2026-11-22 (depuis la conversation), suivre les passages, puis K13
-(57 fiches SEC de l'ancien système retrouvées dans les dépôts recollectés — gratuit, exige la collecte
-de NVDA et RVMD) et les lignes « réel » de M2 (B3/B6/B10/B13). Les gestes de l'écran n'ont été joués
-que sur la société fictive. Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec
-M4. Un dossier terminé ne repart pas quand le parcours s'allonge : à traiter avec M4.
-
-**SpaceX** (fiche en production : révision 1, « SPCX », rien d'autre) : NE PAS la compléter à la main ;
-le vrai passage l'écrira, signé du système (passage à blanc du 2026-11-16 : identité complète,
-prospectus 424B4 du 2026-06-12 pour « derniers comptes annuels »).
+**Prochain lot** : K13 (57 fiches SEC de l'ancien système retrouvées dans les dépôts recollectés —
+gratuit, NVDA et RVMD désormais collectées) et les lignes « réel » de M2 (B3/B6/B10/B13). Les demandes
+« au fil du dossier » (M3 §2, 1 bis) se construisent avec M4. Un dossier terminé ne repart pas quand le
+parcours s'allonge : à traiter avec M4.
 
 M1 accepté sur le VPS le 2026-11-16 (reste à l'écran : admettre, révoquer, corriger sur de vraies
 décisions ; puis archiver `M1-fiche-emetteur.md`). Modèles : Sonnet pour les rangements en base, Opus
