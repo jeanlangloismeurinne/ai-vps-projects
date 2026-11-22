@@ -98,7 +98,7 @@ rougi par `negatif_recueil.sh`) ; « base » sur une vraie base ; « réel » su
 | B10 | **Une fiche incomplète se complète depuis le registre officiel** : quand l'adaptateur des dépôts trouve l'émetteur au registre (par son symbole ou sa raison sociale), il propose une révision de la fiche (raison sociale, numéro, place, symbole, pays) avec le registre cité en motif. Le système la signe ; votre correction d'un champ l'emporte (#147). Un homonyme (deux sociétés pour un nom) n'est jamais tranché par le système : indisponibilité nommée, acte attendu de l'utilisateur. | société fictive ; **réel : SpaceX** |
 | B11 | **Dans le doute, indisponible** : document illisible (PDF non lu, page vide, erreur du registre après une seconde tentative) → indisponibilité nommée avec la raison ; jamais un document vide rangé comme bon. | société fictive |
 | B12 | **L'écran** montre, par émetteur, les demandes, les documents rangés (origine, qualification, date), les indisponibilités et leur raison, la dépense. | réel |
-| B13 | **NVDA et RVMD** : les derniers comptes annuels, les comptes intermédiaires et les annonces importantes depuis le 1er janvier 2026 sont collectés ; chaque document que l'ancien système a déjà lu pour ces genres est retrouvé (par son numéro de dépôt), chaque écart listé et expliqué. | réel |
+| B13 | **NVDA et RVMD, le besoin initial** (reformulée le 2026-11-22 : un dossier s'initialise avec le dernier rapport annuel, M3 §4 q.2) : les derniers comptes annuels et leurs données comptables structurées sont collectés ; chaque fiche de l'ancien système qui cite ces dépôts est retrouvée (par son numéro de dépôt), chaque écart listé et expliqué. Les comptes intermédiaires et les annonces ne sont plus demandés ici : ils le seront par M4 au fil du dossier, et leur preuve est une ligne d'acceptation de M4 (`07-avant-comite.md` § « À l'ouverture de M4 »). | **réel** : dossiers du 2026-11-22 ; `tools/controle_ancien_systeme.sh` sans `--en-memoire` : 14 fiches sur les dépôts collectés → 12 retrouvées, 2 écarts expliqués, 0 inexpliqué (41 dépôts non demandés, 2 d'une autre société) |
 | B14 | **Rien d'autre ne casse** : suite complète verte ; l'ancien code continue de tourner tel quel (M2 ne le rebranche pas : c'est M3 qui lira les documents de M2). | réel |
 
 ## 3. Questions pour l'utilisateur — tranchées le 2026-11-16 (les trois recommandations retenues)
@@ -192,7 +192,7 @@ aucune écriture au journal des sources), ~0,01 $ par source :
   annoncée en tête de la publication.
 
 Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) ~~le déclencheur et la tâche de fond qui rangent l'`Envoi`~~ (M3 §5) ; (4) ~~l'écran (B12)~~ (construit avec K12, M3 §5) ; (5) les
-lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13), suite (B14).
+lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13, reformulée et constatée le 2026-11-22 : besoin initial seul), suite (B14).
 
 ## 6. Lire la presse payante — mesures et proposition (2026-11-18, question ouverte)
 

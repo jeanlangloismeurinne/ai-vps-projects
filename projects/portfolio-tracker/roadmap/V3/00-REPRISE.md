@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-22 (K13 fait, lecteur 1.2.0 ; prochain lot : lignes « réel » de M2, B13 à reformuler) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-22 (B13 reformulée et constatée ; suite dans M4, option C en réserve ; prochain lot : B3/B10/B12 à cocher, B6) — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -39,11 +39,15 @@ les 10-K Workiva → **lecteur 1.2.0** (déployé ; la tâche de fond relit les 
 suivant, les lectures 1.1.0 restent). Détail : `M3-base-connaissance.md` § « K13 ».
 
 **Prochain lot** : lignes « réel » de M2. B3 (prospectus SpaceX), B10 (fiche SpaceX complétée) et B12
-(écran) sont déjà constatées sur les vrais dossiers du 2026-11-22 → à cocher après relecture. Restent
-B6 (une vraie évaluation de source : il faut une collecte web, payante) et **B13, à reformuler** : elle
-exige comptes intermédiaires et annonces depuis janvier, alors que l'utilisateur a tranché le 2026-11-21
-« initialiser = le dernier rapport annuel » (M3 §4 q.2) — question posée à l'utilisateur. Les demandes
-« au fil du dossier » (M3 §2, 1 bis) se construisent avec M4. Un dossier terminé ne repart pas quand le
+(écran) sont déjà constatées sur les vrais dossiers du 2026-11-22 → à cocher après relecture. **B13
+reformulée et constatée le 2026-11-22** (arbitrage A + B) : besoin initial seul (annuel + données
+structurées) ; K13 sans `--en-memoire` : 14 fiches → 12 retrouvées, 2 expliquées, 0 inexpliquée. Les
+intermédiaires et annonces deviennent une ligne d'acceptation de M4 (41 fiches non demandées en ligne de
+base) ; **option C en réserve** : élargir le besoin initial (donnée du `referentiel.json` de `comptes`)
+si M4 demande presque toujours les trimestriels dès son premier passage — décision à la clôture de M4.
+Tout : `07-avant-comite.md` § « À l'ouverture de M4 ». Reste B6 (une vraie évaluation de source : il
+faut une collecte web, payante). Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec
+M4. Un dossier terminé ne repart pas quand le
 parcours s'allonge : à traiter avec M4.
 
 M1 accepté sur le VPS le 2026-11-16 (reste à l'écran : admettre, révoquer, corriger sur de vraies

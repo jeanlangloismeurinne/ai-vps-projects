@@ -53,7 +53,7 @@ règle simple, l'automatisation son raffinement).
 | M1 ✅ | **Fiche de l'émetteur et sources** (accepté sur le VPS le 2026-11-16, sauf les gestes d'écriture à l'écran, laissés à l'utilisateur : `M1-fiche-emetteur.md`) | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
 | M2 | **Collecte de sources** (construit hors ligne le 2026-11-16 : `M2-collecte-sources.md` §5) | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur. **Arbitrés le 2026-11-14** : une source inconnue rencontrée part à l'évaluateur de sources (la porte de M1 est construite : #145) ; la collecte est un travail suivi par le chef de dossier, et le dossier avance à côté (#146) | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
 | M3 | **Base de connaissance** | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
-| M4 | **Comptes et segments** | Comptes reconstitués, ratios maison, ventilation, périmètre, par famille de comptes | Les comptes de NVDA et RVMD bouclent avec les totaux publiés ; deux découpages superposés (Apple, cas fictif) sont séparés | 0 |
+| M4 | **Comptes et segments** | Comptes reconstitués, ratios maison, ventilation, périmètre, par famille de comptes | Les comptes de NVDA et RVMD bouclent avec les totaux publiés ; deux découpages superposés (Apple, cas fictif) sont séparés ; **ses demandes au fil du dossier sont collectées et contrôlées par l'ancien système** (suite de B13, ci-dessous) | 0 |
 | M5 | **Filtres** | Alertes motivées au gérant (dette, autonomie, clauses, qui décide, hors compétence) ; jamais d'arrêt automatique | Sur RVMD l'autonomie de trésorerie est signalée avec sa pièce | faible |
 | M6 | **Carte des sources de profit** | Inventaire élément × marché, classé, contrôlé contre les listes de l'émetteur ; débats de la thèse proposés, que vous complétez et validez en un lot | Chaque élément listé par l'émetteur est dans la carte **à chaque passage** ; deux passages donnent la même carte ; le relecteur retrouve les erreurs connues (étalons) | **première mesure payante** |
 | M7 | **Modèle de l'entreprise** | Classeur : une ligne par source de profit, ses moteurs, cellules avec origine ; liste des cellules vides. Squelette construit par le code | Le total des lignes de la première année égale le chiffre d'affaires publié | 0 |
@@ -96,6 +96,31 @@ rôle devient une donnée, et un changement de modèle rejoue les étalons) ; au
 M6 — la carte se mesurera quand sa collecte sera enregistrée sous le nouveau contrat, pour ne jamais
 avoir à refaire une recherche complète.
 
+## À l'ouverture de M4 (reporté de M2 et M3 le 2026-11-22)
+
+**Suite de B13 — ligne d'acceptation de M4** (arbitrage du 2026-11-22, options A + B) : quand M4, en
+travaillant sur NVDA et RVMD, demande ce qui lui manque (comptes intermédiaires depuis la clôture,
+annonces importantes, exercices antérieurs), sa demande devient une collecte suivie par le chef de
+dossier (M3 §2, 1 bis), et les fiches de l'ancien système qui citent les dépôts ainsi collectés sont
+retrouvées par `tools/controle_ancien_systeme.sh` **sans `--en-memoire`** ; chaque écart listé et
+expliqué. Ligne de base du 2026-11-22 : 41 fiches sur des dépôts non demandés (NVDA 21, RVMD 20 : 10-Q,
+8-K, procurations, commentaire du directeur financier, formulaires 4). Une fiche qui cite un dépôt que
+M4 n'a pas eu besoin de demander (exemple : un 10-K RVMD de 2021) reste « non demandé » : c'est un écart
+expliqué, pas un manque — c'est M4 qui dit jusqu'où remonter, pas l'ancien système.
+
+**Option C gardée en réserve — changer l'amont de la collecte.** Un vrai fonds n'initie pas un
+dossier sur le seul rapport annuel : il y ajoute d'emblée les trimestres publiés depuis la clôture (les
+« douze derniers mois ») et les annonces importantes. L'arbitrage du 2026-11-21 (initialiser = le
+dernier rapport annuel, le reste demandé au fil du dossier) est retenu. **Si, en construisant M4, on
+constate que sa première demande est presque toujours la même** (les trimestriels depuis la clôture,
+dès le premier passage), il sera plus efficace d'élargir le besoin initial déclaré dans
+`referentiel.json` du module `comptes` plutôt que de payer un aller-retour par dossier. C'est une
+modification de donnée, pas de code (M3 §2, point 1) : le chef de dossier, la collecte et la lecture
+ne changent pas. Point de décision : à la clôture de M4, regarder sur NVDA, RVMD et SpaceX ce que M4 a
+demandé et quand ; décision à l'utilisateur. Le tri des « annonces importantes » (lesquelles des 8-K)
+reste un jugement : s'il entre dans le besoin initial, il se fait par catégorie déclarée au registre,
+jamais par un modèle.
+
 ## Dettes reprises de l'ancien plan
 
 Elles sont rattachées au module qui les soldera, au moment de son tri : question 3 de l'arbre mal posée
@@ -125,6 +150,7 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | 2026-11-16 | M2 | Ouvert : tri de l'ancien code et acceptation écrite AVANT la construction (B1-B14) ; SpaceX (introduite en juin 2026, aucun rapport annuel) proposée comme troisième cas | `M2-collecte-sources.md` |
 | 2026-11-16 | M2 | Construit hors ligne : module `recueil` (B1-B11 sur société fictive, 63/0, négatif 43/43) ; passage à blanc réel SpaceX (identité complétée, prospectus rendu) ; restent base, évaluateur et moteur réels, déclencheur, écran, lignes « réel » | `M2-collecte-sources.md` §5 |
 | 2026-11-21 | M3 | Déclencheur (`etude`) et besoins (`comptes`) construits hors ligne : mettre à l'étude, passage (relever, lire, avancer et ranger ensemble), rien de payant en pause, un seul arrêt (validation de la collecte) ; le chef de dossier expose ses gestes par son contrat et accepte un interrupteur de relecture par pas | `check_etude.py` 39/0, `negatif_etude.sh` 31/31 ; chef 108/0 et 27/27 (hôte) |
+| 2026-11-22 | M2, M4 | B13 reformulée (besoin initial seul : annuel + données structurées), constatée sur les dossiers réels ; la suite (intermédiaires, annonces) devient une ligne d'acceptation de M4 ; option C (élargir le besoin initial) gardée en réserve, décidée à la clôture de M4 | `controle_ancien_systeme.sh` sans `--en-memoire` : 14 fiches → 12 retrouvées, 2 expliquées, 0 inexpliquée ; § « À l'ouverture de M4 » |
 
 **Réserve sur M1** (2026-11-16) : les gestes d'écriture de l'écran (admettre, révoquer, corriger une
 fiche) n'ont pas été joués en production — le registre est indélébile ; ils sont prouvés par
