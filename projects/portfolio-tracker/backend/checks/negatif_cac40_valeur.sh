@@ -3,7 +3,7 @@
 #
 #   bash checks/negatif_cac40_valeur.sh
 #
-# SATISFIABILITÉ mesurée avant toute mutation : 36 ok / 0 FAIL (2026-11-22).
+# SATISFIABILITÉ mesurée avant toute mutation : 42 ok / 0 FAIL (2026-11-22, référence CAC 40 comprise).
 # ⚠️ LES MUTATIONS QUI COMPTENT : n°6 et n°7 (divisions d'actions par date de publication du DÉPÔT : Air Liquide,
 # cas réel) et n°19 (filtre par marché : sans lui, le CAC 40 entre dans la page Nasdaq et dans ses badges).
 # Non gardé : l'exclusion des faits à dimension dans `esef_eps` — aucun dépôt lu n'en porte sur le BPA.
@@ -38,6 +38,11 @@ mutations=(
   "$VA¦    return bool(payload) and \"m\" in payload and (payload.get(\"check\") or {}).get(\"ok\") is not False¦    return bool(payload) and (payload.get(\"check\") or {}).get(\"ok\") is not False¦une ligne CAC 40 en échec (marché seul, sans séries) n'est pas affichable"
   "$VA¦    return {t: p for t, p in series.items() if market_of(p) == market}¦    return dict(series)¦la page Nasdaq (et ses badges) ne lit que le Nasdaq, échecs compris"
   "$VA¦         \"periods\": {k: decompose(d, k) if k in mk[\"periods\"] else {\"ok\": False, \"reason\": mk[\"no_history\"]} for k in PERIODS}}¦         \"periods\": {k: decompose(d, k) for k in PERIODS}}¦CAC 40 : « 10 ans » rend « historique insuffisant », pas un départ décalé"
+  "$VA¦         \"home\": home[n] / home[i0] if home[i0] and home[n] else None,¦         \"home\": None,¦CAC 40 : la référence nationale a son rendement annuel (1,007¹² − 1)"
+  "$VA¦         \"home\": home[n] / home[i0] if home[i0] and home[n] else None,¦         \"home\": home[n] / home[i0] if home[i0] and home[n] else 1.0,¦Nasdaq : pas de référence nationale, aucun facteur fantôme"
+  "$VA¦        out[\"home\"].append(math.log(home[i] / home[i0]) if home[i] and home[i0] else None)¦        out[\"home\"].append(None)¦CAC 40 : la courbe cumulée de la référence part de zéro et monte"
+  "$VA¦    home = [macro[\"home\"][idx[x]] for x in m] if macro.get(\"home\") else None¦    home = macro[\"home\"][:len(m)] if macro.get(\"home\") else None¦la référence nationale s'aligne par mois, pas par position"
+  "$VA¦    home = [macro[\"home\"][idx[x]] for x in m] if macro.get(\"home\") else None¦    home = [macro[\"home\"][idx[x]] for x in m]¦macro sans référence nationale (Nasdaq) : assemble passe, sans série"
 )
 
 source "$(dirname "$0")/_negatif.sh"

@@ -6,7 +6,8 @@ Ce module dit seulement ce que valent, pour une société européenne, les trois
                 connu 4 mois après la clôture (délai légal du rapport financier annuel) ; ESEF d'abord (le
                 chiffre publié à l'époque, via filings.xbrl.org), Yahoo `income_stmt` en repli ;
   inflation   = indice des prix harmonisé France (FRED CP0000FRM086NEST), décalé d'un mois de publication ;
-  référence   = S&P 500 dividendes réinvestis converti en euros (^SP500TR ÷ EURUSD).
+  référence   = S&P 500 dividendes réinvestis converti en euros (^SP500TR ÷ EURUSD), et le CAC 40 dividendes
+                réinvestis (`HOME_INDEX`).
 Les comptes ESEF commencent en 2020-2021 : seules les périodes 3 et 5 ans ont un sens (`valeur.MARKETS`).
 """
 from __future__ import annotations
@@ -29,6 +30,10 @@ from app.nasdaq import valeur as V
 logger = logging.getLogger(__name__)
 
 MARKET = "cac40"
+# Yahoo n'a pas l'indice CAC 40 Gross Return (PX1GR.PA s'arrête en 2015) : le fonds indiciel distribuant Amundi
+# CAC 40 (ex-Lyxor), en cours ajustés des dividendes, en tient lieu, frais de gestion déduits. C40.PA, capitalisant,
+# suit désormais le CAC 40 ESG — pas le CAC 40. Sondé le 2026-11-22 : 10 ans à 8,9 %/an contre 5,9 % pour ^FCHI.
+HOME_INDEX = "CAC.PA"
 AVAIL_MONTHS = 4
 GAP_WARN = 0.05
 # Un facteur 10 entre deux chiffres d'un même exercice n'est pas une différence de comptabilité (IFRS 17, cession,
@@ -255,10 +260,12 @@ def _macro_eur_sync() -> dict:
     sp = V._monthly_last(yf.download("^SP500TR", start=V.START + "-01", auto_adjust=True, progress=False)["Close"].squeeze())
     eurusd = V._fx_monthly("EUR")
     sp_eur = (sp / eurusd.reindex(sp.index).ffill()).dropna()
+    home = V._monthly_last(yf.download(HOME_INDEX, start=V.START + "-01", auto_adjust=True, progress=False)["Close"].squeeze())
     months = [x for x in sorted(set(sp_eur.index) | set(cpi_m.index)) if x >= V.START]
     cpi_f = cpi_m.reindex(months).ffill()
     return {"m": months, "cpi": [None if v != v else float(v) for v in cpi_f.values],
-            "sp": [None if v != v else float(v) for v in sp_eur.reindex(months).values]}
+            "sp": [None if v != v else float(v) for v in sp_eur.reindex(months).values],
+            "home": [None if v != v else float(v) for v in home.reindex(months).values]}
 
 
 _esef_lock = threading.Lock()

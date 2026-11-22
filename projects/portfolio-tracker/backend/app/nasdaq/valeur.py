@@ -44,6 +44,7 @@ MARKETS = {
     "nasdaq": {"macro": "valeur", "currency": "USD", "symbol": "$", "ref": "S&P 500", "infl": "inflation américaine",
                "source": "comptes SEC", "periods": ("3y", "5y", "10y", "2010")},
     "cac40": {"macro": "valeur_cac40", "currency": "EUR", "symbol": "€", "ref": "S&P 500 en euros",
+              "home": "CAC 40", "home_note": "lu sur le fonds indiciel Amundi CAC 40, frais de gestion déduits",
               "infl": "inflation française", "source": "comptes ESEF, Yahoo en repli",
               "periods": ("3y", "5y"), "no_history": "historique insuffisant : bénéfices publiés depuis 2020 seulement"},
 }
@@ -172,6 +173,7 @@ def start_index(months: list[str], e: list, period: str) -> tuple[int, bool]:
 def decompose(d: dict, period: str) -> dict:
     """Facteurs multiplicatifs de i0 à aujourd'hui, et leurs rendements annuels."""
     m, p, tr, e, cpi, sp = d["m"], d["p"], d["tr"], d["e"], d["cpi"], d["sp"]
+    home = d.get("home") or [None] * len(m)
     i0, shifted = start_index(m, e, period)
     n = len(m) - 1
     yrs = (n - i0) / 12
@@ -180,6 +182,7 @@ def decompose(d: dict, period: str) -> dict:
         out["reason"] = "historique insuffisant"
         return out
     f = {"infl": cpi[n] / cpi[i0], "sp": sp[n] / sp[i0] if sp[i0] and sp[n] else None,
+         "home": home[n] / home[i0] if home[i0] and home[n] else None,
          "div": (tr[n] / tr[i0]) / (p[n] / p[i0]), "price": p[n] / p[i0]}
     f["total"] = f["price"] * f["div"]
     e0, e1 = e[i0], e[n]
@@ -200,8 +203,9 @@ def decompose(d: dict, period: str) -> dict:
 def cumulative(d: dict, period: str) -> dict:
     """Pour l'aire empilée : log des facteurs cumulés mois par mois depuis le départ de la période."""
     m, p, tr, e, cpi, sp = d["m"], d["p"], d["tr"], d["e"], d["cpi"], d["sp"]
+    home = d.get("home") or [None] * len(m)
     i0, _ = start_index(m, e, period)
-    out = {k: [] for k in ("m", "infl", "real", "mult", "div", "total", "sp")}
+    out = {k: [] for k in ("m", "infl", "real", "mult", "div", "total", "sp", "home")}
     e0 = e[i0] if e[i0] and e[i0] > 0 else None
     for i in range(i0, len(m)):
         out["m"].append(m[i])
@@ -210,6 +214,7 @@ def cumulative(d: dict, period: str) -> dict:
         out["div"].append(math.log((tr[i] / tr[i0]) / (p[i] / p[i0])) if tr[i] and p[i] else None)
         out["total"].append(math.log(tr[i] / tr[i0]) if tr[i] else None)
         out["sp"].append(math.log(sp[i] / sp[i0]) if sp[i] and sp[i0] else None)
+        out["home"].append(math.log(home[i] / home[i0]) if home[i] and home[i0] else None)
         if e0 and e[i] and e[i] > 0 and p[i]:
             out["real"].append(math.log(e[i] / e0) - li)
             out["mult"].append(math.log((p[i] / e[i]) / (p[i0] / e0)))
@@ -262,7 +267,8 @@ def usable(payload: dict | None) -> bool:
 
 
 def assemble(ticker: str, payload: dict, macro: dict) -> dict | None:
-    """Aligne la série du titre (mois, cours brut, cours ajusté, état) sur l'inflation et le S&P 500."""
+    """Aligne la série du titre (mois, cours brut, cours ajusté, état) sur l'inflation, le S&P 500 et, pour un marché
+    qui en a une, la référence nationale (`home` : CAC 40 dividendes réinvestis)."""
     idx = {m: i for i, m in enumerate(macro["m"])}
     keep = [i for i, m in enumerate(payload["m"]) if m in idx and payload["p"][i] and payload["tr"][i]]
     if len(keep) < 36:
@@ -271,10 +277,11 @@ def assemble(ticker: str, payload: dict, macro: dict) -> dict | None:
     m = pick(payload["m"])
     cpi = [macro["cpi"][idx[x]] for x in m]
     sp = [macro["sp"][idx[x]] for x in m]
+    home = [macro["home"][idx[x]] for x in m] if macro.get("home") else None
     if any(c is None for c in cpi):
         return None
     return {"ticker": ticker, "m": m, "p": pick(payload["p"]), "tr": pick(payload["tr"]), "e": pick(payload["e"]),
-            "cpi": cpi, "sp": sp, "check": payload.get("check")}
+            "cpi": cpi, "sp": sp, "home": home, "check": payload.get("check")}
 
 
 # ───────────────────────────── collecte ─────────────────────────────

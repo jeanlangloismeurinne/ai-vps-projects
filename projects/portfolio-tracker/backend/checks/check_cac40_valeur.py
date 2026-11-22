@@ -150,6 +150,26 @@ check("CAC 40 : « 10 ans » rend « historique insuffisant », pas un départ d
 check("CAC 40 : 5 ans se décompose", (s_eu.get("periods") or {}).get("5y", {}).get("ok") is True)
 check("Nasdaq : « 10 ans » reste calculé", (s_us.get("periods") or {}).get("10y", {}).get("ok") is True)
 
+# ── référence nationale : CAC 40 dividendes réinvestis à côté du S&P 500 en euros ──
+d_home = {**d, "home": [5000 * 1.007 ** i for i in range(n)]}
+p_home = (safe(V.summary, d_home, None, "cac40", default={}) or {}).get("periods", {}).get("5y", {})
+check("CAC 40 : la référence nationale a son rendement annuel (1,007¹² − 1)",
+      abs((p_home.get("annual") or {}).get("home", 0) - (1.007 ** 12 - 1)) < 1e-9)
+check("CAC 40 : la référence nationale ne remplace pas le S&P 500",
+      abs((p_home.get("annual") or {}).get("sp", 0) - (1.008 ** 12 - 1)) < 1e-9)
+cu = safe(V.cumulative, d_home, "5y", default={}) or {}
+check("CAC 40 : la courbe cumulée de la référence part de zéro et monte",
+      (cu.get("home") or [None])[0] == 0 and (cu.get("home") or [0])[-1] > 0)
+check("Nasdaq : pas de référence nationale, aucun facteur fantôme",
+      "home" not in ((s_us.get("periods") or {}).get("5y", {}).get("factor") or {"home": 1}))
+mac = {"m": d["m"][::-1], "cpi": d["cpi"][::-1], "sp": d["sp"][::-1], "home": d_home["home"][::-1]}
+pay = {"m": d["m"], "p": d["p"], "tr": d["tr"], "e": d["e"]}
+asm = safe(V.assemble, "X", pay, mac, default={}) or {}
+check("la référence nationale s'aligne par mois, pas par position",
+      (asm.get("home") or [None])[0] == d_home["home"][0] and (asm.get("home") or [None])[-1] == d_home["home"][-1])
+asm_us = safe(V.assemble, "X", pay, {k: v for k, v in mac.items() if k != "home"}, default={}) or {}
+check("macro sans référence nationale (Nasdaq) : assemble passe, sans série", asm_us.get("m") and asm_us.get("home") is None)
+
 for k in ko:
     print("FAIL", k)
 print(f"check_cac40_valeur : {ok_n} ok / {len(ko)} FAIL")
