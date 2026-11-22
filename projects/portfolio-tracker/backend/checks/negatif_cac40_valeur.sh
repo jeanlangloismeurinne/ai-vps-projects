@@ -3,7 +3,7 @@
 #
 #   bash checks/negatif_cac40_valeur.sh
 #
-# SATISFIABILITÉ mesurée avant toute mutation : 34 ok / 0 FAIL (2026-11-22).
+# SATISFIABILITÉ mesurée avant toute mutation : 36 ok / 0 FAIL (2026-11-22).
 # ⚠️ LES MUTATIONS QUI COMPTENT : n°6 et n°7 (divisions d'actions par date de publication du DÉPÔT : Air Liquide,
 # cas réel) et n°19 (filtre par marché : sans lui, le CAC 40 entre dans la page Nasdaq et dans ses badges).
 # Non gardé : l'exclusion des faits à dimension dans `esef_eps` — aucun dépôt lu n'en porte sur le BPA.
@@ -31,6 +31,8 @@ mutations=(
   "$EU¦    return {\"year\": e[\"end\"][:4], \"ours\": e[\"v\"], \"yahoo\": y[\"v\"], \"currency\": e[\"cur\"], \"ok\": V.eps_check(e[\"v\"], y[\"v\"])}¦    return {\"year\": e[\"end\"][:4], \"ours\": e[\"v\"], \"yahoo\": y[\"v\"], \"currency\": e[\"cur\"], \"ok\": True}¦contrôle croisé : hors tolérance, l'analyse est masquée (STMicro 2025, IFRS 0,33 contre US GAAP 0,18)"
   "$EU¦        return {\"ok\": None}¦        return {\"ok\": False}¦contrôle croisé : sans exercice commun, impossible mais pas masqué (Puma)"
   "$EU¦              and not scale_error(e[\"v\"], ys[e[\"end\"][:7]][\"v\"])]¦              ]¦Capgemini : l'exercice remplacé pour erreur d'échelle n'est pas « contrôlé » (le titre n'est pas masqué)"
+  "$EU¦    out = [p for p in points if abs(p[\"v\"]) < OUTLIER * med]¦    out = list(points)¦Crédit Agricole 2019-2020 : hors d'échelle de la série (×100 la médiane), écartés et signalés"
+  "$EU¦OUTLIER = 100¦OUTLIER = 3¦Safran (réel) : un bénéfice proche de zéro ou une forte variation ne sont pas des erreurs d'échelle"
   "$EU¦        r = 1.0 if p[\"cur\"] == \"EUR\" else fx(p[\"cur\"], p[\"end\"][:7])¦        r = 1.0¦BPA en dollars converti au change du mois de clôture"
   "$VA¦    return (payload or {}).get(\"market\", \"nasdaq\")¦    return (payload or {}).get(\"market\", \"cac40\")¦une ligne sans marché déclaré est une ligne Nasdaq"
   "$VA¦    return bool(payload) and \"m\" in payload and (payload.get(\"check\") or {}).get(\"ok\") is not False¦    return bool(payload) and (payload.get(\"check\") or {}).get(\"ok\") is not False¦une ligne CAC 40 en échec (marché seul, sans séries) n'est pas affichable"

@@ -69,6 +69,17 @@ check("Capgemini : l'exercice remplacé pour erreur d'échelle n'est pas « cont
 check("Capgemini 2022 : 8 790 000 € par action au dépôt, sans dépôt suivant : Yahoo (8,79 €) le remplace, et la note le dit",
       c22.get("src") == "yahoo" and abs(c22.get("v", 0) - 8.79) < 1e-9 and any("échelle" in w for w in cwarn))
 
+# Crédit Agricole (réel) : dépôts 2020 et 2021 en millions ; 2021 est démenti par le dépôt 2022, 2019-2020 non.
+aca = [{"end": f"{y}-12-31", "v": v, "cur": "EUR", "src": "esef"} for y, v in
+       ((2019, 1482000.0), (2020, 804000.0), (2021, 1.836), (2022, 1.681), (2023, 1.943), (2024, 2.109), (2025, 2.18))]
+akept, awarn = safe(E.drop_outliers, aca, default=(aca, [])) or (aca, [])
+check("Crédit Agricole 2019-2020 : hors d'échelle de la série (×100 la médiane), écartés et signalés",
+      [p["end"][:4] for p in akept] == ["2021", "2022", "2023", "2024", "2025"] and len(awarn) == 2)
+saf = [{"end": f"{y}-12-31", "v": v, "cur": "EUR", "src": "esef"} for y, v in
+       ((2019, 5.63), (2020, 0.8), (2021, 0.1), (2022, -5.76), (2023, 8.07), (2024, -1.6), (2025, 17.17))]
+check("Safran (réel) : un bénéfice proche de zéro ou une forte variation ne sont pas des erreurs d'échelle",
+      len((safe(E.drop_outliers, saf, default=([], [])) or ([], []))[0]) == 7)
+
 # ── disponibilité : 4 mois après la clôture, jamais à la clôture ──
 check("exercice 2024 connu fin avril 2025", E.avail_date("2024-12-31") == "2025-04-30")
 check("exercice décalé (clôture 30 juin) connu fin octobre", E.avail_date("2025-06-30") == "2025-10-31")

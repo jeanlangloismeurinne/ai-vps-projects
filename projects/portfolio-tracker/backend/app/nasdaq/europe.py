@@ -31,6 +31,11 @@ GAP_WARN = 0.05
 # normes : au plus ×2 au sondage) mais une erreur d'échelle du dépôt (TotalEnergies 2022 : tout le dépôt ÷ 100 ;
 # Capgemini 2022 : 8 790 000 € par action).
 SCALE = 10
+# Une erreur d'échelle répétée par les dépôts suivants (Crédit Agricole : dépôts 2020 ET 2021 en millions, 804 000 €
+# par action pour 2020) n'a pas de chiffre sain pour la démentir : elle se voit dans la série du titre. Seul le sens
+# « trop grand » se juge — un bénéfice proche de zéro est réel (Safran 2021 : 0,10 €) ; plus forte variation réelle
+# mesurée au sondage : ×13 la médiane (Renault 2025).
+OUTLIER = 100
 ESEF = "https://filings.xbrl.org"
 # Premier concept présent dans le dépôt : Bouygues ne déclare que le BPA « des activités poursuivies ».
 EPS_CONCEPTS = ("DilutedEarningsLossPerShare", "BasicEarningsLossPerShare",
@@ -170,7 +175,7 @@ def merge(esef: list[dict], yahoo: list[dict]) -> tuple[list[dict], list[str]]:
     commun, un écart de plus de 5 % se signale : on garde l'ESEF, l'écart se lit dans la note du titre — sauf erreur
     d'échelle (`SCALE`), où Yahoo remplace le chiffre du dépôt, et la note le dit."""
     by = {p["end"][:7]: p for p in esef}
-    warn = [f"{p['end'][:4]} : ESEF {p['scale']:,.2f} écarté (erreur d'échelle), repris du dépôt suivant {p['v']:.2f}"
+    warn = [f"{p['end'][:4]} : ESEF {p['scale']:,.2f} écarté (erreur d'échelle), repris du dépôt suivant {p['v']:.2f}".replace(",", " ")
             for p in esef if "scale" in p]
     for y in yahoo:
         k = y["end"][:7]
@@ -179,10 +184,22 @@ def merge(esef: list[dict], yahoo: list[dict]) -> tuple[list[dict], list[str]]:
             by[k] = y
         elif e["cur"] == y["cur"] and scale_error(e["v"], y["v"]):
             by[k] = {**y, "scale": e["v"]}
-            warn.append(f"{k[:4]} : ESEF {e['v']:,.2f} écarté (erreur d'échelle), Yahoo {y['v']:.2f}")
+            warn.append(f"{k[:4]} : ESEF {e['v']:,.2f} écarté (erreur d'échelle), Yahoo {y['v']:.2f}".replace(",", " "))
         elif e["cur"] == y["cur"] and abs(y["v"] - e["v"]) > GAP_WARN * max(abs(e["v"]), 1e-9):
             warn.append(f"{k[:4]} : ESEF {e['v']:.2f} / Yahoo {y['v']:.2f}")
     return [by[k] for k in sorted(by)], warn
+
+
+def drop_outliers(points: list[dict]) -> tuple[list[dict], list[str]]:
+    """Retire les BPA au moins `OUTLIER` fois plus grands (en valeur absolue) que la médiane de la série du titre."""
+    vals = sorted(abs(p["v"]) for p in points)
+    if len(vals) < 3 or not vals[len(vals) // 2]:
+        return points, []
+    med = vals[len(vals) // 2]
+    out = [p for p in points if abs(p["v"]) < OUTLIER * med]
+    warn = [f"{p['end'][:4]} : {p['v']:,.2f} écarté (hors d'échelle de la série)".replace(",", " ")
+            for p in points if abs(p["v"]) >= OUTLIER * med]
+    return out, warn
 
 
 def cross_check(esef: list[dict], yahoo: list[dict]) -> dict:
@@ -319,6 +336,8 @@ def build(symbol: str, pr: dict | None, esef_cached: dict | None, fx: Fx) -> tup
     es = adjust_esef(first_published(esef["filings"]), pr["splits"] if pr else [])
     ys = yahoo_points(yh.get("annual") or {}, yh.get("fin_cur") or "EUR")
     pts, warn = merge(es, ys)
+    pts, warn_out = drop_outliers(pts)
+    warn += warn_out
     ttm = to_ttm(pts, fx)
     note = None
     if not pr:

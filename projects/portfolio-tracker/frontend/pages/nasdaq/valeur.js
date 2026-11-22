@@ -9,7 +9,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const LAYERS = ['infl', 'real', 'mult', 'div']
 const ratioHex = (r, degraded) => (degraded || r == null ? '#f87171' : r <= 2 ? '#6ee7b7' : r <= 3 ? '#fcd34d' : '#fca5a5')
 const MARKETS = [['nasdaq', 'Nasdaq'], ['cac40', 'CAC 40']]
-const short = (s, n = 13) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s)
+const short = (s, n = 18) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const SORTS = [
   { v: 'total', l: 'Rendement total', f: r => -r.period.annual.total },
   { v: 'borrowed', l: 'Part empruntée', f: r => -(r.period.borrowed ?? -1) },
@@ -22,7 +22,8 @@ const lg = r => Math.log1p(r || 0)
 const TICKS = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 1, 2, 3, 5]
 
 function Bars({ rows, sp, watch, onOpen, refLabel }) {
-  const W = 1000, RH = 24, L = 90, R0 = 560, top = 26
+  const named = rows.some(r => r.name)
+  const W = 1000, RH = 24, L = named ? 150 : 90, R0 = 560, top = 26
   const COL = { total: R0 + 14, an: R0 + 66, ratio: R0 + 140, part: R0 + 320 }
   const H = top + rows.length * RH + 26
   const vals = rows.flatMap(r => {
@@ -145,7 +146,7 @@ export default function NasdaqValeur() {
           <h2 className="text-sm font-semibold text-white mb-2">Non décomposables sur la période ({ko.length})</h2>
           <ul className="grid gap-1 sm:grid-cols-2 text-xs text-gray-400">
             {ko.map(r => (
-              <li key={r.ticker}><button onClick={() => openTicker(r.ticker, 'valeur')} className="hover:text-white"><b className="text-gray-200">{r.name || r.ticker}</b> — {r.note || r.period?.reason || 'données insuffisantes'}</button></li>
+              <li key={r.ticker}><button onClick={() => openTicker(r.ticker, 'valeur')} className="hover:text-white"><b className="text-gray-200">{r.name || r.ticker}</b> — {[r.period?.reason, r.note].filter(Boolean).join(' ; ') || 'données insuffisantes'}</button></li>
             ))}
           </ul>
         </div>
