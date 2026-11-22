@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TEST NÉGATIF de `check_etude.py` — au moins une mutation par garde du déclencheur (M3 §3, K10 et K11
-# sur société fictive ; arbitrage du 2026-11-21 sur la relecture humaine), chacune exigeant exit≠0 +
+# sur société fictive ; arbitrages du 2026-11-21 et du 2026-11-22 sur la relecture humaine), chacune exigeant exit≠0 +
 # FAIL sur l'assert NOMMÉ + bilan atteint (harnais `_negatif.sh`). Module pur bibliothèque standard :
 # sans conteneur, le harnais tourne sur l'hôte et le dit. Les gardes déléguées (filtre par dossier de
 # la collecte) se mutent chez leur détenteur.
@@ -60,12 +60,12 @@ mutations=(
 "$RC¦        if s[\"statut\"] != A_EVALUER or (emetteur is not None and s[\"emetteur\"] != emetteur):¦        if s[\"statut\"] != A_EVALUER:¦[K10] le passage d'un autre dossier ne paie rien pour un dossier en pause"
 # [K10] lever la pause ne lève rien.
 "$C¦                etat = CD.lever_pause(etat)¦                pass¦[K10] la pause levée, le travail payant reprend"
-# [L1] l'évaluation des sources appelle une relecture de plus.
-"$J¦    \"recueil:evaluation_des_sources\": false,¦    \"recueil:evaluation_des_sources\": true,¦[L1] un seul arrêt pour vous"
+# [L1] l'évaluation des sources appelle une relecture.
+"$J¦    \"recueil:evaluation_des_sources\": false,¦    \"recueil:evaluation_des_sources\": true,¦[L1] aucun arrêt pour vous"
 # [L1] les interrupteurs ne sont plus transmis : tout est relu.
-"$C¦            apres = CD.avancer(avant, pas, lecture_humaine=referentiel()[\"lecture_humaine\"])¦            apres = CD.avancer(avant, pas, lecture_humaine=None)¦[L1] un seul arrêt pour vous"
-# [L1] la collecte n'est plus relue.
-"$J¦    \"recueil\": true,¦    \"recueil\": false,¦[L1] un seul arrêt pour vous"
+"$C¦            apres = CD.avancer(avant, pas, lecture_humaine=referentiel()[\"lecture_humaine\"])¦            apres = CD.avancer(avant, pas, lecture_humaine=None)¦[L1] aucun arrêt pour vous"
+# [L1] la collecte est relue de nouveau (la valeur débrayée le 2026-11-22 ne tient plus).
+"$J¦    \"recueil\": false,¦    \"recueil\": true,¦[L1] aucun arrêt pour vous"
 # [T1] un geste sur une société non étudiée passe.
 "$C¦        raise GesteRefuse(f\"« {dossier} » n'est pas à l'étude\")¦        pass¦[T1] un geste sur une société non étudiée est refusé"
 # [T1] le refus du chef de dossier n'est plus traduit (il fuit tel quel).

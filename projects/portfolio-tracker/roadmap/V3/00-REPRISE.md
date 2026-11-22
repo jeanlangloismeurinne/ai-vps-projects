@@ -26,10 +26,19 @@ vérifié dans les conteneurs : routes `/v2/emetteurs/{e}/etude`, `libelles_acte
 verts ; seul rouge connu : `check_signature_modele_persist` (données de l'ancien enchaînement).
 Détail des modules : `M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
 
-**Prochain lot — commence par un geste de l'utilisateur À L'ÉCRAN** : mettre NVDA, RVMD et SpaceX à
-l'étude (K14 ; c'est là que la dépense commence). Crédit DeepInfra le 2026-11-22 : **≈ 2,91 $
-prépayés** (non suspendu) — recharger, ou lancer NVDA seule d'abord pour mesurer le coût d'un dossier.
-Ensuite : suivre les passages (toutes les 5 min), valider les documents collectés à l'écran, puis K13
+**NVDA — premier vrai dossier, TERMINÉ le 2026-11-22** (mise à l'étude 08:53 UTC → `parcours_termine`
+09:10, passages 13-15) : 2 demandes (derniers comptes annuels = 10-K FY2026 `0001045810-26-000021`,
+lu en 1 852 lignes, CA 215 938 M$ vérifié ; données structurées = companyfacts, `sans_objet` à la
+lecture, voulu) ; validation faite à l'écran ; **coût 0 $** (SEC gratuite, aucun modèle appelé,
+crédit DeepInfra inchangé ≈ 2,91 $) — le coût d'un dossier n'est donc PAS mesuré : le mesurer sur
+SpaceX (collecte web). 0 pièce de connaissance : normal, aucun consommateur ne cite avant M4.
+
+**Relecture de la collecte DÉBRAYÉE le 2026-11-22** (`lecture_humaine.recueil = false`, à la demande de
+l'utilisateur) : un dossier va au bout sans arrêt ; le raffinement « en cas de doute seulement » est à
+la feuille de route du module (`app/modules/recueil/ARCHITECTURE.md`). Contrôles qui jouent le geste à
+l'écran : relecture rétablie le temps du contrôle (`check_etude.relecture`).
+
+**Prochain lot** : RVMD et SpaceX mis à l'étude le 2026-11-22 (depuis la conversation), suivre les passages, puis K13
 (57 fiches SEC de l'ancien système retrouvées dans les dépôts recollectés — gratuit, exige la collecte
 de NVDA et RVMD) et les lignes « réel » de M2 (B3/B6/B10/B13). Les gestes de l'écran n'ont été joués
 que sur la société fictive. Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec

@@ -174,4 +174,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # L'écran se prouve sur un arrêt : la collecte relue le temps du contrôle, quelle que soit la valeur
+    # en vigueur (débrayée le 2026-11-22).
+    with F.relecture(recueil=True):
+        code = main()
+    sys.exit(code)

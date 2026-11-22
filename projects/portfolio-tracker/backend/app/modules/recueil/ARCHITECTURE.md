@@ -166,3 +166,19 @@ les 18 et 19 novembre ; fixture d'aperçu Reuters et de ses reprises copiée du 
 - Une source rencontrée par deux dossiers est évaluée une fois ; sa dépense est déclarée au dossier
   qui l'a rencontrée le premier.
 - Les documents fournis à la main et les autres régulateurs : un adaptateur de plus (B1), pas construits.
+
+## Feuille de route du module (raffinements possibles, non engagés)
+
+Chaque module tient sa propre feuille de route : ce qu'on pourrait y ajouter plus tard, sans que le
+plan général (`roadmap/V3/07-avant-comite.md`) ait à le porter. Une ligne n'est pas une promesse ;
+elle s'ouvre sur décision de l'utilisateur.
+
+- **Relecture de la collecte « en cas de doute seulement »** (proposée le 2026-11-22). Aujourd'hui la
+  relecture est débrayée (`etude/referentiel.json`, `lecture_humaine.recueil = false`, après NVDA :
+  une validation sans rien à juger). Raffinement : ne s'arrêter pour vous que si un document vient
+  d'ailleurs que le registre officiel de l'émetteur, si une demande est déclarée introuvable, ou si le
+  document rendu n'est pas du type attendu (cas SpaceX du 2026-11-16 : un prospectus 424B4 rendu pour
+  « derniers comptes annuels »). Règle générale, jamais par société ; débrayable vers « toujours
+  relire » / « jamais relire » (principe 3). Avant de l'écrire : relever ce que la fiche d'un document
+  porte déjà (adaptateur, partie/formulaire, qualification) pour fonder le doute sur des champs qui
+  existent.

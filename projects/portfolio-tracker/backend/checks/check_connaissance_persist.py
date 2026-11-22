@@ -97,7 +97,9 @@ async def _parcours(monde: T.Monde) -> list[str]:
 
 async def _vues(monde: T.Monde) -> dict:
     return {
-        "etudes": await T.lire_etudes(monde),
+        # La base de production porte aussi les vraies études (NVDA dès le 2026-11-22) : on compare celle du
+        # dossier fictif, jamais le registre entier.
+        "etudes": [e for e in await T.lire_etudes(monde) if e.etude.dossier == EMETTEUR],
         "connaissance": await K.lire_connaissance(monde.connaissance, recueil_depot=monde.recueil,
                                                   emetteurs_depot=monde.emetteurs, emetteur=EMETTEUR),
         "ecran": await K.vue_ecran(monde.connaissance, recueil_depot=monde.recueil,
@@ -214,7 +216,7 @@ async def _section_ordre(conn, etiquette: str) -> None:
         for dossier in ("AB", "A-C", "A-B-D"):
             await d.ajouter_etude({"dossier": dossier, "mise_le": JOUR, "par": "gerant", "motif": "ordre"})
     ordre_mem = [e["dossier"] for e in await mem.etudes()]
-    ordre_base = [e["dossier"] for e in await base.etudes()]
+    ordre_base = [e["dossier"] for e in await base.etudes() if e["dossier"] in ("AB", "A-C", "A-B-D")]
     b.check(ordre_base == ordre_mem == ["A-B-D", "A-C", "AB"],
             f"[P1]{etiquette} les études se lisent dans le même ordre en base et en mémoire ({ordre_base})")
 
@@ -315,5 +317,8 @@ async def main() -> None:
             await conn.close()
 
 
-asyncio.run(main())
+# Le geste en base se prouve sur un arrêt : la collecte relue le temps du contrôle, quelle que soit la
+# valeur en vigueur (débrayée le 2026-11-22).
+with CE.relecture(recueil=True):
+    asyncio.run(main())
 sys.exit(b.summary())

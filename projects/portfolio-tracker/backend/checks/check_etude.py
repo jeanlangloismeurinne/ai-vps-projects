@@ -130,6 +130,20 @@ E_QUESTIONS = list(json.loads((BACKEND / "app/modules/emetteurs/referentiel.json
                    ["evaluation_des_sources"]["questions"])
 
 
+@contextlib.contextmanager
+def relecture(**interrupteurs):
+    """Le temps d'un scénario, des interrupteurs de relecture autres que ceux en vigueur : le mécanisme
+    d'arrêt reste prouvé quelle que soit la valeur choisie en production."""
+    ref = copy.deepcopy(dict(TC.referentiel()))
+    ref["lecture_humaine"] = {**ref["lecture_humaine"], **interrupteurs}
+    anc = TC.referentiel
+    TC.referentiel = lambda: ref
+    try:
+        yield
+    finally:
+        TC.referentiel = anc
+
+
 def transaction_memoire(*depots):
     """Une transaction en mémoire : instantané des dépôts, restauré si le bloc lève (ce que la base
     fait par ROLLBACK). Sans elle, l'atomicité ne se prouverait pas sur la société fictive."""
@@ -268,8 +282,9 @@ def main() -> int:
                                                                f"{EMETTEUR}|donnees_comptables_structurees"]),
             "[K10] la tâche de fond relève les collectes lancées, chaque besoin une fois",
             f"{simule and simule.appels}")
-    b.check(actes == ["lecture:collecte"],
-            "[L1] un seul arrêt pour vous : valider les documents collectés", f"{actes}")
+    b.check(actes == [],
+            "[L1] aucun arrêt pour vous : le dossier va au bout seul (collecte non relue depuis le 2026-11-22)",
+            f"{actes}")
     fin = etats[-1] if etats else None
     b.check(fin and fin.arret and fin.arret.motif == CD.ARRET_PARCOURS_TERMINE
             and {"fiche_emetteur", "collecte", "evaluation_des_sources", "lecture"} <= set(fin.faits),
@@ -286,16 +301,12 @@ def main() -> int:
 
     # ── [L1] rétablir une relecture = basculer une valeur ───────────────────────────────────
     table = T.lecture_humaine()
-    b.check(table.get("recueil") is True and table.get("recueil:evaluation_des_sources") is False
+    b.check(table.get("recueil") is False and table.get("recueil:evaluation_des_sources") is False
             and table.get("emetteurs") is False and table.get("connaissance") is False,
-            "[L1] les interrupteurs en vigueur : la collecte relue, le reste non", f"{table}")
+            "[L1] les interrupteurs en vigueur : rien n'est relu", f"{table}")
 
     async def s_relecture_retablie():
-        ref = dict(TC.referentiel())
-        ref["lecture_humaine"] = {**ref["lecture_humaine"], "connaissance": True}
-        anc = TC.referentiel
-        TC.referentiel = lambda: ref
-        try:
+        with relecture(recueil=True):
             monde, _ = await nouveau_monde()
             await T.mettre_a_l_etude(monde, EMETTEUR, par="gerant", motif="initiation", le=JOUR)
             actes = []
@@ -308,11 +319,9 @@ def main() -> int:
                 if e.arret and e.arret.motif == CD.ARRET_PARCOURS_TERMINE:
                     break
             return actes
-        finally:
-            TC.referentiel = anc
     actes2 = run(s_relecture_retablie())
-    b.check(actes2 == ["lecture:collecte", "lecture:lecture"],
-            "[L1] rétablir la relecture de la mise en lecture : une valeur, un arrêt de plus", f"{actes2}")
+    b.check(actes2 == ["lecture:collecte"],
+            "[L1] rétablir la relecture de la collecte : une valeur, un arrêt", f"{actes2}")
 
     # ── [K10] ensemble ou pas du tout ───────────────────────────────────────────────────────
     class ChefQuiRefuse(CD.RangementMemoire):
@@ -354,41 +363,42 @@ def main() -> int:
 
     # ── [K10] rien de payant sur un dossier en pause ────────────────────────────────────────
     async def s_pause():
-        ev = Evaluateur()
-        monde, simule = await nouveau_monde(cout_web=0.6, evaluateur=ev)   # 2 × 0,60 $ : le palier
-        for dossier in (EMETTEUR, AUTRE):
-            await T.mettre_a_l_etude(monde, dossier, par="gerant", motif="initiation", le=JOUR)
-        en_pause = None
-        for i in range(8):
-            await T.traiter_les_dossiers(monde, le=JOUR)
-            e = await etat(monde)
-            if e.arret and e.arret.motif == CD.ARRET_PAUSE_DEPENSE:
-                en_pause = e
-                break
-            if e.arret and e.arret.motif == CD.ARRET_ACTE_HUMAIN:
-                await T.enregistrer_acte(monde, EMETTEUR, e.arret.cle, le=JOUR)
-        # Du travail payant attend sur les deux dossiers : une demande relancée, une source inconnue.
-        for dossier in (EMETTEUR, AUTRE):
-            d = R.Demande("derniers_comptes_annuels", dossier)
-            t = next(t for t in await monde.recueil.travaux(dossier) if t["cle"] == d.cle)
-            await monde.recueil.ecrire_travail({**t, "statut": R.LANCEE})
-            await monde.recueil.noter_source_rencontree({
-                "source": f"autre-inconnue-{dossier.lower()}.example", "emetteur": dossier, "nature": "mesure",
-                "adresses": [f"https://autre-inconnue-{dossier.lower()}.example/x"], "vue_le": JOUR,
-                "statut": RC.A_EVALUER, "travail": d.cle, "essais": 0, "motif": ""})
-        avant_appels, avant_ev = len(simule.appels), len(ev.appels)
-        p_pause = await T.passer(monde, EMETTEUR, le=JOUR)
-        payes_en_pause = (simule.appels[avant_appels:], ev.appels[avant_ev:])
-        p_autre = await T.passer(monde, AUTRE, le=JOUR)
-        payes_autre = (simule.appels[avant_appels:], ev.appels[avant_ev:])
-        en_pause_intacts = (
-            next(t for t in await monde.recueil.travaux(EMETTEUR)
-                 if t["cle"] == R.Demande("derniers_comptes_annuels", EMETTEUR).cle)["statut"],
-            next(s["statut"] for s in await monde.recueil.sources_rencontrees()
-                 if s["source"] == "autre-inconnue-fictive-etude.example"))
-        await T.lever_pause(monde, EMETTEUR, le=JOUR)
-        p_leve = await T.passer(monde, EMETTEUR, le=JOUR)
-        return en_pause, p_pause, payes_en_pause, payes_autre, en_pause_intacts, p_leve, simule.appels, ev.appels
+        with relecture(recueil=True):  # l'autre dossier attend sa relecture : il reste ouvert au payant
+            ev = Evaluateur()
+            monde, simule = await nouveau_monde(cout_web=0.6, evaluateur=ev)   # 2 × 0,60 $ : le palier
+            for dossier in (EMETTEUR, AUTRE):
+                await T.mettre_a_l_etude(monde, dossier, par="gerant", motif="initiation", le=JOUR)
+            en_pause = None
+            for i in range(8):
+                await T.traiter_les_dossiers(monde, le=JOUR)
+                e = await etat(monde)
+                if e.arret and e.arret.motif == CD.ARRET_PAUSE_DEPENSE:
+                    en_pause = e
+                    break
+                if e.arret and e.arret.motif == CD.ARRET_ACTE_HUMAIN:
+                    await T.enregistrer_acte(monde, EMETTEUR, e.arret.cle, le=JOUR)
+            # Du travail payant attend sur les deux dossiers : une demande relancée, une source inconnue.
+            for dossier in (EMETTEUR, AUTRE):
+                d = R.Demande("derniers_comptes_annuels", dossier)
+                t = next(t for t in await monde.recueil.travaux(dossier) if t["cle"] == d.cle)
+                await monde.recueil.ecrire_travail({**t, "statut": R.LANCEE})
+                await monde.recueil.noter_source_rencontree({
+                    "source": f"autre-inconnue-{dossier.lower()}.example", "emetteur": dossier, "nature": "mesure",
+                    "adresses": [f"https://autre-inconnue-{dossier.lower()}.example/x"], "vue_le": JOUR,
+                    "statut": RC.A_EVALUER, "travail": d.cle, "essais": 0, "motif": ""})
+            avant_appels, avant_ev = len(simule.appels), len(ev.appels)
+            p_pause = await T.passer(monde, EMETTEUR, le=JOUR)
+            payes_en_pause = (simule.appels[avant_appels:], ev.appels[avant_ev:])
+            p_autre = await T.passer(monde, AUTRE, le=JOUR)
+            payes_autre = (simule.appels[avant_appels:], ev.appels[avant_ev:])
+            en_pause_intacts = (
+                next(t for t in await monde.recueil.travaux(EMETTEUR)
+                     if t["cle"] == R.Demande("derniers_comptes_annuels", EMETTEUR).cle)["statut"],
+                next(s["statut"] for s in await monde.recueil.sources_rencontrees()
+                     if s["source"] == "autre-inconnue-fictive-etude.example"))
+            await T.lever_pause(monde, EMETTEUR, le=JOUR)
+            p_leve = await T.passer(monde, EMETTEUR, le=JOUR)
+            return en_pause, p_pause, payes_en_pause, payes_autre, en_pause_intacts, p_leve, simule.appels, ev.appels
     r = run(s_pause())
     en_pause, p_pause, payes_en_pause, payes_autre, intacts, p_leve, appels, ev_appels = \
         r if r else (None,) * 6 + ([], [])
@@ -439,25 +449,26 @@ def main() -> int:
 
     # ── [T1] les gestes ─────────────────────────────────────────────────────────────────────
     async def s_gestes():
-        monde, _ = await nouveau_monde()
-        refus = {}
-        for nom, coro in (("non étudié", lambda: T.lever_pause(monde, EMETTEUR, le=JOUR)),):
-            try:
-                await coro()
-            except T.GesteRefuse as exc:
-                refus[nom] = str(exc)
-        await T.mettre_a_l_etude(monde, EMETTEUR, par="gerant", motif="initiation", le=JOUR)
-        await T.passer(monde, EMETTEUR, le=JOUR)
-        await T.passer(monde, EMETTEUR, le=JOUR)       # la collecte a répondu : la relecture est attendue
-        for nom, coro in (("acte non attendu", lambda: T.enregistrer_acte(monde, EMETTEUR, "lecture:lecture", le=JOUR)),
-                          ("pause non posée", lambda: T.lever_pause(monde, EMETTEUR, le=JOUR)),
-                          ("rien à relancer", lambda: T.relancer(monde, EMETTEUR, le=JOUR))):
-            try:
-                await coro()
-            except T.GesteRefuse as exc:
-                refus[nom] = str(exc)
-        clair = await T.enregistrer_acte(monde, EMETTEUR, "lecture:collecte", le=JOUR)
-        return refus, clair, await etat(monde)
+        with relecture(recueil=True):               # les gestes se jouent sur un arrêt : la collecte relue
+            monde, _ = await nouveau_monde()
+            refus = {}
+            for nom, coro in (("non étudié", lambda: T.lever_pause(monde, EMETTEUR, le=JOUR)),):
+                try:
+                    await coro()
+                except T.GesteRefuse as exc:
+                    refus[nom] = str(exc)
+            await T.mettre_a_l_etude(monde, EMETTEUR, par="gerant", motif="initiation", le=JOUR)
+            await T.passer(monde, EMETTEUR, le=JOUR)
+            await T.passer(monde, EMETTEUR, le=JOUR)       # la collecte a répondu : la relecture est attendue
+            for nom, coro in (("acte non attendu", lambda: T.enregistrer_acte(monde, EMETTEUR, "lecture:lecture", le=JOUR)),
+                              ("pause non posée", lambda: T.lever_pause(monde, EMETTEUR, le=JOUR)),
+                              ("rien à relancer", lambda: T.relancer(monde, EMETTEUR, le=JOUR))):
+                try:
+                    await coro()
+                except T.GesteRefuse as exc:
+                    refus[nom] = str(exc)
+            clair = await T.enregistrer_acte(monde, EMETTEUR, "lecture:collecte", le=JOUR)
+            return refus, clair, await etat(monde)
     r = run(s_gestes())
     refus, clair, e = r if r else ({}, "", None)
     b.check("pas à l'étude" in refus.get("non étudié", ""), "[T1] un geste sur une société non étudiée est refusé",
