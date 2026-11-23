@@ -13,8 +13,9 @@ ni n'écrit rien du reste du système. Ce qu'il fait et ce qui le garde : `ARCHI
 
 ## Reste à faire
 
-- Arbitrer « bénéfice publié ou d'exploitation » (plus-values sur participations d'Alphabet et d'Amazon en 2026).
+- Bénéfice publié ou ajusté : arbitré le 2026-11-23, PUBLIÉ ; le retraitement (plus-values sur participations
+  d'Alphabet et d'Amazon en 2026…) est en roadmap avec ses raisons dans `00-REPRISE-CAC40.md`.
+- Multiple plancher propre au titre : proposition chiffrée en attente d'arbitrage, dans `00-REPRISE-CAC40.md`.
 - Émetteurs étrangers (20-F) : bénéfice annuel seulement, l'état retarde jusqu'à un an (ASML).
 - Le consensus à terme n'a d'historique qu'à partir du 2026-11-22 (photo hebdomadaire).
 - Extension au CAC 40 : version 1 livrée le 2026-11-22 (`00-REPRISE-CAC40.md`, même dossier).
-- Écran : la phrase de décomposition dit « hausse entièrement méritée » même quand le cours baisse.

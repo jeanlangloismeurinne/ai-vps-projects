@@ -49,7 +49,25 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - **Revue Euronext du 10/12/2026** (effet 21/12) : relever la composition et mettre à jour `CAC40` + `CAC40_AS_OF`.
 - Résidu connu : TotalEnergies 2020 (−0,029 $ au lieu de −2,90 $, aucun chiffre sain pour le démentir ; perte dans
   les deux cas, sans effet).
-- La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans.
-- Le recalibrage du multiple plancher par titre (multiple bas sur 15 ans) ou par secteur.
-- L'arbitrage commun avec le Nasdaq : bénéfice publié ou ajusté (dépréciations d'Engie, de Kering ; amortissement
-  d'acquisition chez EssilorLuxottica ; IFRS contre US GAAP chez STMicro).
+- La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans. **Elle
+  conditionne aussi le multiple plancher propre au titre** (ci-dessous) : sans elle, le CAC 40 n'a que ~3 ans de
+  multiples, moins que les 3 ans d'historique exigés.
+- **Multiple plancher — proposition du 2026-11-23, EN ATTENTE D'ARBITRAGE** (commune avec le Nasdaq). Règle :
+  multiple du titre = 5ᵉ centile de son propre cours ÷ bénéfice moyen 3 ans sur les 10 années PRÉCÉDENTES (lu à
+  chaque date, sans regarder l'avenir ; mois où l'état est dégradé exclus), × 0,8 de marge ; ×15 tant qu'il y a
+  moins de 3 ans d'historique (donc tout le CAC 40 jusqu'à la table). Mesuré sur 58 titres Nasdaq 2010-2026 :
+  percé 2,5 % des mois (×15 : 10,8 %), 1 titre percé > 20 % du temps (×15 : 9), cours à 1,8× le plancher en
+  médiane (×15 : 2,0×), 6 titres à plus de 3× (×15 : 18). Tient sur 2010-2017, 2018-2026 et la baisse de 2022.
+  **Par secteur écarté** : le secteur explique 8 % des écarts de multiple bas entre titres (Technologie : Micron
+  5, Palo Alto 77), et la règle par secteur ne fait pas mieux que ×15. Changement de sens à faire trancher : sous
+  le plancher = « payé aussi peu que ses pires jours de la décennie », plus « bon marché dans l'absolu » (Nvidia et
+  Amazon y sont aujourd'hui ; Micron et GM ont un plancher à ×4). Restants percés > 10 % : eBay, Amazon, Comcast,
+  Meta, Gilead.
+- **Retraitement du bénéfice → ROADMAP** (arbitré le 2026-11-23 : on reste au bénéfice PUBLIÉ). Signaler les
+  années où le retraitement change le résultat revient à calculer le bénéfice ajusté, et aucune source automatique
+  ne tient : Yahoo « Normalized Income » ne couvre que 4 exercices, ne respecte pas sa propre identité (publié −
+  exceptionnels + impôt) sur environ un tiers des années, et classe en exceptionnel des revenus courants (CME :
+  revenus de placement → bénéfice « normalisé » négatif) ; il ignore l'amortissement d'acquisition
+  (EssilorLuxottica identique au publié). L'ESEF ne porte le chiffre ajusté de la société que dans des concepts
+  propres à chacune (Kering oui, Safran et EssilorLuxottica non). Voie retenue pour plus tard : relever le
+  bénéfice ajusté à la main avec la table 2010-2019 (même source, le rapport annuel).
