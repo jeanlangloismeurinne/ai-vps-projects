@@ -74,6 +74,13 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   base plus longue pour tous, base selon la cyclicité mesurée du titre, ou indicateur « position dans le cycle ».
   La mesure de cyclicité par les baisses du bénéfice PUBLIÉ est polluée par les charges exceptionnelles
   (Microsoft 2012) : lien avec le retraitement ci-dessous.
+  **ARBITRÉ le 2026-11-23 : À CONSTRUIRE = l'indicateur « position dans le cycle »**, la base du plancher reste la
+  moyenne 3 ans. Définition : bénéfice des 12 derniers mois ÷ moyenne réelle des 10 dernières années (chaque
+  exercice ÷ inflation, remis en monnaie d'aujourd'hui), affiché « bénéfices actuels = N× leur moyenne de cycle »
+  sur la fiche ; éclairage seulement, n'entre dans aucun calcul. Sans 10 ans de bénéfices : non affiché, raison
+  dite (CAC 40 jusqu'à la table). Moyenne ≤ 0 : « pas de moyenne de cycle (pertes) ».
+  **ROADMAP** : base du plancher dont la longueur dépend de la cyclicité MESURÉE du titre — après le retraitement
+  ou la table 2010-2019, qui rendront la mesure de cyclicité propre.
 - **Retraitement du bénéfice → ROADMAP** (arbitré le 2026-11-23 : on reste au bénéfice PUBLIÉ). Signaler les
   années où le retraitement change le résultat revient à calculer le bénéfice ajusté, et aucune source automatique
   ne tient : Yahoo « Normalized Income » ne couvre que 4 exercices, ne respecte pas sa propre identité (publié −
