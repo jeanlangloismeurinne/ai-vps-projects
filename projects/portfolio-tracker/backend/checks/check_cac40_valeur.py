@@ -148,6 +148,11 @@ check("CAC 40 : « 10 ans » rend « historique insuffisant », pas un départ d
       (s_eu.get("periods") or {}).get("10y", {}).get("ok") is False
       and "historique insuffisant" in (s_eu.get("periods") or {}).get("10y", {}).get("reason", ""))
 check("CAC 40 : 5 ans se décompose", (s_eu.get("periods") or {}).get("5y", {}).get("ok") is True)
+check("CAC 40 : plancher provisoire au multiple fixe de 8, dit comme tel",
+      s_eu.get("mult") == 8 and s_eu.get("mult_kind") == "provisoire" and s_eu.get("floor") is not None
+      and abs(s_eu["floor"] - 8 * (d["e"][-1] + d["e"][-13] + d["e"][-25]) / 3) < 1e-9)
+check("CAC 40 : position dans le cycle non affichée faute de 10 ans, raison dite",
+      (s_eu.get("cycle") or {}).get("x") is None and "10 ans" in ((s_eu.get("cycle") or {}).get("why") or ""))
 check("Nasdaq : « 10 ans » reste calculé", (s_us.get("periods") or {}).get("10y", {}).get("ok") is True)
 
 # ── référence nationale : CAC 40 dividendes réinvestis à côté du S&P 500 en euros ──

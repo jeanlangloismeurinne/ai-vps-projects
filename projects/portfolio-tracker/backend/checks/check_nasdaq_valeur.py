@@ -92,25 +92,91 @@ dec3 = safe(V.decompose, d3, "3y")
 check("perte aujourd'hui : pas de décomposition, et on dit pourquoi",
       dec3.get("ok") is False and "perte" in dec3.get("reason", ""))
 
-# ── plancher : moyenne 3 ans × 15, caduc sous 90 % du meilleur état réel des 10 ans ──
+# ── plancher : moyenne 3 ans × multiple des pires jours (ou fixe), bande = sensibilité de la marge 0,7 à 0,9 ──
 fl = V.floor_series(e, p, cpi)
+own = V.own_floor(e, p, cpi)
 a3 = (e[-1] + e[-13] + e[-25]) / 3
-check("plancher central = moyenne des états à t, t-12, t-24 × 15", abs(fl["mid"][-1] - 15 * a3) < 1e-9)
-check("ratio = cours / plancher central", abs(fl["ratio"][-1] - p[-1] / (15 * a3)) < 1e-9)
+k_own = own["mult"][-1] or 0
+check("plancher central = moyenne des états à t, t-12, t-24 × multiple des pires jours",
+      k_own > 0 and fl["mid"][-1] is not None and abs(fl["mid"][-1] - k_own * a3) < 1e-9)
+check("ratio = cours / plancher central", fl["ratio"][-1] is not None and abs(fl["ratio"][-1] - p[-1] / (k_own * a3)) < 1e-9)
+check("bande = la même règle avec une marge de 0,7 et de 0,9 au lieu de 0,8",
+      fl["lo"][-1] is not None and abs(fl["lo"][-1] - k_own * a3 * 0.7 / 0.8) < 1e-9
+      and abs(fl["hi"][-1] - k_own * a3 * 0.9 / 0.8) < 1e-9)
+flx = V.floor_series(e, p, cpi, 8)
+check("multiple provisoire fixe : plancher = moyenne 3 ans × 8, bande 7 à 9",
+      flx["mid"][-1] is not None and abs(flx["mid"][-1] - 8 * a3) < 1e-9
+      and abs(flx["lo"][-1] - 7 * a3) < 1e-9 and abs(flx["hi"][-1] - 9 * a3) < 1e-9)
+check("multiple provisoire : plancher dès 24 mois, sans attendre 3 ans de multiples", flx["mid"][30] is not None and fl["mid"][30] is None)
+check("sans multiple des pires jours : la raison est portée par la série", "moins de 3 ans" in (fl["why"][30] or ""))
 check("état qui progresse : plancher valide", fl["degraded"][-1] is False)
 e4 = e[:60] + [e[59] * 0.5] * 12
-fl4 = V.floor_series(e4, p, cpi)
+fl4 = V.floor_series(e4, p, cpi, 8)
 check("bénéfices divisés par deux : plancher caduc", fl4["degraded"][-1] is True)
-check("fantôme = meilleur état réel indexé × 15 (au-dessus du plancher quand l'état se dégrade)",
+check("fantôme = meilleur état réel indexé × le même multiple (au-dessus du plancher quand l'état se dégrade)",
       fl4["ghost"][-1] is not None and fl4["ghost"][-1] > fl4["mid"][-1])
-check("avant 24 mois d'historique : pas de plancher", fl["mid"][10] is None)
+check("avant 24 mois d'historique : pas de plancher", flx["mid"][10] is None)
+
+# ── plancher propre au titre : 5ᵉ centile de ses multiples des 120 mois PRÉCÉDENTS × 0,8 (arbitré le 2026-11-23) ──
+import numpy as np  # noqa: E402
+
+N = 200
+flat = [1.0] * N
+eg = [1.0 * 1.01 ** i for i in range(N)]
+a3g = [None] * 24 + [(eg[i] + eg[i - 12] + eg[i - 24]) / 3 for i in range(24, N)]
+pg = [15 + 5 * math.sin(i / 7) if a3g[i] is None else a3g[i] * (15 + 5 * math.sin(i / 7)) for i in range(N)]
+ow = safe(V.own_floor, eg, pg, flat) or {"floor": [None] * N, "ratio": [None] * N, "why": [""] * N, "mult": [None] * N}
+i = 190
+want = float(np.percentile([pg[j] / a3g[j] for j in range(i - 120, i)], 5)) * 0.8
+check("multiple du titre = 5ᵉ centile de ses multiples des 120 mois précédents × 0,8",
+      ow["mult"][i] is not None and abs(ow["mult"][i] - want) < 1e-9)
+check("plancher = multiple du titre × moyenne 3 ans", ow["floor"][i] is not None and abs(ow["floor"][i] - want * a3g[i]) < 1e-9)
+check("rapport au plancher = cours / plancher", ow["ratio"][i] is not None and abs(ow["ratio"][i] - pg[i] / (want * a3g[i])) < 1e-9)
+pf = pg[:i + 1] + [pg[j] * 0.1 for j in range(i + 1, N)]
+ow2 = safe(V.own_floor, eg, pf, flat) or {"floor": [None] * N}
+check("rien de l'avenir : changer les cours APRÈS t ne bouge pas le plancher de t", ow2["floor"][i] == ow["floor"][i])
+pc = pg[:i] + [pg[i] * 0.1] + pg[i + 1:]
+ow3 = safe(V.own_floor, eg, pc, flat) or {"floor": [None] * N}
+check("le cours du jour n'entre pas dans son propre plancher", ow3["floor"][i] == ow["floor"][i])
+check("moins de 3 ans de multiples : pas de plancher, et la raison est dite",
+      ow["floor"][40] is None and "moins de 3 ans" in (ow["why"][40] or ""))
+check("avec 36 multiples précédents : plancher", ow["floor"][24 + 36] is not None)
+check("avec 35 multiples précédents : pas de plancher", ow["floor"][24 + 35] is None)
+eb = eg[:100] + [eg[100] * 0.3] * 30 + eg[130:]
+pb = [pg[j] * (0.02 if 100 <= j < 140 else 1) for j in range(N)]
+ow4 = safe(V.own_floor, eb, pb, flat) or {"floor": [None] * N}
+ow5 = safe(V.own_floor, eb, pg, flat) or {"floor": [None] * N}
+check("mois à état dégradé exclus des multiples : un cours délirant sur un état dégradé ne bouge pas le plancher",
+      ow4["floor"][170] is not None and abs(ow4["floor"][170] - ow5["floor"][170]) < 1e-9)
+el = [-1.0] * N
+check("bénéfice moyen négatif : pas de plancher, raison dite",
+      (safe(V.own_floor, el, pg, flat) or {"floor": [0], "why": [""]})["floor"][-1] is None)
+
+# ── position dans le cycle : bénéfice 12 mois ÷ moyenne des 10 derniers exercices en monnaie d'aujourd'hui ──
+cy = safe(V.cycle_position, [2.0] * 120, [100.0] * 120) or {"x": None}
+check("bénéfices constants et prix stables : position = 1", cy["x"] is not None and abs(cy["x"] - 1) < 1e-9)
+infl = [100 * 1.003 ** j for j in range(120)]
+ei = [infl[j] / 100 for j in range(120)]
+cy2 = safe(V.cycle_position, ei, infl) or {"x": None}
+check("bénéfice qui ne suit que l'inflation : position = 1 (chaque exercice remis en monnaie d'aujourd'hui)",
+      cy2["x"] is not None and abs(cy2["x"] - 1) < 1e-9)
+ec = [1.0] * 108 + [3.0] * 12
+cy3 = safe(V.cycle_position, ec, [100.0] * 120) or {"x": None}
+check("bénéfice 12 mois triplé sur le dernier mois seulement : x = 3 / moyenne des 10 exercices",
+      cy3["x"] is not None and abs(cy3["x"] - 3.0 / ((3.0 + 9 * 1.0) / 10)) < 1e-9)
+cy4 = safe(V.cycle_position, [2.0] * 100, [100.0] * 100) or {"x": 1, "why": ""}
+check("moins de 10 ans de bénéfices : non affiché, raison dite", cy4["x"] is None and "10 ans" in cy4["why"])
+cy5 = safe(V.cycle_position, [-1.0] * 119 + [1.0], [100.0] * 120) or {"x": 1, "why": ""}
+check("moyenne de cycle négative : « pas de moyenne de cycle (pertes) »", cy5["x"] is None and "pertes" in cy5["why"])
 
 # ── PER à terme ──
 s = safe(V.summary, d, {"fwd_eps": 2.0, "fwd_lo": 1.0, "fwd_hi": 4.0, "n_analysts": 10}) or {"forward": {"pe": 0, "pe_lo": 0, "pe_hi": 0, "ratio": 0}}
 check("PER à terme = cours / bénéfice attendu", abs(s["forward"]["pe"] - p[-1] / 2.0) < 1e-9)
 check("fourchette : l'analyste le plus optimiste donne le PER le plus bas",
       abs(s["forward"]["pe_lo"] - p[-1] / 4.0) < 1e-9 and abs(s["forward"]["pe_hi"] - p[-1] / 1.0) < 1e-9)
-check("rapport au plancher = PER à terme / 15", abs(s["forward"]["ratio"] - p[-1] / 2.0 / 15) < 1e-9)
+check("rapport au plancher = PER à terme / multiple des pires jours",
+      s["forward"].get("ratio") is not None and abs(s["forward"]["ratio"] - p[-1] / 2.0 / k_own) < 1e-9)
+check("le résumé dit quel multiple il applique (propre au titre)", s.get("mult") == k_own and s.get("mult_kind") == "propre")
 
 # ── contrôle croisé : un bénéfice désavoué par Yahoo ne s'affiche pas ──
 check("contrôle croisé en défaut : analyse masquée", V.usable({"m": [], "check": {"ok": False}}) is False)

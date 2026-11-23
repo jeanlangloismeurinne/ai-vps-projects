@@ -3,9 +3,10 @@
 Détenteur unique des formules (les écrans ne font que dessiner) :
   état à t      = bénéfice dilué par action des 12 derniers mois CONNU à t (date de dépôt SEC), ramené
                   au nombre d'actions d'aujourd'hui (divisions postérieures au dépôt) et en dollars ;
-  plancher à t  = moyenne de l'état à t, t-12, t-24 mois × 12 / 15 / 20 (le prix est brut, non ajusté
-                  des dividendes : un cours ajusté abaisse le passé et fabrique des percées) ;
-  fantôme       = meilleur état réel (moyenne 3 ans ÷ inflation) des 120 derniers mois × inflation × 15 ;
+  plancher à t  = moyenne de l'état à t, t-12, t-24 mois × multiple des pires jours du titre (`own_floor`), ou
+                  × un multiple provisoire fixe pour un marché sans 10 ans d'historique (`MARKETS[…]["fixed_mult"]`) ;
+                  le prix est brut, non ajusté des dividendes (un cours ajusté abaisse le passé et fabrique des percées) ;
+  fantôme       = meilleur état réel (moyenne 3 ans ÷ inflation) des 120 derniers mois × inflation × le même multiple ;
   caduc         = moyenne 3 ans ≤ 0, ou état réel < 90 % du meilleur des 10 ans ;
   décomposition = cours₁/cours₀ = inflation × bénéfices réels × multiple (état des 12 derniers mois),
                   et rendement total = cours × dividendes réinvestis ; S&P 500 dividendes réinvestis en regard.
@@ -30,8 +31,6 @@ from app.db.database import get_db_session
 logger = logging.getLogger(__name__)
 
 SEC_UA = {"User-Agent": "LM Associes nasdaq-research plm@lm-associes.com"}
-MULTS = (12, 15, 20)
-MID = 15
 DEGRADED_BELOW = 0.9
 BEST_WINDOW = 120
 START = "2007-01"
@@ -42,11 +41,19 @@ EPS_CHECK = (0.7, 1.4)  # écart toléré avec le bénéfice des 12 derniers moi
 # sens. Les formules ne changent pas. CAC 40 : comptes ESEF depuis 2020-2021, donc ni 10 ans ni « depuis 2010 ».
 MARKETS = {
     "nasdaq": {"macro": "valeur", "currency": "USD", "symbol": "$", "ref": "S&P 500", "infl": "inflation américaine",
-               "source": "comptes SEC", "periods": ("3y", "5y", "10y", "2010")},
+               "source": "comptes SEC", "periods": ("3y", "5y", "10y", "2010"),
+               "floor_note": "Multiple des pires jours : le prix le plus bas que le marché ait payé pour ce titre sur les "
+                             "10 dernières années (5ᵉ centile de ses multiples cours ÷ bénéfice moyen 3 ans), moins 20 %. "
+                             "Sous le plancher, le titre est payé aussi peu que ses pires jours de la décennie."},
     "cac40": {"macro": "valeur_cac40", "currency": "EUR", "symbol": "€", "ref": "S&P 500 en euros",
               "home": "CAC 40", "home_note": "lu sur le fonds indiciel Amundi CAC 40, frais de gestion déduits",
               "infl": "inflation française", "source": "comptes ESEF, Yahoo en repli",
-              "periods": ("3y", "5y"), "no_history": "historique insuffisant : bénéfices publiés depuis 2020 seulement"},
+              "periods": ("3y", "5y"), "no_history": "historique insuffisant : bénéfices publiés depuis 2020 seulement",
+              "fixed_mult": 8,
+              "floor_note": "Multiple provisoire de 8, le même pour tous : il faut 10 ans de bénéfices pour mesurer le "
+                            "multiple des pires jours de chaque titre, et les comptes ESEF ne remontent qu'à 2020. "
+                            "8 est le bas des multiples observés sur le CAC 40 depuis 2023 (9 % des mois en dessous) ; "
+                            "les banques, l'automobile, l'acier et le pétrole s'y paient durablement moins."},
 }
 
 state: dict = {"running": False, "error": None, "done": 0, "total": 0, "finished_at": None}
@@ -141,21 +148,78 @@ def _a3(e: list, i: int):
     return (e[i] + e[i - 12] + e[i - 24]) / 3
 
 
-def floor_series(e: list, p: list, cpi: list) -> dict:
+OWN_WINDOW = 120   # mois précédents où l'on mesure les multiples du titre
+OWN_MIN = 36       # moins de multiples que cela : pas de plancher
+OWN_PCT = 5        # centile des multiples (le plus bas que le titre ait connu, aux valeurs aberrantes près)
+OWN_MARGIN = 0.8   # marge sous ce multiple
+OWN_SENS = (0.7, 0.9)  # sensibilité affichée : la même règle avec ces marges
+
+
+def own_floor(e: list, p: list, cpi: list) -> dict:
+    """Plancher PROPRE AU TITRE (arbitré le 2026-11-23, remplace le multiple de 15) : à t, 5ᵉ centile de ses multiples
+    cours ÷ moyenne 3 ans des 120 mois PRÉCÉDENTS (t exclu, rien de l'avenir ; mois à état dégradé ou à moyenne ≤ 0
+    exclus) × 0,8, fois la moyenne 3 ans de t. Moins de `OWN_MIN` multiples : pas de plancher, et `why` le dit."""
     n = len(p)
     a3 = [_a3(e, i) for i in range(n)]
     real = [a3[i] / cpi[i] if a3[i] is not None and a3[i] > 0 and cpi[i] else None for i in range(n)]
-    out = {m: [] for m in ("lo", "mid", "hi", "ghost", "ratio")}
+    mult: list[float | None] = []
+    for i in range(n):
+        win = [r for r in real[max(0, i - BEST_WINDOW + 1):i + 1] if r is not None]
+        best = max(win) if win else None
+        good = real[i] is not None and p[i] and best and real[i] >= DEGRADED_BELOW * best
+        mult.append(p[i] / a3[i] if good else None)
+    out: dict = {"mult": [], "floor": [], "ratio": [], "why": []}
+    for i in range(n):
+        ms = [x for x in mult[max(0, i - OWN_WINDOW):i] if x is not None]
+        if a3[i] is None or a3[i] <= 0:
+            out["mult"].append(None), out["floor"].append(None), out["ratio"].append(None)
+            out["why"].append("bénéfice moyen sur 3 ans négatif, nul ou inconnu")
+        elif len(ms) < OWN_MIN:
+            out["mult"].append(None), out["floor"].append(None), out["ratio"].append(None)
+            out["why"].append(f"moins de {OWN_MIN // 12} ans de multiples sur les 10 dernières années ({len(ms)} mois)")
+        else:
+            k = float(np.percentile(ms, OWN_PCT)) * OWN_MARGIN
+            out["mult"].append(k), out["floor"].append(k * a3[i])
+            out["ratio"].append(p[i] / (k * a3[i]) if p[i] else None)
+            out["why"].append(None)
+    return out
+
+
+def cycle_position(e: list, cpi: list) -> dict:
+    """Position dans le cycle (arbitré le 2026-11-23, éclairage seul) : bénéfice des 12 derniers mois ÷ moyenne des
+    10 derniers exercices, chacun remis en monnaie d'aujourd'hui. `x` est None et `why` le dit s'il manque un exercice."""
+    n = len(e) - 1
+    if n < 108 or any(e[n - 12 * k] is None or not cpi[n - 12 * k] for k in range(10)):
+        return {"x": None, "why": "moins de 10 ans de bénéfices"}
+    avg = sum(e[n - 12 * k] * cpi[n] / cpi[n - 12 * k] for k in range(10)) / 10
+    if avg <= 0:
+        return {"x": None, "why": "pas de moyenne de cycle (pertes)"}
+    return {"x": e[n] / avg, "avg": avg, "why": None}
+
+
+def floor_series(e: list, p: list, cpi: list, fixed: float | None = None) -> dict:
+    """Plancher central = moyenne 3 ans × multiple des pires jours (`own_floor`), ou × `fixed` (multiple provisoire
+    d'un marché sans 10 ans d'historique). Bande = sensibilité de la marge (`OWN_SENS` au lieu de 0,8). Fantôme =
+    meilleur état réel des 10 ans, indexé, × le même multiple. Caduc : inchangé (il juge les bénéfices, pas le prix)."""
+    n = len(p)
+    a3 = [_a3(e, i) for i in range(n)]
+    real = [a3[i] / cpi[i] if a3[i] is not None and a3[i] > 0 and cpi[i] else None for i in range(n)]
+    own = None if fixed else own_floor(e, p, cpi)
+    lo_k, hi_k = OWN_SENS[0] / OWN_MARGIN, OWN_SENS[1] / OWN_MARGIN
+    out = {m: [] for m in ("lo", "mid", "hi", "ghost", "ratio", "mult", "why")}
     out["degraded"] = []
     for i in range(n):
         win = [r for r in real[max(0, i - BEST_WINDOW + 1):i + 1] if r is not None]
         best = max(win) if win else None
         ok = a3[i] is not None and a3[i] > 0
-        out["lo"].append(a3[i] * MULTS[0] if ok else None)
-        out["mid"].append(a3[i] * MID if ok else None)
-        out["hi"].append(a3[i] * MULTS[-1] if ok else None)
-        out["ghost"].append(best * cpi[i] * MID if best else None)
-        out["ratio"].append(p[i] / (a3[i] * MID) if ok and p[i] else None)
+        k = (fixed if ok else None) if fixed else own["mult"][i]
+        out["mult"].append(k)
+        out["why"].append(None if k else ("bénéfice moyen sur 3 ans négatif, nul ou inconnu" if not ok else own["why"][i]))
+        out["lo"].append(a3[i] * k * lo_k if k else None)
+        out["mid"].append(a3[i] * k if k else None)
+        out["hi"].append(a3[i] * k * hi_k if k else None)
+        out["ghost"].append(best * cpi[i] * k if best and k else None)
+        out["ratio"].append(p[i] / (a3[i] * k) if k and p[i] else None)
         out["degraded"].append(bool(a3[i] is not None and (not ok or (best and real[i] < DEGRADED_BELOW * best))))
     return out
 
@@ -226,11 +290,14 @@ def cumulative(d: dict, period: str) -> dict:
 
 def summary(d: dict, fwd: dict | None, market: str = "nasdaq") -> dict:
     mk = MARKETS[market]
-    fl = floor_series(d["e"], d["p"], d["cpi"])
+    fl = floor_series(d["e"], d["p"], d["cpi"], mk.get("fixed_mult"))
     n = len(d["m"]) - 1
+    k = fl["mult"][n]
     s = {"ticker": d["ticker"], "as_of": d["m"][n], "price": d["p"][n],
          "ratio": fl["ratio"][n], "degraded": fl["degraded"][n], "floor": fl["mid"][n],
-         "floor_lo": fl["lo"][n], "floor_hi": fl["hi"][n],
+         "floor_lo": fl["lo"][n], "floor_hi": fl["hi"][n], "mult": k, "why": fl["why"][n],
+         "mult_kind": "provisoire" if mk.get("fixed_mult") else "propre",
+         "cycle": cycle_position(d["e"], d["cpi"]),
          "eps_ttm": d["e"][n], "pe_ttm": d["p"][n] / d["e"][n] if d["e"][n] and d["e"][n] > 0 else None,
          "check": d.get("check"),
          "periods": {k: decompose(d, k) if k in mk["periods"] else {"ok": False, "reason": mk["no_history"]} for k in PERIODS}}
@@ -239,7 +306,7 @@ def summary(d: dict, fwd: dict | None, market: str = "nasdaq") -> dict:
         s["forward"] = {**fwd, "pe": pe,
                         "pe_lo": d["p"][n] / fwd["fwd_hi"] if fwd.get("fwd_hi") and fwd["fwd_hi"] > 0 else None,
                         "pe_hi": d["p"][n] / fwd["fwd_lo"] if fwd.get("fwd_lo") and fwd["fwd_lo"] > 0 else None,
-                        "ratio": pe / MID if pe else None}
+                        "ratio": pe / k if pe and k else None}
     return s
 
 
@@ -560,7 +627,7 @@ async def read_one(ticker: str, period: str = "10y") -> dict | None:
         return item
     s = summary(d, _fwd_in(fwd.get(ticker), MARKETS[market]["currency"]), market)
     s["period"] = s.pop("periods")[period]
-    fl = floor_series(d["e"], d["p"], d["cpi"])
+    fl = floor_series(d["e"], d["p"], d["cpi"], MARKETS[market].get("fixed_mult"))
     item.update(s)
     item["series"] = {"m": d["m"], "p": d["p"], **fl}
     item["cumul"] = cumulative(d, period)

@@ -3,7 +3,7 @@
 #
 #   bash checks/negatif_cac40_valeur.sh
 #
-# SATISFIABILITÉ mesurée avant toute mutation : 42 ok / 0 FAIL (2026-11-22, référence CAC 40 comprise).
+# SATISFIABILITÉ mesurée avant toute mutation : 44 ok / 0 FAIL (2026-11-23, plancher provisoire et cycle compris).
 # ⚠️ LES MUTATIONS QUI COMPTENT : n°6 et n°7 (divisions d'actions par date de publication du DÉPÔT : Air Liquide,
 # cas réel) et n°19 (filtre par marché : sans lui, le CAC 40 entre dans la page Nasdaq et dans ses badges).
 # Non gardé : l'exclusion des faits à dimension dans `esef_eps` — aucun dépôt lu n'en porte sur le BPA.
@@ -43,6 +43,9 @@ mutations=(
   "$VA¦        out[\"home\"].append(math.log(home[i] / home[i0]) if home[i] and home[i0] else None)¦        out[\"home\"].append(None)¦CAC 40 : la courbe cumulée de la référence part de zéro et monte"
   "$VA¦    home = [macro[\"home\"][idx[x]] for x in m] if macro.get(\"home\") else None¦    home = macro[\"home\"][:len(m)] if macro.get(\"home\") else None¦la référence nationale s'aligne par mois, pas par position"
   "$VA¦    home = [macro[\"home\"][idx[x]] for x in m] if macro.get(\"home\") else None¦    home = [macro[\"home\"][idx[x]] for x in m]¦macro sans référence nationale (Nasdaq) : assemble passe, sans série"
+  "$VA¦              \"fixed_mult\": 8,¦              \"fixed_mult\": 15,¦CAC 40 : plancher provisoire au multiple fixe de 8, dit comme tel"
+  "$VA¦\"mult_kind\": \"provisoire\" if mk.get(\"fixed_mult\") else \"propre\",¦\"mult_kind\": \"propre\",¦CAC 40 : plancher provisoire au multiple fixe de 8, dit comme tel"
+  "$VA¦    if n < 108 or any(¦    if n < 12 or any(¦CAC 40 : position dans le cycle non affichée faute de 10 ans, raison dite"
 )
 
 source "$(dirname "$0")/_negatif.sh"

@@ -65,6 +65,14 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   le plancher = « payé aussi peu que ses pires jours de la décennie », plus « bon marché dans l'absolu » (Nvidia et
   Amazon y sont aujourd'hui ; Micron et GM ont un plancher à ×4). Restants percés > 10 % : eBay, Amazon, Comcast,
   Meta, Gilead.
+- **Plancher propre au titre + position dans le cycle — fonctions pures LIVRÉES, non branchées (2026-11-23).**
+  `valeur.own_floor` et `valeur.cycle_position` (non commitées) ; check Nasdaq 41 ok, test négatif 30/30. Mesuré sur
+  la production (76 titres, 2010-2026, copie temporaire du module, rien écrit) : percé 2,0 % des mois, 3 titres
+  percés > 20 %, cours à 1,72× le plancher en médiane, NVDA et AMZN sous le plancher aujourd'hui (0,92 / 0,96),
+  MU et GM à ×4,5 / ×3,8 — conforme à la mesure d'arbitrage. **Reste à décider avant de brancher** : sort de la
+  bande 12/15/20 (`floor_lo`/`floor_hi`), de la ligne fantôme, de « caduc » et du « PER à terme ÷ 15 » ; textes
+  d'écran (`ValeurPanel.js` : « multiple plancher de 15 », ligne 244) ; le sens « payé aussi peu que ses pires
+  jours ». Le CAC 40 affichera « pas de plancher » partout tant que la table 2010-2019 n'existe pas.
 - **Titres cycliques — question ouverte** (2026-11-23). Mesuré (16 semi-conducteurs Nasdaq, règle ci-dessus) : le
   plancher ne casse pas (percé 1 %) mais il est lointain (cours à 2,5× contre 1,8× pour les autres) et oscille
   avec le cycle, parce que la moyenne 3 ans tombe sur un sommet ou un creux. Base « moyenne réelle sur 10 ans » :
