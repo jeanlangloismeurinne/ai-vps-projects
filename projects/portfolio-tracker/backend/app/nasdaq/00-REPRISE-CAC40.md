@@ -52,10 +52,12 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans. **Elle
   conditionne aussi le multiple plancher propre au titre** (ci-dessous) : sans elle, le CAC 40 n'a que ~3 ans de
   multiples, moins que les 3 ans d'historique exigés.
-- **Multiple plancher — proposition du 2026-11-23, EN ATTENTE D'ARBITRAGE** (commune avec le Nasdaq). Règle :
+- **Multiple plancher propre au titre — ARBITRÉ le 2026-11-23, À CONSTRUIRE** (commun avec le Nasdaq). Règle :
   multiple du titre = 5ᵉ centile de son propre cours ÷ bénéfice moyen 3 ans sur les 10 années PRÉCÉDENTES (lu à
-  chaque date, sans regarder l'avenir ; mois où l'état est dégradé exclus), × 0,8 de marge ; ×15 tant qu'il y a
-  moins de 3 ans d'historique (donc tout le CAC 40 jusqu'à la table). Mesuré sur 58 titres Nasdaq 2010-2026 :
+  chaque date, sans regarder l'avenir ; mois où l'état est dégradé exclus), × 0,8 de marge. **Le ×15 disparaît,
+  y compris comme repère** : moins de 3 ans de multiples → pas de plancher, raison affichée (tout le CAC 40
+  jusqu'à la table). « Bon marché » s'apprécie par rapport à soi ; le multiple peut changer quand l'entreprise
+  change de métier (la fenêtre glissante de 10 ans le permet). Mesuré sur 58 titres Nasdaq 2010-2026 :
   percé 2,5 % des mois (×15 : 10,8 %), 1 titre percé > 20 % du temps (×15 : 9), cours à 1,8× le plancher en
   médiane (×15 : 2,0×), 6 titres à plus de 3× (×15 : 18). Tient sur 2010-2017, 2018-2026 et la baisse de 2022.
   **Par secteur écarté** : le secteur explique 8 % des écarts de multiple bas entre titres (Technologie : Micron
@@ -63,6 +65,15 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   le plancher = « payé aussi peu que ses pires jours de la décennie », plus « bon marché dans l'absolu » (Nvidia et
   Amazon y sont aujourd'hui ; Micron et GM ont un plancher à ×4). Restants percés > 10 % : eBay, Amazon, Comcast,
   Meta, Gilead.
+- **Titres cycliques — question ouverte** (2026-11-23). Mesuré (16 semi-conducteurs Nasdaq, règle ci-dessus) : le
+  plancher ne casse pas (percé 1 %) mais il est lointain (cours à 2,5× contre 1,8× pour les autres) et oscille
+  avec le cycle, parce que la moyenne 3 ans tombe sur un sommet ou un creux. Base « moyenne réelle sur 10 ans » :
+  semis 1,9×, percé 0,2 % ; autres 1,5× mais percé 3,4 % (contre 2,1 %), et il faut 13 ans d'historique. Nvidia
+  est cyclique dans ses comptes : baisses du bénéfice réel ≥ 30 % en 2011, 2018-19 (crypto), 2022-23 (−57 %) ;
+  aujourd'hui bénéfice 12 mois 7,91 $ contre 2,58 $ (moyenne 3 ans) et 1,25 $ (moyenne réelle 7 ans). Pistes :
+  base plus longue pour tous, base selon la cyclicité mesurée du titre, ou indicateur « position dans le cycle ».
+  La mesure de cyclicité par les baisses du bénéfice PUBLIÉ est polluée par les charges exceptionnelles
+  (Microsoft 2012) : lien avec le retraitement ci-dessous.
 - **Retraitement du bénéfice → ROADMAP** (arbitré le 2026-11-23 : on reste au bénéfice PUBLIÉ). Signaler les
   années où le retraitement change le résultat revient à calculer le bénéfice ajusté, et aucune source automatique
   ne tient : Yahoo « Normalized Income » ne couvre que 4 exercices, ne respecte pas sa propre identité (publié −
