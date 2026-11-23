@@ -312,7 +312,7 @@ export default function ValeurPanel({ ticker, name, market = 'nasdaq' }) {
         <FloorChart s={d.series} i0={i0} sym={L.symbol} />
         <h4 className="text-sm font-semibold text-white pt-1">Combien de fois le plancher</h4>
         <RatioChart s={d.series} i0={i0} />
-        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. Avec le multiple des pires jours, sur 76 titres du Nasdaq de 2010 à 2026, le cours est passé sous son plancher 2 % des mois ; aujourd'hui il vaut 1,7 fois son plancher en médiane.</p>
+        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. {d.mult_kind === 'provisoire' ? 'Avec le multiple provisoire de 8, sur les 40 titres du CAC 40 depuis 2023, le cours est passé sous son plancher 9 % des mois.' : "Avec le multiple des pires jours, sur 76 titres du Nasdaq de 2010 à 2026, le cours est passé sous son plancher 2 % des mois ; aujourd'hui il vaut 1,7 fois son plancher en médiane."}</p>
       </section>
 
       <section className="space-y-2">
