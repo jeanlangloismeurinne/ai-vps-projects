@@ -4,7 +4,7 @@ Sous-projet du sous-projet NASDAQ (`00-REPRISE-NASDAQ.md`, même dossier). **Ind
 ne jamais modifier `roadmap/V3/00-REPRISE.md`, ne jamais committer `_governance/sdd/*`, ne rien lire ni écrire hors
 des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § « CAC 40 » (même dossier).
 
-## État (2026-11-22) — version 1 LIVRÉE
+## État (2026-11-23) — version 1 LIVRÉE, multiple des pires jours livré
 
 - `europe.py` (sources seules ; formules dans `valeur.py`), `valeur.MARKETS` + `select()` (filtre par marché),
   `?market=` sur l'API, rafraîchi chaque jour après le Nasdaq (`job.py`). Pas de migration.
@@ -31,6 +31,28 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   en 2015) et C40.PA suit le CAC 40 ESG. Mesuré : 5 ans +6,4 %/an (indice de prix +3,0 %), 3 ans +5,8 % ; 38/38
   lignes décomposables l'ont ; Nasdaq 72 ok sur 10 ans, aucun facteur fantôme. Check 42 ok + 27/27 mutations.
 
+## Lot du 2026-11-23 — multiple des pires jours LIVRÉ (commits `40e143d`, `650298d`)
+
+- **Règle** (arbitrée le 2026-11-23, commune avec le Nasdaq) : multiple des pires jours = 5ᵉ centile des multiples
+  cours ÷ bénéfice moyen 3 ans des 120 mois PRÉCÉDENTS (mois courant exclu, mois à état dégradé exclus) × 0,8 ;
+  plancher = ce multiple × moyenne 3 ans. Moins de 36 multiples → pas de plancher, raison dite (`why`). Le ×15 a
+  disparu partout (plancher, fantôme, PER à terme).
+- **Bande** = sensibilité de la marge : 0,7 et 0,9 au lieu de 0,8 (`OWN_SENS`). **PER à terme ÷ ce multiple.**
+  Fantôme = meilleur état réel des 10 ans × le même multiple. « Caduc » inchangé (il juge les bénéfices).
+- **CAC 40 : multiple provisoire FIXE de 8** (`MARKETS.cac40.fixed_mult`, `mult_kind = "provisoire"`), bande 7-9,
+  à retirer quand la table 2010-2019 existera. Choisi sur la mesure : multiples du CAC 40 depuis 2023 (40 titres,
+  1 538 mois), 5ᵉ centile 7,1, 10ᵉ 8,4 ; percé 8,7 % des mois à 8 (16 % à 10, 39 % à 15). Banques, automobile,
+  acier et pétrole s'y paient durablement moins : c'est ce que le multiple propre corrigera.
+- **Position dans le cycle** : bénéfice 12 mois ÷ moyenne des 10 derniers exercices en monnaie d'aujourd'hui, sur la
+  fiche, éclairage seul. CAC 40 : « non affichée — moins de 10 ans de bénéfices ».
+- Garde : `check_nasdaq_valeur.py` 46 ok + 36/36 mutations ; `check_cac40_valeur.py` 44 ok + 30/30. Suite 7 167
+  assertions, rouge connu seul.
+- **Production** : Nasdaq 55/87 avec plancher, 5 sous le plancher (Nvidia 0,92, Amazon 0,96), médiane ×1,72 ;
+  CAC 40 38/42, 1 sous le plancher (Crédit Agricole 0,92), médiane ×2,58.
+- **À surveiller** : 17 titres Nasdaq n'ont pas de plancher faute de 36 multiples, souvent parce que leurs mois
+  « caducs » sont exclus (certains en ont 0 à 3 sur 10 ans). Avant, ils avaient un plancher ×15, souvent marqué « caduc ».
+  À juger : est-ce le bon message (« pas de plancher ») ou faut-il garder ces mois ?
+
 ## Ce que le lot a appris (choix qui s'écartent du plan initial)
 
 - **Contrôle croisé** : ESEF contre Yahoo sur le même exercice, pas contre le bénéfice 12 mois (qui écartait Accor,
@@ -50,29 +72,7 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
 - Résidu connu : TotalEnergies 2020 (−0,029 $ au lieu de −2,90 $, aucun chiffre sain pour le démentir ; perte dans
   les deux cas, sans effet).
 - La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans. **Elle
-  conditionne aussi le multiple plancher propre au titre** (ci-dessous) : sans elle, le CAC 40 n'a que ~3 ans de
-  multiples, moins que les 3 ans d'historique exigés.
-- **Multiple plancher propre au titre — ARBITRÉ le 2026-11-23, À CONSTRUIRE** (commun avec le Nasdaq). Règle :
-  multiple du titre = 5ᵉ centile de son propre cours ÷ bénéfice moyen 3 ans sur les 10 années PRÉCÉDENTES (lu à
-  chaque date, sans regarder l'avenir ; mois où l'état est dégradé exclus), × 0,8 de marge. **Le ×15 disparaît,
-  y compris comme repère** : moins de 3 ans de multiples → pas de plancher, raison affichée (tout le CAC 40
-  jusqu'à la table). « Bon marché » s'apprécie par rapport à soi ; le multiple peut changer quand l'entreprise
-  change de métier (la fenêtre glissante de 10 ans le permet). Mesuré sur 58 titres Nasdaq 2010-2026 :
-  percé 2,5 % des mois (×15 : 10,8 %), 1 titre percé > 20 % du temps (×15 : 9), cours à 1,8× le plancher en
-  médiane (×15 : 2,0×), 6 titres à plus de 3× (×15 : 18). Tient sur 2010-2017, 2018-2026 et la baisse de 2022.
-  **Par secteur écarté** : le secteur explique 8 % des écarts de multiple bas entre titres (Technologie : Micron
-  5, Palo Alto 77), et la règle par secteur ne fait pas mieux que ×15. Changement de sens à faire trancher : sous
-  le plancher = « payé aussi peu que ses pires jours de la décennie », plus « bon marché dans l'absolu » (Nvidia et
-  Amazon y sont aujourd'hui ; Micron et GM ont un plancher à ×4). Restants percés > 10 % : eBay, Amazon, Comcast,
-  Meta, Gilead.
-- **Plancher propre au titre + position dans le cycle — fonctions pures LIVRÉES, non branchées (2026-11-23).**
-  `valeur.own_floor` et `valeur.cycle_position` (non commitées) ; check Nasdaq 41 ok, test négatif 30/30. Mesuré sur
-  la production (76 titres, 2010-2026, copie temporaire du module, rien écrit) : percé 2,0 % des mois, 3 titres
-  percés > 20 %, cours à 1,72× le plancher en médiane, NVDA et AMZN sous le plancher aujourd'hui (0,92 / 0,96),
-  MU et GM à ×4,5 / ×3,8 — conforme à la mesure d'arbitrage. **Reste à décider avant de brancher** : sort de la
-  bande 12/15/20 (`floor_lo`/`floor_hi`), de la ligne fantôme, de « caduc » et du « PER à terme ÷ 15 » ; textes
-  d'écran (`ValeurPanel.js` : « multiple plancher de 15 », ligne 244) ; le sens « payé aussi peu que ses pires
-  jours ». Le CAC 40 affichera « pas de plancher » partout tant que la table 2010-2019 n'existe pas.
+  conditionne aussi le multiple des pires jours** : à sa livraison, retirer `fixed_mult` du CAC 40.
 - **Titres cycliques — question ouverte** (2026-11-23). Mesuré (16 semi-conducteurs Nasdaq, règle ci-dessus) : le
   plancher ne casse pas (percé 1 %) mais il est lointain (cours à 2,5× contre 1,8× pour les autres) et oscille
   avec le cycle, parce que la moyenne 3 ans tombe sur un sommet ou un creux. Base « moyenne réelle sur 10 ans » :
