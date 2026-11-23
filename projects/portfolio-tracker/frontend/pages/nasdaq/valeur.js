@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import SlidePanes, { useSelectedTicker } from '../../components/nasdaq/SlidePanes'
 import TickerSheet from '../../components/nasdaq/TickerSheet'
-import ValeurPanel, { C, FLOOR_CAVEAT, LABELS, NASDAQ_LABELS, PERIODS, pct, times } from '../../components/nasdaq/ValeurPanel'
+import ValeurPanel, { C, LABELS, NASDAQ_LABELS, PERIODS, pct, times } from '../../components/nasdaq/ValeurPanel'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8050'
 const LAYERS = ['infl', 'real', 'mult', 'div']
@@ -139,7 +139,7 @@ export default function NasdaqValeur() {
         Les composantes se multiplient : l'échelle est logarithmique pour que leurs longueurs s'ajoutent exactement jusqu'au losange. Un clic ouvre le titre.
         {eu && <> Pour le CAC 40 : bénéfice du dernier exercice publié ({L.source}), connu 4 mois après la clôture ; {L.infl} ; références {L.ref} et {L.home}, dividendes réinvestis ({L.home_note}).</>}
       </p>
-      {eu && <p className="text-xs text-amber-200/80 max-w-3xl">{FLOOR_CAVEAT}</p>}
+      {L.floor_note && <p className={`text-xs max-w-3xl ${eu ? 'text-amber-200/80' : 'text-gray-500'}`}>{L.floor_note}</p>}
       {err && <div className="rounded border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">Erreur de chargement : {err}</div>}
       {!sum ? <p className="text-sm text-gray-500">Chargement…</p> : ok.length === 0
         ? <p className="text-sm text-gray-500">Aucun titre décomposable{sum.running ? ' — rafraîchissement en cours' : ''}.</p>

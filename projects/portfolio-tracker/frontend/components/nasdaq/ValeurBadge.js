@@ -1,11 +1,11 @@
-import { pct, ratioColor, times } from './ValeurPanel'
+import { noFloor, pct, ratioColor, times } from './ValeurPanel'
 
 // Badge de carte : écart au plancher et part empruntée de la hausse sur 10 ans. Un clic ouvre l'onglet Valeur.
 export function ValeurBadge({ v, onClick }) {
   if (!v) return null
   const p = v.period
   let main
-  if (v.ratio == null) main = <span className="text-red-400">{v.note ? 'valeur indisponible' : 'pas de plancher (perte)'}</span>
+  if (v.ratio == null) main = <span className="text-red-400">{noFloor(v)}</span>
   else main = <span className={ratioColor(v.ratio, v.degraded)}>{times(v.ratio)} le plancher{v.degraded ? ' · caduc' : ''}</span>
   const borrowed = p?.ok && p.borrowed != null
     ? (p.borrowed > 0.05 ? <span className="text-amber-300">{Math.round(100 * p.borrowed)} % emprunté</span> : <span className="text-emerald-300">hausse méritée</span>)

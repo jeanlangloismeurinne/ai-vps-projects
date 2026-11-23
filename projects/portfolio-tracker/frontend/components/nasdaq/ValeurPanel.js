@@ -12,7 +12,10 @@ const num = (x, d = 1) => x == null ? '—' : x.toLocaleString('fr-FR', { minimu
 const money = (x, sym = '$') => x == null ? '—' : `${x.toLocaleString('fr-FR', { maximumFractionDigits: x < 10 ? 2 : 0 })} ${sym}`
 // Ce que l'écran écrit d'un marché vient de l'API (`valeur.MARKETS`) ; à défaut, le Nasdaq.
 export const NASDAQ_LABELS = { symbol: '$', ref: 'S&P 500', infl: 'inflation américaine', source: 'comptes SEC', periods: ['3y', '5y', '10y', '2010'] }
-export const FLOOR_CAVEAT = "Le multiple plancher de 15 a été calibré sur la technologie américaine : le luxe (Hermès se paie environ 50 fois ses bénéfices), les banques et les services publics s'en écartent durablement."
+// Nom du multiple appliqué : propre au titre (Nasdaq) ou provisoire et commun (CAC 40, `MARKETS.cac40.fixed_mult`).
+export const multName = (d) => d?.mult_kind === 'provisoire' ? 'multiple provisoire' : 'multiple des pires jours'
+// Pourquoi un titre n'a pas de plancher, en minuscules, pour la carte et la liste.
+export const noFloor = (v) => v?.note ? 'valeur indisponible' : `pas de plancher${v?.why ? ` (${v.why})` : ''}`
 const monthFr = (m) => m ? `${m.slice(5)}/${m.slice(0, 4)}` : ''
 
 export function ratioColor(r, degraded) {
@@ -241,18 +244,18 @@ function Forward({ d }) {
       <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
         <div><div className="text-xs text-gray-500">PER des 12 derniers mois</div><div className="text-white font-semibold">{d.pe_ttm ? num(d.pe_ttm) : 'perte'}</div></div>
         <div><div className="text-xs text-gray-500">PER à terme (exercice suivant)</div><div className="text-white font-semibold">{f.pe ? num(f.pe) : '—'}</div></div>
-        <div><div className="text-xs text-gray-500">Soit, par rapport au multiple plancher de 15</div><div className={`font-semibold ${ratioColor(f.ratio)}`}>{times(f.ratio)} le plancher</div></div>
+        <div><div className="text-xs text-gray-500">Soit, par rapport au {multName(d)} ({d.mult ? num(d.mult) : '—'})</div><div className={`font-semibold ${ratioColor(f.ratio)}`}>{f.ratio ? `${times(f.ratio)} le plancher` : 'pas de plancher'}</div></div>
         <div><div className="text-xs text-gray-500">Analystes</div><div className="text-white font-semibold">{f.n_analysts}</div></div>
       </div>
       {f.pe_lo && f.pe_hi && (
         <div>
           <div className="relative h-4 w-full max-w-md rounded bg-gray-800">
             <div className="absolute top-1 h-2 rounded bg-sky-700" style={{ left: `${X(f.pe_lo)}%`, width: `${Math.max(1, X(f.pe_hi) - X(f.pe_lo))}%` }} />
-            <div className="absolute -top-0.5 h-5 border-l-2 border-dashed border-emerald-400" style={{ left: `${X(15)}%` }} />
+            {d.mult && <div className="absolute -top-0.5 h-5 border-l-2 border-dashed border-emerald-400" style={{ left: `${X(d.mult)}%` }} />}
             <div className="absolute top-0 h-4 w-0.5 bg-white" style={{ left: `${X(f.pe)}%` }} />
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            Fourchette des analystes : de {num(f.pe_lo)} (le plus optimiste) à {num(f.pe_hi)} (le plus prudent) fois le bénéfice attendu ; échelle de 0 à 60, pointillé vert = 15.
+            Fourchette des analystes : de {num(f.pe_lo)} (le plus optimiste) à {num(f.pe_hi)} (le plus prudent) fois le bénéfice attendu ; échelle de 0 à 60{d.mult ? `, pointillé vert = ${multName(d)} (${num(d.mult)})` : ''}.
             Plus la fourchette est large, moins le consensus est sûr. Photo du {f.as_of ? new Date(f.as_of).toLocaleDateString('fr-FR') : '—'}, enregistrée chaque semaine{d.forward_history?.length > 1 ? ` (${d.forward_history.length} photos)` : ''}.
           </p>
         </div>
@@ -292,23 +295,30 @@ export default function ValeurPanel({ ticker, name, market = 'nasdaq' }) {
       <section className="space-y-2">
         <h4 className="text-sm font-semibold text-white">Le cours face au plancher</h4>
         <p className="text-sm text-gray-300">
-          Aujourd'hui : cours {usd(d.price)}, plancher {usd(d.floor_lo)} à {usd(d.floor_hi)}, soit{' '}
+          Aujourd'hui : cours {usd(d.price)}{d.ratio ? <>, plancher {usd(d.floor)} ({multName(d)} de {num(d.mult)} × bénéfice moyen 3 ans ; {usd(d.floor_lo)} à {usd(d.floor_hi)} avec une marge de 30 % ou de 10 % au lieu de 20 %)</> : null}, soit{' '}
           <b className={ratioColor(d.ratio, dg)}>{d.ratio ? `${times(d.ratio)} le plancher` : 'pas de plancher'}</b>.{' '}
-          {d.ratio == null ? "Bénéfice moyen sur 3 ans négatif ou nul : rien ne soutient le cours. Mesuré sur 2 118 titres du Nasdaq (2011-2025), après une chute de 20 % ou plus, une entreprise en perte a perdu plus de la moitié de sa valeur dans l'année 24 % du temps, contre 7 % pour une entreprise bénéficiaire." : dg
+          {d.ratio == null ? (!d.why || d.why.startsWith('bénéfice')
+            ? "Bénéfice moyen sur 3 ans négatif ou nul : rien ne soutient le cours. Mesuré sur 2 118 titres du Nasdaq (2011-2025), après une chute de 20 % ou plus, une entreprise en perte a perdu plus de la moitié de sa valeur dans l'année 24 % du temps, contre 7 % pour une entreprise bénéficiaire."
+            : `Le multiple des pires jours se mesure sur 10 ans : ${d.why || 'historique insuffisant'}.`) : dg
             ? <span className="text-red-400">L'état actuel est inférieur de plus de 10 % au meilleur état des 10 ans : le plancher est caduc.</span>
             : 'Le plancher est valide : les bénéfices tiennent.'}
         </p>
-        <Legend items={[[C.sp, 'Cours'], [C.real, 'Plancher : bénéfice moyen 3 ans × 12 à × 20'], [C.mult, "Si l'état avait tenu (meilleur des 10 ans, indexé, × 15)", true], [C.bad, 'État dégradé : plancher caduc']]} />
+        {d.ratio != null && <p className="text-sm text-gray-300">{d.mult_kind === 'provisoire' ? `Payé ${num(d.price / d.floor * d.mult)} fois son bénéfice moyen 3 ans, pour un multiple provisoire de ${num(d.mult)}.` : d.ratio < 1 ? 'Le titre est payé aujourd\'hui moins cher que ses pires jours de la décennie.' : `Le titre est payé ${times(d.ratio)} ce qu'il valait lors de ses pires jours de la décennie (marge de 20 % comprise).`}</p>}
+        {L.floor_note && <p className="text-xs text-gray-500">{L.floor_note}</p>}
+        <p className="text-sm text-gray-300">Position dans le cycle : {d.cycle?.x != null
+          ? <>bénéfices actuels = <b className="text-white">{times(d.cycle.x)}</b> leur moyenne de cycle (10 derniers exercices, chacun en monnaie d'aujourd'hui : {usd(d.cycle.avg)} par action). Éclairage seul : n'entre dans aucun calcul.</>
+          : <span className="text-gray-500">non affichée — {d.cycle?.why || 'moins de 10 ans de bénéfices'}.</span>}</p>
+        <Legend items={[[C.sp, 'Cours'], [C.real, `Plancher : bénéfice moyen 3 ans × ${multName(d)} (marge de 10 à 30 %)`], [C.mult, "Si l'état avait tenu (meilleur des 10 ans, indexé, même multiple)", true], [C.bad, 'État dégradé : plancher caduc']]} />
         <FloorChart s={d.series} i0={i0} sym={L.symbol} />
         <h4 className="text-sm font-semibold text-white pt-1">Combien de fois le plancher</h4>
         <RatioChart s={d.series} i0={i0} />
-        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. Zone rouge, au-delà de ×3 : sur 42 valeurs de croissance du Nasdaq de 2011 à 2025, une chute de 20 % ou plus dans l'année y a été plus fréquente (24 % des mois, contre 14 à 16 % entre ×1 et ×3), sans rendement moyen plus faible.</p>
+        <p className="text-xs text-gray-500">Le rapport se lit sans l'effet de la croissance qui écrase les écarts sur la courbe du cours. Zone verte : sous le plancher. Avec le multiple des pires jours, sur 76 titres du Nasdaq de 2010 à 2026, le cours est passé sous son plancher 2 % des mois ; aujourd'hui il vaut 1,7 fois son plancher en médiane.</p>
       </section>
 
       <section className="space-y-2">
         <h4 className="text-sm font-semibold text-white">Le PER à terme : cher par rapport aux perspectives ?</h4>
         <Forward d={d} />
-        {eu && <p className="text-xs text-amber-200/80">{FLOOR_CAVEAT}</p>}
+
       </section>
 
       <section className="space-y-2">
