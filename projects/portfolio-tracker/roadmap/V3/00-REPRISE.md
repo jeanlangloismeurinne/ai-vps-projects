@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-28 (M2 ACCEPTÉ, B6 reportée à M6, dossier M2 archivé ; prochain pas : ouvrir M4) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-28 (M2 ACCEPTÉ, B6 reportée à M6, dossier M2 archivé ; M4 ouvert, questions §4 en attente) — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -20,10 +20,11 @@ role: >
 
 **M2 ACCEPTÉ le 2026-11-28** (utilisateur) ; l'évaluation réelle d'une source (B6, payante) est une
 ligne d'acceptation de M6 (`07-avant-comite.md` § « À l'ouverture de M6 ») ; dossier archivé :
-`roadmap/archive/V3-M2-collecte-sources.md`. **Prochain pas : ouvrir M4 « Comptes et segments »**
-(charte, points 6 et 7 : tri de l'ancien code — `knowledge/`, socle reconstitué, ventilation, périmètre
-—, puis acceptation écrite AVANT la construction, avec la suite de B13 et le point de décision de
-l'option C : `07-avant-comite.md` § « À l'ouverture de M4 »). M3 reste à accepter (K14 sur les trois
+`roadmap/archive/V3-M2-collecte-sources.md`. **M4 « Comptes et segments » OUVERT le 2026-11-28** : `M4-comptes-segments.md` (tri, acceptation
+C1-C12, **trois questions en attente de l'utilisateur** §4 : famille de comptes, reclassements par
+émetteur, comptes en texte seulement — SpaceX n'a qu'un trimestre en données structurées). Prochain
+pas : réponses, puis construction hors ligne (société fictive) ; la suite de B13 et l'option C y sont
+reprises (C8). M3 reste à accepter (K14 sur les trois
 dossiers réels).
 
 **Où on en est (2026-11-22)** — **M2, M3, le déclencheur et l'écran de l'étude sont EN PRODUCTION**
