@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TEST NÉGATIF de `check_recueil.py` — au moins une mutation par ligne d'acceptation du module M2
-# (`roadmap/V3/M2-collecte-sources.md` §2, lignes « société fictive »), chacune exigeant exit≠0 +
+# (`roadmap/archive/V3-M2-collecte-sources.md` §2, lignes « société fictive »), chacune exigeant exit≠0 +
 # FAIL sur l'assert NOMMÉ + bilan atteint (harnais `_negatif.sh`). Le module est pur bibliothèque
 # standard : sans conteneur, le harnais tourne sur l'hôte et le dit. Les mutations de la règle
 # « votre correction tient » visent son détenteur, `emetteurs/regles.py` (une garde déléguée se mute

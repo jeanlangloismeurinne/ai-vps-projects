@@ -3812,4 +3812,4 @@ modèle juge comme avant et la recherche n'est pas repayée (M2 §8, `[P8]`).
 
 **Construit (2026-11-19, hors ligne + essais réels en mémoire).** `recueil/adaptateurs/apercus.py`
 (+ `apercus.json`), branché dans `web.py` et `evaluateur.py` ; preuve `check_recueil_evaluateur.py`
-[X5] [P1]-[P7], `negatif_recueil_evaluateur.sh`. Détail et mesures : `roadmap/V3/M2-collecte-sources.md` §7.
+[X5] [P1]-[P7], `negatif_recueil_evaluateur.sh`. Détail et mesures : `roadmap/archive/V3-M2-collecte-sources.md` §7.

@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-22 (B13 reformulée et constatée ; suite dans M4, option C en réserve ; prochain lot : B3/B10/B12 à cocher, B6) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-28 (M2 ACCEPTÉ, B6 reportée à M6, dossier M2 archivé ; prochain pas : ouvrir M4) — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,13 +18,21 @@ role: >
 
 ## ➜ Prochain pas
 
+**M2 ACCEPTÉ le 2026-11-28** (utilisateur) ; l'évaluation réelle d'une source (B6, payante) est une
+ligne d'acceptation de M6 (`07-avant-comite.md` § « À l'ouverture de M6 ») ; dossier archivé :
+`roadmap/archive/V3-M2-collecte-sources.md`. **Prochain pas : ouvrir M4 « Comptes et segments »**
+(charte, points 6 et 7 : tri de l'ancien code — `knowledge/`, socle reconstitué, ventilation, périmètre
+—, puis acceptation écrite AVANT la construction, avec la suite de B13 et le point de décision de
+l'option C : `07-avant-comite.md` § « À l'ouverture de M4 »). M3 reste à accepter (K14 sur les trois
+dossiers réels).
+
 **Où on en est (2026-11-22)** — **M2, M3, le déclencheur et l'écran de l'étude sont EN PRODUCTION**
 (migrations 064 puis 065 appliquées le 2026-11-22 ; backend et frontend reconstruits, commit `401d2a1` ;
 vérifié dans les conteneurs : routes `/v2/emetteurs/{e}/etude`, `libelles_actes`, tâche planifiée
 `_passage_des_etudes` enregistrée, section « Étude de la société » compilée ; GET réel NVDA/SPCX/RVMD
 → 200, « pas à l'étude »). Suite : `check_recueil_persist` et `check_connaissance_persist` désormais
 verts ; seul rouge connu : `check_signature_modele_persist` (données de l'ancien enchaînement).
-Détail des modules : `M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
+Détail des modules : `roadmap/archive/V3-M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
 
 **Trois vrais dossiers terminés le 2026-11-22** (NVDA, RVMD, SpaceX : comptes annuels + companyfacts,
 tout SEC, 0 $ ; le coût d'un dossier avec collecte web n'est PAS encore mesuré ; RVMD a aussi la cotation
@@ -38,16 +46,10 @@ code source HTML coupaient les lignes (procurations et 8-K Donnelley : une cellu
 les 10-K Workiva → **lecteur 1.2.0** (déployé ; la tâche de fond relit les 6 documents à son passage
 suivant, les lectures 1.1.0 restent). Détail : `M3-base-connaissance.md` § « K13 ».
 
-**Prochain lot** : lignes « réel » de M2. B3 (prospectus SpaceX), B10 (fiche SpaceX complétée) et B12
-(écran) sont déjà constatées sur les vrais dossiers du 2026-11-22 → à cocher après relecture. **B13
-reformulée et constatée le 2026-11-22** (arbitrage A + B) : besoin initial seul (annuel + données
-structurées) ; K13 sans `--en-memoire` : 14 fiches → 12 retrouvées, 2 expliquées, 0 inexpliquée. Les
-intermédiaires et annonces deviennent une ligne d'acceptation de M4 (41 fiches non demandées en ligne de
-base) ; **option C en réserve** : élargir le besoin initial (donnée du `referentiel.json` de `comptes`)
-si M4 demande presque toujours les trimestriels dès son premier passage — décision à la clôture de M4.
-Tout : `07-avant-comite.md` § « À l'ouverture de M4 ». Reste B6 (une vraie évaluation de source : il
-faut une collecte web, payante). Les demandes « au fil du dossier » (M3 §2, 1 bis) se construisent avec
-M4. Un dossier terminé ne repart pas quand le
+**B13** (besoin initial seul, constatée le 2026-11-22) : la suite — intermédiaires et annonces
+demandés au fil du dossier — est une ligne d'acceptation de M4 ; **option C en réserve** (élargir le
+besoin initial dans le `referentiel.json` de `comptes`), décision à la clôture de M4. Les demandes « au
+fil du dossier » (M3 §2, 1 bis) se construisent avec M4 ; un dossier terminé ne repart pas quand le
 parcours s'allonge : à traiter avec M4.
 
 M1 accepté sur le VPS le 2026-11-16 (reste à l'écran : admettre, révoquer, corriger sur de vraies

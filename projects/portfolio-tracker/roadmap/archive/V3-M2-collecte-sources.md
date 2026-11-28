@@ -1,6 +1,6 @@
 ---
 id: m2-collecte-sources
-status: construit hors ligne (B1-B11, base 064 non appliquée, moteur/modèle/évaluateur réels le 2026-11-18) ; reste arbitrage de la grille d'évaluation, déclencheur, écran, lignes « réel »
+status: ACCEPTÉ le 2026-11-28 (B1-B5 et B7-B14 constatées ; B6 réelle reportée à M6 par l'utilisateur, prouvée sur société fictive et par essais réels en mémoire)
 created: 2026-11-16
 project: portfolio-tracker
 role: >
@@ -10,6 +10,11 @@ role: >
 ---
 
 # M2 — Collecte de sources
+
+> **ACCEPTÉ le 2026-11-28** (utilisateur) : B1-B5, B7-B14 constatées (lignes « réel » le 2026-11-22) ;
+> B6 réelle reportée à M6, premier module qui demande du web. Restent dits, non bloquants : étage 3 de
+> la presse payante (aucun abonnement, §7) ; un aperçu qui finit sur une phrase entière et que le modèle
+> juge complet (§8).
 
 *Ce que ferait un vrai fonds* : la documentation (le « centre de documentation » ou l'équipe de
 données) reçoit une demande de l'analyste — « les derniers comptes annuels de SpaceX », « les
@@ -91,7 +96,7 @@ rougi par `negatif_recueil.sh`) ; « base » sur une vraie base ; « réel » su
 | B3 | **Une société récemment introduite** : « derniers comptes annuels » rend le prospectus d'introduction quand aucun rapport annuel n'existe encore, et le dit dans l'origine ; jamais un cumul trimestriel présenté comme une année. Dès qu'un rapport annuel est déposé, c'est lui. | société fictive ; **réel : SpaceX, constaté le 2026-11-22** (relu en base) : seul document du genre, le prospectus 424B4 n° 0001628280-26-042639 publié le 2026-06-12, mention « aucun rapport annuel n'est encore déposé… (#148) » dans l'origine ; aucun trimestriel rangé comme annuel. Date des faits vide : la pièce l'affichera « période non précisée » (M3 §4 q.1) |
 | B4 | **Le document est gardé brut et jamais modifié** : le même document collecté deux fois n'est rangé qu'une fois (empreinte) ; une nouvelle version d'un document (amendement) est un document nouveau qui cite l'ancien. | société fictive ; base (table sans modification ni suppression) |
 | B5 | **Chaque document dit d'où il vient et ce qu'il vaut** : son origine, et la qualification que M1 rend pour son adresse au jour de la collecte ; un document d'une source non admise est gardé mais marqué comme tel, il ne passe jamais pour admis. | société fictive |
-| B6 | **Une source inconnue rencontrée part à l'évaluateur** (rôle distinct de celui qui collecte, A17 de M1) : il lit trois publications au moins, répond à la grille ; le système admet au seuil, met en suspens dessous. La collecte n'attend pas son verdict pour rendre les autres documents. | société fictive (évaluateur simulé) ; réel : une évaluation sur une vraie source |
+| B6 | **Une source inconnue rencontrée part à l'évaluateur** (rôle distinct de celui qui collecte, A17 de M1) : il lit trois publications au moins, répond à la grille ; le système admet au seuil, met en suspens dessous. La collecte n'attend pas son verdict pour rendre les autres documents. | société fictive (évaluateur simulé) ; essais réels EN MÉMOIRE (Reuters admise, MarketBeat en suspens, §5, §8) ; **réel reporté à M6** (arbitrage de l'utilisateur, 2026-11-28) : M6 est le premier module qui demande du web, la première évaluation rangée au journal des sources viendra de sa collecte — ligne d'acceptation de M6 (`07-avant-comite.md` § « À l'ouverture de M6 ») |
 | B7 | **Une page de relations investisseurs d'une autre société, rencontrée en collectant, est admise au fil de l'eau** (`admettre_pages_investisseurs`, A16 de M1). | société fictive |
 | B8 | **La collecte est un travail suivi** : le pas de collecte rend « en cours », le chef de dossier le suit à chaque passage jusqu'à « fait » ou « indisponible » ; ce qui ne dépend pas d'elle avance (#146). Une collecte interrompue (redémarrage) reprend sans recollecter ce qui est déjà rangé. | société fictive ; base |
 | B9 | **La dépense est comptée** : chaque recherche web et chaque appel de modèle (évaluateur) est déclaré au chef de dossier, qui fait sa pause à 1 $. Dépôts officiels et sites : 0. | société fictive |
@@ -192,7 +197,7 @@ aucune écriture au journal des sources), ~0,01 $ par source :
   annoncée en tête de la publication.
 
 Reste, dans l'ordre proposé : (1) ~~rangement en base~~ ; (2) ~~moteur réel (Exa) et évaluateur réel~~ — reste l'arbitrage de la grille ; (3) ~~le déclencheur et la tâche de fond qui rangent l'`Envoi`~~ (M3 §5) ; (4) ~~l'écran (B12)~~ (construit avec K12, M3 §5) ; (5) les
-lignes « réel » : SpaceX (B3, B10), une évaluation réelle (B6), NVDA et RVMD (B13, reformulée et constatée le 2026-11-22 : besoin initial seul), suite (B14).
+lignes « réel » : SpaceX (B3, B10), ~~une évaluation réelle (B6)~~ reportée à M6, NVDA et RVMD (B13, reformulée et constatée le 2026-11-22 : besoin initial seul), suite (B14).
 
 ## 6. Lire la presse payante — mesures et proposition (2026-11-18, question ouverte)
 

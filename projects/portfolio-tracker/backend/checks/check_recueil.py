@@ -1,6 +1,6 @@
 """Module M2 « Collecte de sources » sur des sociétés FICTIVES — aucune base, aucun réseau, aucun
 modèle, aucune dépense. C'est la part « société fictive » de l'acceptation écrite avant la
-construction (`roadmap/V3/M2-collecte-sources.md` §2) ; chaque section porte le numéro de la ligne
+construction (`roadmap/archive/V3-M2-collecte-sources.md` §2) ; chaque section porte le numéro de la ligne
 qu'elle prouve, et `negatif_recueil.sh` prouve que chacune vire au rouge.
 
   [B0]  le cœur n'importe ni réseau ni modèle : seul `adaptateurs/transport.py` touche le réseau

@@ -51,7 +51,7 @@ règle simple, l'automatisation son raffinement).
 |---|---|---|---|---|
 | M0 ✅ | **Fondations** (accepté hors ligne le 2026-11-13, voir journal) | Documents de cadre à jour (une constitution, un schéma des blocs, une seule ligne de base de la suite) ; documents inutiles supprimés ou archivés ; charte et garde des accès entre modules ; squelette du chef de dossier (état → pas suivant, pause tous les 1 $) ; NASDAQ sorti du chantier | Aucun document ne décrit un mécanisme supprimé ; le contrôle d'accès rougit sur un accès interdit ; le chef de dossier conduit une société fictive à travers des modules simulés et s'arrête à 1 $ | 0 |
 | M1 ✅ | **Fiche de l'émetteur et sources** (accepté sur le VPS le 2026-11-16, sauf les gestes d'écriture à l'écran, laissés à l'utilisateur : `M1-fiche-emetteur.md`) | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
-| M2 | **Collecte de sources** (construit hors ligne le 2026-11-16 : `M2-collecte-sources.md` §5) | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur. **Arbitrés le 2026-11-14** : une source inconnue rencontrée part à l'évaluateur de sources (la porte de M1 est construite : #145) ; la collecte est un travail suivi par le chef de dossier, et le dossier avance à côté (#146) | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
+| M2 ✅ | **Collecte de sources** (accepté le 2026-11-28 ; l'évaluation réelle d'une source, B6, est reportée à M6 : `roadmap/archive/V3-M2-collecte-sources.md`) | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur. **Arbitrés le 2026-11-14** : une source inconnue rencontrée part à l'évaluateur de sources (la porte de M1 est construite : #145) ; la collecte est un travail suivi par le chef de dossier, et le dossier avance à côté (#146) | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
 | M3 | **Base de connaissance** | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
 | M4 | **Comptes et segments** | Comptes reconstitués, ratios maison, ventilation, périmètre, par famille de comptes | Les comptes de NVDA et RVMD bouclent avec les totaux publiés ; deux découpages superposés (Apple, cas fictif) sont séparés ; **ses demandes au fil du dossier sont collectées et contrôlées par l'ancien système** (suite de B13, ci-dessous) | 0 |
 | M5 | **Filtres** | Alertes motivées au gérant (dette, autonomie, clauses, qui décide, hors compétence) ; jamais d'arrêt automatique | Sur RVMD l'autonomie de trésorerie est signalée avec sa pièce | faible |
@@ -121,6 +121,17 @@ demandé et quand ; décision à l'utilisateur. Le tri des « annonces important
 reste un jugement : s'il entre dans le besoin initial, il se fait par catégorie déclarée au registre,
 jamais par un modèle.
 
+## À l'ouverture de M6 (reporté de M2 le 2026-11-28)
+
+**B6 de M2 — ligne d'acceptation de M6** (arbitrage de l'utilisateur, 2026-11-28) : M6 est le premier
+module qui demande du web. Quand sa collecte rencontre une source inconnue, celle-ci part à
+l'évaluateur (rôle distinct de celui qui collecte) ; constat réel : **au moins une évaluation rangée au
+journal des sources** (trois publications complètes lues ou échec nommé, note sur la grille, admise au
+seuil ou en suspens dessous, motif), dépense déclarée au chef de dossier, et la collecte a rendu ses
+autres documents sans attendre le verdict. Acquis avant : société fictive (`check_recueil_evaluateur`),
+essais réels en mémoire sans écriture au journal (Reuters admise, MarketBeat en suspens ; reprise sous
+licence reconnue chez marketscreener.com) — `roadmap/archive/V3-M2-collecte-sources.md` §5, §7, §8.
+
 ## Dettes reprises de l'ancien plan
 
 Elles sont rattachées au module qui les soldera, au moment de son tri : question 3 de l'arbre mal posée
@@ -147,10 +158,11 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | 2026-11-16 | M1 | A13 : déployé ; API et écrans vérifiés en production ; motif des actes sur sa propre ligne | captures `/v2/emetteurs`, `/v2/emetteurs/RVMD` ; gestes d'écriture laissés à l'utilisateur (registre indélébile) |
 | 2026-11-16 | M1 | A15 : l'ancien code lit la fiche (`knowledge/fiche_emetteur.py`, seul lecteur) ; listes de domaines de `websearch`, `source_registry` et le contrôle provisoire de reprise supprimés ; 0 écart de `source_type` sur 4 815 comparaisons réelles avant bascule ; sans fiche, rien n'est admis | `check_fiche_lue.py` 180/0, `negatif_fiche_lue.sh` 9/9 ; `negatif_search_worker.sh` 51/51, `negatif_garde_guichet.sh` 9/9 ; suite 6 625, rouge unique `check_signature_modele_persist` (données de l'ancien enchaînement, hors M1) |
 | 2026-11-16 | M1 | Premier geste d'écriture joué en production par l'utilisateur : fiche SpaceX établie à l'écran (révision 1, minimale) | `emetteurs_fiches` id 110 |
-| 2026-11-16 | M2 | Ouvert : tri de l'ancien code et acceptation écrite AVANT la construction (B1-B14) ; SpaceX (introduite en juin 2026, aucun rapport annuel) proposée comme troisième cas | `M2-collecte-sources.md` |
-| 2026-11-16 | M2 | Construit hors ligne : module `recueil` (B1-B11 sur société fictive, 63/0, négatif 43/43) ; passage à blanc réel SpaceX (identité complétée, prospectus rendu) ; restent base, évaluateur et moteur réels, déclencheur, écran, lignes « réel » | `M2-collecte-sources.md` §5 |
+| 2026-11-16 | M2 | Ouvert : tri de l'ancien code et acceptation écrite AVANT la construction (B1-B14) ; SpaceX (introduite en juin 2026, aucun rapport annuel) proposée comme troisième cas | `roadmap/archive/V3-M2-collecte-sources.md` |
+| 2026-11-16 | M2 | Construit hors ligne : module `recueil` (B1-B11 sur société fictive, 63/0, négatif 43/43) ; passage à blanc réel SpaceX (identité complétée, prospectus rendu) ; restent base, évaluateur et moteur réels, déclencheur, écran, lignes « réel » | `roadmap/archive/V3-M2-collecte-sources.md` §5 |
 | 2026-11-21 | M3 | Déclencheur (`etude`) et besoins (`comptes`) construits hors ligne : mettre à l'étude, passage (relever, lire, avancer et ranger ensemble), rien de payant en pause, un seul arrêt (validation de la collecte) ; le chef de dossier expose ses gestes par son contrat et accepte un interrupteur de relecture par pas | `check_etude.py` 39/0, `negatif_etude.sh` 31/31 ; chef 108/0 et 27/27 (hôte) |
 | 2026-11-22 | M2, M4 | B13 reformulée (besoin initial seul : annuel + données structurées), constatée sur les dossiers réels ; la suite (intermédiaires, annonces) devient une ligne d'acceptation de M4 ; option C (élargir le besoin initial) gardée en réserve, décidée à la clôture de M4 | `controle_ancien_systeme.sh` sans `--en-memoire` : 14 fiches → 12 retrouvées, 2 expliquées, 0 inexpliquée ; § « À l'ouverture de M4 » |
+| 2026-11-28 | M2, M6 | **M2 accepté** par l'utilisateur ; B6 réelle (évaluation d'une source rencontrée par une vraie collecte web, payante) reportée à M6, premier module qui demande du web | lignes « réel » B3, B10, B12, B13, B14 du 2026-11-22 (commit `cbef274`) ; § « À l'ouverture de M6 » |
 
 **Réserve sur M1** (2026-11-16) : les gestes d'écriture de l'écran (admettre, révoquer, corriger une
 fiche) n'ont pas été joués en production — le registre est indélébile ; ils sont prouvés par

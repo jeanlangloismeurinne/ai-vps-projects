@@ -68,7 +68,7 @@ jouée par `tools/emetteurs.sh importer`.
   producteurs qui déclarent eux-mêmes leur `source_type` (`edgar_feed`…) ne sont pas touchés.
 - **La grille d'évaluation n'est éprouvée que sur deux sources réelles** (référentiel 1.3.0, le
   2026-11-18 : « auteur » et « non promotionnel » resserrés après qu'un site d'alertes générées a
-  obtenu la même note qu'une agence de presse ; mesures : `roadmap/V3/M2-collecte-sources.md` §5).
+  obtenu la même note qu'une agence de presse ; mesures : `roadmap/archive/V3-M2-collecte-sources.md` §5).
   L'évaluateur (le modèle qui répond à la grille) est dans M2, `recueil/evaluateur.py`. Seuil et
   nombre de publications restent des valeurs de départ, en donnée.
 - **Le contenu du kit de spécialité** : la fiche porte un nom de spécialité, rien de plus.

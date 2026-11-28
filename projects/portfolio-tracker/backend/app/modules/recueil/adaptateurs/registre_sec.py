@@ -1,6 +1,6 @@
 """Adaptateur « registre de la SEC » : les dépôts officiels d'une société enregistrée aux États-Unis.
 
-Repris de l'ancien code (tri de `roadmap/V3/M2-collecte-sources.md` §1), réécrit en bibliothèque
+Repris de l'ancien code (tri de `roadmap/archive/V3-M2-collecte-sources.md` §1), réécrit en bibliothèque
 standard derrière l'interface : le registre des symboles (`edgar_feed.resolve_cik`), la liste des
 dépôts (`material_events._submissions`), le téléchargement d'une soumission et son découpage en
 documents (`note_flash.telecharger_soumission`, `extraire_documents`) — le texte est gardé BRUT,

@@ -1,15 +1,12 @@
 # Collecte de sources — `app/modules/recueil/`
 
-Contrat **1.0.0**. Module M2 du plan `roadmap/V3/07-avant-comite.md`. **État : construit et prouvé
-hors ligne le 2026-11-16 (société fictive, sans base, sans réseau, sans dépense) ; passage à blanc
-réel sur SpaceX, en mémoire, contre le registre de la SEC (gratuit). Le rangement en base (tables
-`recueil_*`, migration 064, `app/modules/recueil/depot_base.py`) est construit et prouvé le
-2026-11-16 sur une base PostgreSQL 16 locale/jetable (`checks/check_recueil_persist.py`) ; PAS
-ENCORE APPLIQUÉE en production. Le moteur réel (Exa), le modèle réel (DeepInfra) et l'évaluateur
-réel des sources inconnues sont construits et prouvés hors ligne le 2026-11-18
-(`checks/check_recueil_evaluateur.py`), et essayés en réel EN MÉMOIRE (`tools/essai_evaluateur.sh`).
-PAS ENCORE ACCEPTÉ** : restent l'écran, le déclencheur, et les lignes « réel » (B3, B6, B10, B12-B14) de `roadmap/V3/M2-collecte-sources.md`,
-qui porte aussi le tri de l'ancien code.
+Contrat **1.0.0**. Module M2 du plan `roadmap/V3/07-avant-comite.md`. **État : ACCEPTÉ le 2026-11-28.** Prouvé
+hors ligne sur société fictive (`checks/check_recueil.py`, `check_recueil_evaluateur.py`), en base
+(`check_recueil_persist.py`, migration 064 appliquée en production le 2026-11-22), puis en réel sur
+NVDA, RVMD et SpaceX le 2026-11-22 (déclencheur et écran : module `etude`). L'évaluation réelle d'une
+source inconnue (B6) est reportée à M6, premier module qui demande du web ; l'évaluateur n'a été
+essayé en réel qu'EN MÉMOIRE (`tools/essai_evaluateur.sh`). Acceptation et tri de l'ancien code :
+`roadmap/archive/V3-M2-collecte-sources.md`.
 
 *Ce que ferait un vrai fonds* : la documentation reçoit une demande de l'analyste, rend les documents
 eux-mêmes avec leur provenance, ou répond « ça n'existe pas » en disant pourquoi ; elle ne lit pas

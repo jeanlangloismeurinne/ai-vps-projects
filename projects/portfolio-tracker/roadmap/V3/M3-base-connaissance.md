@@ -113,7 +113,7 @@ migration de M2 (064) est appliquée en production après les contrôles (accord
 | K11 | **Les besoins** : deux modules consommateurs fictifs déclarent des besoins initiaux qui se recoupent ; le pas de collecte demande chaque genre une fois ; en ajouter un troisième ne modifie aucun fichier de code. Un module qui demande en cours de dossier (un exercice antérieur) obtient une collecte suivie ; ce qui dépend de sa demande l'attend, le reste avance ; la même demande faite deux fois n'est collectée qu'une fois. | société fictive |
 | K12 | **L'écran** montre, par émetteur, les documents lus (nombre de lignes, lectures impossibles et pourquoi), les pièces avec leur extrait, leurs lignes et ce que vaut leur source aujourd'hui ; l'état du dossier et le bouton « mettre à l'étude ». | réel |
 | K13 | **Contrôle par l'ancien système** : pour NVDA et RVMD, chacune des 57 fiches à extraits vérifiés qui cite un dépôt SEC voit ses extraits retrouvés dans la lecture du même dépôt recollecté par M2 ; chaque écart listé et expliqué (un dépôt non recollecté, une différence de lecture). Gratuit. | réel |
-| K14 | **Bout en bout sur trois sociétés** : NVDA, RVMD et SpaceX mises à l'étude ; le besoin des comptes est collecté (SpaceX : le prospectus) et lu ; les lignes « réel » de M2 (B3, B6, B10, B12, B13) passent dans ce même parcours. Rien d'autre ne casse (suite complète). | réel |
+| K14 | **Bout en bout sur trois sociétés** : NVDA, RVMD et SpaceX mises à l'étude ; le besoin des comptes est collecté (SpaceX : le prospectus) et lu ; les lignes « réel » de M2 (B3, B10, B12, B13 ; B6 reportée à M6 le 2026-11-28) passent dans ce même parcours. Rien d'autre ne casse (suite complète). | réel |
 
 ## 4. Questions pour l'utilisateur — tranchées le 2026-11-21
 
