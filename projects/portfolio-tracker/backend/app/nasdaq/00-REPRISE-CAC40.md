@@ -49,7 +49,7 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   assertions, rouge connu seul.
 - **Production** : Nasdaq 55/87 avec plancher, 5 sous le plancher (Nvidia 0,92, Amazon 0,96), médiane ×1,72 ;
   CAC 40 38/42, 1 sous le plancher (Crédit Agricole 0,92), médiane ×2,58.
-- **À surveiller** : 17 titres Nasdaq n'ont pas de plancher faute de 36 multiples, souvent parce que leurs mois
+- **À surveiller** (mesuré le 2026-11-28, voir « Reste à faire ») : 17 titres Nasdaq n'ont pas de plancher faute de 36 multiples, souvent parce que leurs mois
   « caducs » sont exclus (certains en ont 0 à 3 sur 10 ans). Avant, ils avaient un plancher ×15, souvent marqué « caduc ».
   À juger : est-ce le bon message (« pas de plancher ») ou faut-il garder ces mois ?
 
@@ -73,6 +73,24 @@ des tables `nasdaq_*`. Ce qui existe et ce qui le garde : `ARCHITECTURE.md` § �
   les deux cas, sans effet).
 - La table manuelle des bénéfices 2010-2019 (chiffre publié à l'époque, avec source et date) → 10 ans. **Elle
   conditionne aussi le multiple des pires jours** : à sa livraison, retirer `fixed_mult` du CAC 40.
+  **EN COURS (2026-11-28), relevé délégué à Sonnet, interrompu par le plafond de dépense mensuel de l'organisation.**
+  Dossier `table_2010/` : `CONSIGNE.md` (règles données aux agents), `releves.json` (9/41 sociétés × 2010-2020 :
+  AI, MC, CA, DG, VIE, TTE, STMPA, MRN, PUM — 99 lignes, 0 trou), `verifier.py releves.json esef_reference.json`
+  (nombre dans l'extrait, source non agrégatrice, 2020 contre l'ESEF). Contrôle : 2020 = ESEF sur 6/6 comparables ;
+  écarts expliqués : TTE 2020 −2,90 $ (corrige le résidu ESEF −0,029), STMPA 2020 1,20 $ US GAAP contre 0,76 $ IFRS.
+  Restent 32 sociétés (lots de la consigne : AC AIR MT CS BNP EN BVI CAP / ACA BN DSY FGR ENGI EL ERF /
+  ENX RMS KER LR OR ML ORA RI / PUB RNO SAF SGO SAN SU GLE STLAP / HO). URW exclu (cours Yahoo depuis 2023-04).
+  Coût mesuré : ≈ 170 k jetons Sonnet par société ; consigne à durcir : « ne lance pas de sous-agent » (les lots en
+  ont lancé un par société). **Stellantis : cours Yahoo figé à 6,54 € de 2015-06 à 2020-12** (75 mois) → couper
+  son historique avant 2021-01 avant tout multiple propre (sinon ces faux cours entrent dans le 5ᵉ centile) ; le
+  relevé PSA est alors inutile. Intégration prévue : `europe.py` lit `table_2010/releves.json` comme une source
+  (`src = "table"`, `filed` = date de publication pour les divisions), l'ESEF prime de 2020 ; puis `"10y"` dans
+  `MARKETS.cac40.periods` et retrait de `fixed_mult` (arbitré le 2026-11-23) une fois la table complète.
+- **Nasdaq, titres sans plancher (mesuré le 2026-11-28, `own_floor`)** : 18 titres. 8 récents ou en pertes (APP,
+  ARM, CEG, DASH, DDOG, HOOD, MRVL, PLTR) : aucun changement si l'on gardait les mois caducs. 10 à bénéfices en recul
+  (AMD, EBAY, GILD, KDP, LIN, MDLZ, PANW, STX, WDC, WMT) : un plancher apparaîtrait mais souvent absurde (KDP ×0,8 →
+  cours à 34× ; LIN 17× ; GILD 27× — fusions). Percée inchangée (2,0 %). Recommandé, en attente d'arbitrage : garder
+  la règle, distinguer la raison affichée (« titre trop récent » / « bénéfices en recul sur la plupart des 10 ans »).
 - **Titres cycliques — question ouverte** (2026-11-23). Mesuré (16 semi-conducteurs Nasdaq, règle ci-dessus) : le
   plancher ne casse pas (percé 1 %) mais il est lointain (cours à 2,5× contre 1,8× pour les autres) et oscille
   avec le cycle, parce que la moyenne 3 ans tombe sur un sommet ou un creux. Base « moyenne réelle sur 10 ans » :
