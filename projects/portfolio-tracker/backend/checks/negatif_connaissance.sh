@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TEST NÉGATIF de `check_connaissance.py` — au moins une mutation par ligne d'acceptation « société
-# fictive » du module M3 (`roadmap/V3/M3-base-connaissance.md` §3), chacune exigeant exit≠0 + FAIL
+# fictive » du module M3 (`roadmap/archive/V3-M3-base-connaissance.md` §3), chacune exigeant exit≠0 + FAIL
 # sur l'assert NOMMÉ + bilan atteint (harnais `_negatif.sh`). Module pur bibliothèque standard : sans
 # conteneur, le harnais tourne sur l'hôte et le dit. La vérification mot pour mot est déléguée à
 # `citation.py` : elle se mute chez son détenteur.

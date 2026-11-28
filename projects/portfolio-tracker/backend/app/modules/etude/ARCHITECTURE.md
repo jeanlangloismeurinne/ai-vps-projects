@@ -1,6 +1,6 @@
 # Étude — `app/modules/etude/` (le déclencheur du chef de dossier)
 
-Contrat **1.2.0** (vue d'écran). Construit avec M3 (`roadmap/V3/M3-base-connaissance.md` §2, « Le déclencheur » ;
+Contrat **1.2.0** (vue d'écran). Construit avec M3 (`roadmap/archive/V3-M3-base-connaissance.md` §2, « Le déclencheur » ;
 acceptation K10, K11). **État (2026-11-21) : construit et prouvé hors ligne sur société fictive
 ; rangement en base (migration 065) prouvé sur base jetable, tâche planifiée câblée (`app/main.py`,
 toutes les `intervalle_min` minutes) et exécutée sur base jetable — 064/065 PAS ENCORE APPLIQUÉES en

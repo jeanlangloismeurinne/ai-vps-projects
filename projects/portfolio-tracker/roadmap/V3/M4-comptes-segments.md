@@ -1,6 +1,6 @@
 ---
 id: m4-comptes-segments
-status: ouvert le 2026-11-28 — tri et acceptation écrits AVANT la construction ; questions §4 en attente de l'utilisateur
+status: ouvert le 2026-11-28 — tri et acceptation écrits AVANT la construction ; question 3 tranchée (a) le 2026-11-28 ; questions 1 et 2 en discussion
 created: 2026-11-28
 project: portfolio-tracker
 role: >
@@ -121,7 +121,8 @@ Tout est gratuit (données SEC, code).
      case qu'il déplace ; affichés à l'écran ; une règle générale les remplace dès qu'elle existe
      (principe 4 : on corrige la cause d'abord — on cherche la règle avant d'écrire l'exception).
    - (b) Interdits : seule une règle générale, ou la case reste « non déposée ».
-3. **Les comptes qui n'existent qu'en texte** (SpaceX : le prospectus ; plus tard les sociétés de l'UE
+3. **Tranchée le 2026-11-28 : (a)** (« ok pour ta recommandation 3A »). Le lot de ressaisie, s'il vient avant M6, porte la ligne « pièces réelles à l'écran » de M3.
+   **Les comptes qui n'existent qu'en texte** (SpaceX : le prospectus ; plus tard les sociétés de l'UE
    hors ESEF, le non coté). *Ce que ferait un vrai fonds* : un assistant ressaisit les états financiers
    du prospectus dans le gabarit, chaque chiffre pointé sur sa page.
    - (a, recommandé) M4 version 1 : données structurées seulement ; SpaceX reçoit son trimestre et

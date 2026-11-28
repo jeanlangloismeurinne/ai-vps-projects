@@ -1,6 +1,6 @@
 ---
 id: m3-base-connaissance
-status: ouvert le 2026-11-21 ; K13 fait le 2026-11-22 (lecteur 1.2.0) ; K0-K9 construits hors ligne le même jour (check_connaissance 49/0, négatif 30/30) ; besoins et déclencheur (K10, K11 sur société fictive) construits hors ligne le même jour (check_etude 39/0, négatif 31/31) ; rangement en base (migration 065, K5 et K10 « base ») et tâche planifiée construits le 2026-11-21 (check_connaissance_persist 73/0 sur base jetable, négatif 10/10 + 9/9 ; 065 NON appliquée) ; écran (K12) construit et prouvé hors ligne le même jour (check_etude_api 24/0, négatif 12/12) ; reste réel
+status: ACCEPTÉ le 2026-11-28 (utilisateur) — K1-K11, K13 constatées ; K12 et K14 constatées SAUF l'affichage de pièces réelles à l'écran, reporté au premier module qui cite une pièce (aucune n'existe en production) — À FAIRE PLUS TARD
 created: 2026-11-21
 project: portfolio-tracker
 role: >
@@ -10,6 +10,12 @@ role: >
 ---
 
 # M3 — Base de connaissance (le lecteur commun)
+
+> **ACCEPTÉ le 2026-11-28** (utilisateur), comme M2 pour B6 : **l'affichage de pièces RÉELLES à l'écran
+> (K12, et la partie « pièces » de K14) reste À FAIRE** — en production, 0 pièce : aucun module ne cite
+> encore. C'est une ligne d'acceptation du premier module qui citera une pièce (M6, ou le lot de
+> ressaisie des comptes en texte de M4 s'il vient avant : `07-avant-comite.md` § « À l'ouverture de
+> M6 »). Constaté le 2026-11-28 : les 6 documents des trois dossiers relus en lecteur 1.2.0 (22/11).
 
 *Ce que ferait un vrai fonds* : la documentation range le rapport annuel tel qu'il est arrivé ; quelqu'un
 le **met en lecture** — pages et lignes numérotées, une fois pour toutes — et chaque analyste cite ensuite
@@ -111,9 +117,9 @@ migration de M2 (064) est appliquée en production après les contrôles (accord
 | K9 | **Un pas au chef de dossier** : après la collecte, il attend que chaque document arrivé ait sa lecture (ou une lecture impossible nommée) ; dépense 0 ; ce qui ne dépend pas de lui avance. | société fictive |
 | K10 | **Le déclencheur** : mettre une société à l'étude crée son dossier ; la tâche de fond relève, lit et fait avancer sans geste de votre part ; l'état du dossier et ce qu'il a lancé sont rangés ensemble ou pas du tout ; deux passages simultanés sur un dossier : le second ne fait rien ; un dossier non mis à l'étude n'avance jamais. | société fictive ; base |
 | K11 | **Les besoins** : deux modules consommateurs fictifs déclarent des besoins initiaux qui se recoupent ; le pas de collecte demande chaque genre une fois ; en ajouter un troisième ne modifie aucun fichier de code. Un module qui demande en cours de dossier (un exercice antérieur) obtient une collecte suivie ; ce qui dépend de sa demande l'attend, le reste avance ; la même demande faite deux fois n'est collectée qu'une fois. | société fictive |
-| K12 | **L'écran** montre, par émetteur, les documents lus (nombre de lignes, lectures impossibles et pourquoi), les pièces avec leur extrait, leurs lignes et ce que vaut leur source aujourd'hui ; l'état du dossier et le bouton « mettre à l'étude ». | réel |
+| K12 | **L'écran** (constaté sur les trois dossiers le 2026-11-22 ; **pièces réelles : reportées, à faire**) montre, par émetteur, les documents lus (nombre de lignes, lectures impossibles et pourquoi), les pièces avec leur extrait, leurs lignes et ce que vaut leur source aujourd'hui ; l'état du dossier et le bouton « mettre à l'étude ». | réel |
 | K13 | **Contrôle par l'ancien système** : pour NVDA et RVMD, chacune des 57 fiches à extraits vérifiés qui cite un dépôt SEC voit ses extraits retrouvés dans la lecture du même dépôt recollecté par M2 ; chaque écart listé et expliqué (un dépôt non recollecté, une différence de lecture). Gratuit. | réel |
-| K14 | **Bout en bout sur trois sociétés** : NVDA, RVMD et SpaceX mises à l'étude ; le besoin des comptes est collecté (SpaceX : le prospectus) et lu ; les lignes « réel » de M2 (B3, B10, B12, B13 ; B6 reportée à M6 le 2026-11-28) passent dans ce même parcours. Rien d'autre ne casse (suite complète). | réel |
+| K14 | **Bout en bout sur trois sociétés** : NVDA, RVMD et SpaceX mises à l'étude ; le besoin des comptes est collecté (SpaceX : le prospectus) et lu ; les lignes « réel » de M2 (B3, B10, B12, B13 ; B6 reportée à M6 le 2026-11-28) passent dans ce même parcours (constaté le 2026-11-22, sans pièce : reporté avec K12). Rien d'autre ne casse (suite complète). | réel |
 
 ## 4. Questions pour l'utilisateur — tranchées le 2026-11-21
 

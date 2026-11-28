@@ -1,10 +1,10 @@
 # Base de connaissance — `app/modules/connaissance/`
 
 Contrat **1.0.0**. Module M3 du plan `roadmap/V3/07-avant-comite.md` ; tri, interface « besoins →
-collecte » et acceptation : `roadmap/V3/M3-base-connaissance.md`. **État (2026-11-21) : le lecteur, les
-pièces, la recherche par les mots et le pas de lecture sont construits et prouvés hors ligne (société
-fictive, communiqué réel) ; le rangement en base (migration 065, `depot_base.py`) est prouvé sur base
-jetable — 065 PAS ENCORE APPLIQUÉE en production. À construire : l'écran, les lignes « réel » (K12-K14).**
+collecte » et acceptation : `roadmap/archive/V3-M3-base-connaissance.md`. **État : ACCEPTÉ le 2026-11-28.** Lecteur (1.2.0),
+pièces, recherche par les mots, pas de lecture, rangement en base (migration 065, appliquée le
+2026-11-22), tâche planifiée et écran en production ; trois dossiers réels lus. **Reste à faire : montrer
+des pièces RÉELLES à l'écran** (0 en production) — ligne d'acceptation du premier module qui cite.
 
 *Ce que ferait un vrai fonds* : on met le document en lecture une fois pour toutes, lignes numérotées ;
 chaque analyste cite sa ligne ; une citation qui ne se retrouve pas mot pour mot n'entre pas au dossier ;

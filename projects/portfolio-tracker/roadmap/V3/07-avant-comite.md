@@ -52,7 +52,7 @@ règle simple, l'automatisation son raffinement).
 | M0 ✅ | **Fondations** (accepté hors ligne le 2026-11-13, voir journal) | Documents de cadre à jour (une constitution, un schéma des blocs, une seule ligne de base de la suite) ; documents inutiles supprimés ou archivés ; charte et garde des accès entre modules ; squelette du chef de dossier (état → pas suivant, pause tous les 1 $) ; NASDAQ sorti du chantier | Aucun document ne décrit un mécanisme supprimé ; le contrôle d'accès rougit sur un accès interdit ; le chef de dossier conduit une société fictive à travers des modules simulés et s'arrête à 1 $ | 0 |
 | M1 ✅ | **Fiche de l'émetteur et sources** (accepté sur le VPS le 2026-11-16, sauf les gestes d'écriture à l'écran, laissés à l'utilisateur : `M1-fiche-emetteur.md`) | Identité maison (numéro SEC facultatif), où la société publie, sa spécialité ; registre des sources : le système évalue et admet, chaque admission datée et motivée, vous suivez et corrigez | Ajouter un titre ne modifie aucun fichier de code ; une société sans numéro SEC a une fiche valide ; une source révoquée signale les pièces qui s'y appuient | 0 |
 | M2 ✅ | **Collecte de sources** (accepté le 2026-11-28 ; l'évaluation réelle d'une source, B6, est reportée à M6 : `roadmap/archive/V3-M2-collecte-sources.md`) | À une demande (quoi, pour qui, depuis quand) : des documents bruts avec leur origine, ou « source indisponible » nommée. Adaptateurs : dépôts SEC, site de l'émetteur, web. Prévus, interface écrite : documents fournis, autre régulateur. **Arbitrés le 2026-11-14** : une source inconnue rencontrée part à l'évaluateur de sources (la porte de M1 est construite : #145) ; la collecte est un travail suivi par le chef de dossier, et le dossier avance à côté (#146) | Le cœur ne nomme aucun formulaire ; la société fictive sans numéro SEC traverse sans plantage | faible |
-| M3 | **Base de connaissance** | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
+| M3 ✅ | **Base de connaissance** (acceptée le 2026-11-28 ; pièces réelles à l'écran reportées au premier module qui cite : `roadmap/archive/V3-M3-base-connaissance.md`) | Pièces datées, à extraits vérifiés, jamais modifiées | Chaque pièce se cite par sa ligne ; rien n'y entre sans origine | 0 |
 | M4 | **Comptes et segments** | Comptes reconstitués, ratios maison, ventilation, périmètre, par famille de comptes | Les comptes de NVDA et RVMD bouclent avec les totaux publiés ; deux découpages superposés (Apple, cas fictif) sont séparés ; **ses demandes au fil du dossier sont collectées et contrôlées par l'ancien système** (suite de B13, ci-dessous) | 0 |
 | M5 | **Filtres** | Alertes motivées au gérant (dette, autonomie, clauses, qui décide, hors compétence) ; jamais d'arrêt automatique | Sur RVMD l'autonomie de trésorerie est signalée avec sa pièce | faible |
 | M6 | **Carte des sources de profit** | Inventaire élément × marché, classé, contrôlé contre les listes de l'émetteur ; débats de la thèse proposés, que vous complétez et validez en un lot | Chaque élément listé par l'émetteur est dans la carte **à chaque passage** ; deux passages donnent la même carte ; le relecteur retrouve les erreurs connues (étalons) | **première mesure payante** |
@@ -132,6 +132,13 @@ autres documents sans attendre le verdict. Acquis avant : société fictive (`ch
 essais réels en mémoire sans écriture au journal (Reuters admise, MarketBeat en suspens ; reprise sous
 licence reconnue chez marketscreener.com) — `roadmap/archive/V3-M2-collecte-sources.md` §5, §7, §8.
 
+**K12 et K14 de M3 — pièces réelles à l'écran, À FAIRE** (arbitrage de l'utilisateur, 2026-11-28 : M3
+accepté sans elles, « bien noter qu'il faut le faire plus tard ») : le premier module qui cite une pièce
+(M6 ici, ou le lot de ressaisie des comptes en texte de M4, question 3a, s'il vient avant — la ligne
+part alors dans son dossier) prouve sur un vrai dossier que l'écran de l'étude montre ses pièces :
+extrait, lignes surlignées dans le document, période, ce que vaut la source aujourd'hui. 0 pièce en
+production au 2026-11-28.
+
 ## Dettes reprises de l'ancien plan
 
 Elles sont rattachées au module qui les soldera, au moment de son tri : question 3 de l'arbre mal posée
@@ -163,6 +170,7 @@ réponses : **sans objet** (elles ne sont pas reprises). Détail : plan archivé
 | 2026-11-21 | M3 | Déclencheur (`etude`) et besoins (`comptes`) construits hors ligne : mettre à l'étude, passage (relever, lire, avancer et ranger ensemble), rien de payant en pause, un seul arrêt (validation de la collecte) ; le chef de dossier expose ses gestes par son contrat et accepte un interrupteur de relecture par pas | `check_etude.py` 39/0, `negatif_etude.sh` 31/31 ; chef 108/0 et 27/27 (hôte) |
 | 2026-11-22 | M2, M4 | B13 reformulée (besoin initial seul : annuel + données structurées), constatée sur les dossiers réels ; la suite (intermédiaires, annonces) devient une ligne d'acceptation de M4 ; option C (élargir le besoin initial) gardée en réserve, décidée à la clôture de M4 | `controle_ancien_systeme.sh` sans `--en-memoire` : 14 fiches → 12 retrouvées, 2 expliquées, 0 inexpliquée ; § « À l'ouverture de M4 » |
 | 2026-11-28 | M2, M6 | **M2 accepté** par l'utilisateur ; B6 réelle (évaluation d'une source rencontrée par une vraie collecte web, payante) reportée à M6, premier module qui demande du web | lignes « réel » B3, B10, B12, B13, B14 du 2026-11-22 (commit `cbef274`) ; § « À l'ouverture de M6 » |
+| 2026-11-28 | M3 | **M3 accepté** par l'utilisateur ; l'affichage de pièces réelles à l'écran (K12, K14) reporté au premier module qui cite — à faire plus tard | relecture 1.2.0 des 6 documents constatée en production ; 0 pièce ; § « À l'ouverture de M6 » |
 | 2026-11-28 | M4 | Ouvert : tri de l'ancien code comptable et acceptation écrite AVANT la construction (C1-C12) ; trois questions à l'utilisateur (famille de comptes, reclassements propres à un émetteur, comptes qui n'existent qu'en texte — SpaceX) | `M4-comptes-segments.md` |
 
 **Réserve sur M1** (2026-11-16) : les gestes d'écriture de l'écran (admettre, révoquer, corriger une

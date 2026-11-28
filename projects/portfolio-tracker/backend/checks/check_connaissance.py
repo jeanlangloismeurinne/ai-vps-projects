@@ -1,6 +1,6 @@
 """Module M3 « Base de connaissance » sur une société FICTIVE — aucune base, aucun réseau, aucun modèle,
 aucune dépense. C'est la part « société fictive » de l'acceptation écrite avant la construction
-(`roadmap/V3/M3-base-connaissance.md` §3) ; chaque section porte le numéro de la ligne qu'elle prouve,
+(`roadmap/archive/V3-M3-base-connaissance.md` §3) ; chaque section porte le numéro de la ligne qu'elle prouve,
 et `negatif_connaissance.sh` prouve que chacune vire au rouge.
 
   [K0] le module n'importe ni réseau, ni base, ni modèle : bibliothèque standard et contrats

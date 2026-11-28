@@ -2,7 +2,7 @@
 id: reprise-cartes-provenance
 status: prompt-de-reprise
 created: 2026-08-19
-updated: 2026-11-28 (M2 ACCEPTÉ, B6 reportée à M6, dossier M2 archivé ; M4 ouvert, questions §4 en attente) — historique des mises à jour : `git log` de ce fichier
+updated: 2026-11-28 (M2 et M3 ACCEPTÉS — B6 et les pièces réelles à l'écran reportées ; M4 ouvert, 3a tranchée, questions 1-2 en discussion) — historique des mises à jour : `git log` de ce fichier
 project: portfolio-tracker
 role: >
   Prompt de reprise du chantier V3. Ne porte que l'ÉTAT, le PROCHAIN PAS et les pointeurs. Récit →
@@ -18,14 +18,17 @@ role: >
 
 ## ➜ Prochain pas
 
+**M3 ACCEPTÉ le 2026-11-28** (utilisateur) : **l'affichage de pièces RÉELLES à l'écran (K12, K14) reste
+À FAIRE**, ligne d'acceptation du premier module qui cite (M6, ou le lot de ressaisie de M4 s'il vient
+avant) ; dossier archivé : `roadmap/archive/V3-M3-base-connaissance.md`.
+
 **M2 ACCEPTÉ le 2026-11-28** (utilisateur) ; l'évaluation réelle d'une source (B6, payante) est une
 ligne d'acceptation de M6 (`07-avant-comite.md` § « À l'ouverture de M6 ») ; dossier archivé :
 `roadmap/archive/V3-M2-collecte-sources.md`. **M4 « Comptes et segments » OUVERT le 2026-11-28** : `M4-comptes-segments.md` (tri, acceptation
-C1-C12, **trois questions en attente de l'utilisateur** §4 : famille de comptes, reclassements par
-émetteur, comptes en texte seulement — SpaceX n'a qu'un trimestre en données structurées). Prochain
-pas : réponses, puis construction hors ligne (société fictive) ; la suite de B13 et l'option C y sont
-reprises (C8). M3 reste à accepter (K14 sur les trois
-dossiers réels).
+C1-C12, **question 3 tranchée (a)** le 2026-11-28 : données structurées seulement, SpaceX reçoit son
+trimestre et le manque nommé ; **questions 1 (famille de comptes : la déclarer ou laisser le système
+décider de la structure ?) et 2 (reclassements par émetteur) en discussion**). Prochain pas : arbitrages, puis construction hors ligne (société fictive) ; la suite de B13 et l'option C y sont
+reprises (C8).
 
 **Où on en est (2026-11-22)** — **M2, M3, le déclencheur et l'écran de l'étude sont EN PRODUCTION**
 (migrations 064 puis 065 appliquées le 2026-11-22 ; backend et frontend reconstruits, commit `401d2a1` ;
@@ -33,7 +36,7 @@ vérifié dans les conteneurs : routes `/v2/emetteurs/{e}/etude`, `libelles_acte
 `_passage_des_etudes` enregistrée, section « Étude de la société » compilée ; GET réel NVDA/SPCX/RVMD
 → 200, « pas à l'étude »). Suite : `check_recueil_persist` et `check_connaissance_persist` désormais
 verts ; seul rouge connu : `check_signature_modele_persist` (données de l'ancien enchaînement).
-Détail des modules : `roadmap/archive/V3-M2-collecte-sources.md`, `M3-base-connaissance.md` §5.
+Détail des modules : `roadmap/archive/V3-M2-collecte-sources.md`, `roadmap/archive/V3-M3-base-connaissance.md` §5.
 
 **Trois vrais dossiers terminés le 2026-11-22** (NVDA, RVMD, SpaceX : comptes annuels + companyfacts,
 tout SEC, 0 $ ; le coût d'un dossier avec collecte web n'est PAS encore mesuré ; RVMD a aussi la cotation
@@ -45,7 +48,7 @@ l'ancien système → 43 retrouvées, 12 écarts expliqués (l'ancien lecteur co
 inexpliqué, 2 d'une autre société (#87). Il a révélé un **défaut du lecteur** : les retours à la ligne du
 code source HTML coupaient les lignes (procurations et 8-K Donnelley : une cellule par ligne), masqué par
 les 10-K Workiva → **lecteur 1.2.0** (déployé ; la tâche de fond relit les 6 documents à son passage
-suivant, les lectures 1.1.0 restent). Détail : `M3-base-connaissance.md` § « K13 ».
+suivant, les lectures 1.1.0 restent). Détail : `roadmap/archive/V3-M3-base-connaissance.md` § « K13 ».
 
 **B13** (besoin initial seul, constatée le 2026-11-22) : la suite — intermédiaires et annonces
 demandés au fil du dossier — est une ligne d'acceptation de M4 ; **option C en réserve** (élargir le
@@ -66,6 +69,9 @@ contradicteur après le premier comité ; c'est l'utilisateur qui dit quoi analy
 payante avant le module M6 (carte).**
 
 ## Reste ouvert (ne s'archive pas)
+
+- **À FAIRE : pièces réelles à l'écran de l'étude** (M3 accepté sans, 2026-11-28) — premier module qui cite ;
+  **B6 réelle** (évaluation d'une source rencontrée) — M6. Les deux : `07-avant-comite.md` § « À l'ouverture de M6 ».
 
 - L'ancien chantier « découpage » (B4g) est **clos sans suite** : ses acquis (inventaire, arbre, premier niveau
   par les segments) seront triés à l'ouverture de M6-M7. Lots B4d, #143, B4f, B4g en production depuis le

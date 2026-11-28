@@ -1,5 +1,5 @@
 """LA SOCIÉTÉ MISE À L'ÉTUDE vue de l'écran : son dossier, ce que la collecte a trouvé ou pas, les
-documents lus et les pièces (M2 B12, M3 K12 : `roadmap/V3/M3-base-connaissance.md`).
+documents lus et les pièces (M2 B12, M3 K12 : `roadmap/archive/V3-M3-base-connaissance.md`).
 
   GET  /v2/emetteurs/{emetteur}/etude                     l'étude, l'état du dossier (actes en mots de
                                                           gérant), la collecte, les documents lus, les pièces

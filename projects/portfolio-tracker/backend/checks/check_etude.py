@@ -1,5 +1,5 @@
 """Contrôle du module « Étude » (le déclencheur du chef de dossier) — société fictive, sans base,
-sans réseau, sans dépense. Acceptation : `roadmap/V3/M3-base-connaissance.md` §3, lignes K10 et K11
+sans réseau, sans dépense. Acceptation : `roadmap/archive/V3-M3-base-connaissance.md` §3, lignes K10 et K11
 (société fictive), et l'arbitrage du 2026-11-21 sur la relecture humaine. Rougi par
 `negatif_etude.sh`.
 

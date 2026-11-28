@@ -2,7 +2,7 @@
 la migration 065 — contre une VRAIE base où 063, 064 et 065 sont appliquées. Tout se joue dans des
 transactions annulées : zéro résidu. Société fictive uniquement — réutilise le monde simulé de
 `checks/check_etude.py` (adaptateur, évaluateur) : aucun réseau, aucun modèle, aucune dépense.
-Acceptation : `roadmap/V3/M3-base-connaissance.md`, K5 et K10 « base ».
+Acceptation : `roadmap/archive/V3-M3-base-connaissance.md`, K5 et K10 « base ».
 
   [P0]  063, 064 et 065 appliquées ICI (sinon : échec NOMMÉ, jamais un saut) ; aucun résidu
   [P1]  le même parcours (mettre à l'étude, la tâche de fond jusqu'au bout, l'acte attendu) joué en
